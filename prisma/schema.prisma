@@ -1,0 +1,247 @@
+// BookFlow AI — multi-tenant core (Phase 0 + Phase 1)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  STAFF
+  VIEWER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum OrganizationPlan {
+  TRIAL
+  STARTER
+  GROWTH
+  BUSINESS
+}
+
+enum ResourceType {
+  STAFF
+  ROOM
+  EQUIPMENT
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+enum BookingSource {
+  PUBLIC
+  DASHBOARD
+  AI
+  IMPORT
+}
+
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String
+  firstName   String?
+  lastName    String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships Membership[]
+  resources   Resource[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Organization {
+  id               String           @id @default(cuid())
+  name             String
+  slug             String           @unique
+  clerkOrgId       String?          @unique
+  plan             OrganizationPlan @default(TRIAL)
+  stripeCustomerId String?          @unique
+  timezoneDefault  String           @default("UTC")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  memberships Membership[]
+  locations   Location[]
+  resources   Resource[]
+  services    Service[]
+  bookings    Booking[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MembershipRole   @default(STAFF)
+  status         MembershipStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model Location {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  timezone       String   @default("UTC")
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  region         String?
+  postalCode     String?
+  country        String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resources    Resource[]
+  bookings     Booking[]
+
+  @@index([organizationId, isActive])
+  @@map("locations")
+}
+
+model Resource {
+  id             String       @id @default(cuid())
+  organizationId String
+  locationId     String
+  name           String
+  type           ResourceType @default(STAFF)
+  userId         String?
+  capacity       Int          @default(1)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  services     ServiceResource[]
+  rules        AvailabilityRule[]
+  overrides    AvailabilityOverride[]
+  bookings     Booking[]
+
+  @@index([organizationId, locationId])
+  @@index([organizationId, isActive])
+  @@map("resources")
+}
+
+model Service {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  durationMin    Int
+  bufferBefore   Int      @default(0)
+  bufferAfter    Int      @default(0)
+  priceCents     Int      @default(0)
+  currency       String   @default("USD")
+  category       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resources    ServiceResource[]
+  bookings     Booking[]
+
+  @@index([organizationId, isActive])
+  @@map("services")
+}
+
+model ServiceResource {
+  id         String @id @default(cuid())
+  serviceId  String
+  resourceId String
+
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, resourceId])
+  @@index([resourceId])
+  @@map("service_resources")
+}
+
+/// Weekly template. weekday: 0 = Sunday … 6 = Saturday (JS Date.getDay).
+/// Times are minutes from local midnight [0, 1440).
+model AvailabilityRule {
+  id         String @id @default(cuid())
+  resourceId String
+  weekday    Int
+  startMin   Int
+  endMin     Int
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId, weekday])
+  @@map("availability_rules")
+}
+
+/// Date-specific override in the location/resource local calendar day (YYYY-MM-DD).
+model AvailabilityOverride {
+  id         String  @id @default(cuid())
+  resourceId String
+  date       String
+  isClosed   Boolean @default(false)
+  startMin   Int?
+  endMin     Int?
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, date])
+  @@index([resourceId])
+  @@map("availability_overrides")
+}
+
+/// Minimal booking row so the availability engine can subtract busy time.
+/// Full booking UX lands in Phase 2.
+model Booking {
+  id             String        @id @default(cuid())
+  organizationId String
+  locationId     String
+  resourceId     String
+  serviceId      String
+  startAt        DateTime
+  endAt          DateTime
+  status         BookingStatus @default(CONFIRMED)
+  source         BookingSource @default(DASHBOARD)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  resource     Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, startAt])
+  @@index([resourceId, startAt, endAt])
+  @@index([resourceId, status])
+  @@map("bookings")
+}

@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BookFlow AI
 
-## Getting Started
+AI-powered booking and business management for barbers, salons, and other service businesses.
 
-First, run the development server:
+## Stack
+
+- Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4
+- Prisma 7 · PostgreSQL · Clerk · Vercel-ready
+
+## Phase 0–1 (current)
+
+- Phase 0: app shell, Clerk auth, env validation, logging, CI
+- Phase 1: organizations, locations, resources, services, hours, availability engine
+
+## Setup
+
+1. Copy env file:
+
+```bash
+cp .env.example .env.local
+```
+
+2. Fill in `DATABASE_URL` and Clerk keys from the [Clerk dashboard](https://dashboard.clerk.com).
+
+3. Install and generate the Prisma client:
+
+```bash
+npm install
+npm run db:generate
+```
+
+4. Run migrations (requires a reachable Postgres):
+
+```bash
+npm run db:migrate
+```
+
+5. Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+6. Point a Clerk webhook to `https://<your-host>/api/webhooks/clerk` for events:
+   - `user.created`
+   - `user.updated`
+   - `user.deleted`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   Set `CLERK_WEBHOOK_SIGNING_SECRET` from the Clerk webhook endpoint.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Script               | Purpose                 |
+| -------------------- | ----------------------- |
+| `npm run dev`        | Local development       |
+| `npm run build`      | Production build        |
+| `npm run lint`       | ESLint                  |
+| `npm run typecheck`  | TypeScript              |
+| `npm run format`     | Prettier                |
+| `npm run db:migrate` | Create/apply migrations |
+| `npm run db:studio`  | Prisma Studio           |
+| `npm test`           | Availability engine tests |
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See the architecture canvas in Cursor for the full roadmap (folders, schema, phases).

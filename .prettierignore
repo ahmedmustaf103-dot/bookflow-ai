@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+build
+coverage
+src/generated
+package-lock.json
+*.tsbuildinfo
+.env
+.env.local
