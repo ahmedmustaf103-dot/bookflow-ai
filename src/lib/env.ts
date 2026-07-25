@@ -12,6 +12,16 @@ export const env = createEnv({
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .default("info"),
+    RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_FROM_EMAIL: z
+      .string()
+      .min(1)
+      .default("BookFlow AI <onboarding@resend.dev>"),
+    STRIPE_SECRET_KEY: z.string().min(1).optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+    STRIPE_PRICE_STARTER: z.string().min(1).optional(),
+    STRIPE_PRICE_GROWTH: z.string().min(1).optional(),
+    STRIPE_PRICE_BUSINESS: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

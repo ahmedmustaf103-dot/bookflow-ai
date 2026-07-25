@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ButtonLink } from "@/components/ui/button";
+import { env } from "@/lib/env";
 import { db } from "@/server/db";
 import { requireOrgOrRedirect } from "@/server/tenant/context";
 
@@ -8,11 +9,21 @@ export default async function DashboardPage() {
   const ctx = await requireOrgOrRedirect();
   const orgId = ctx.organization.id;
 
-  const [locationCount, resourceCount, serviceCount] = await Promise.all([
-    db.location.count({ where: { organizationId: orgId, isActive: true } }),
-    db.resource.count({ where: { organizationId: orgId, isActive: true } }),
-    db.service.count({ where: { organizationId: orgId, isActive: true } }),
-  ]);
+  const [locationCount, resourceCount, serviceCount, upcoming] =
+    await Promise.all([
+      db.location.count({ where: { organizationId: orgId, isActive: true } }),
+      db.resource.count({ where: { organizationId: orgId, isActive: true } }),
+      db.service.count({ where: { organizationId: orgId, isActive: true } }),
+      db.booking.count({
+        where: {
+          organizationId: orgId,
+          status: { in: ["PENDING", "CONFIRMED"] },
+          startAt: { gte: new Date() },
+        },
+      }),
+    ]);
+
+  const bookUrl = `${env.NEXT_PUBLIC_APP_URL}/book/${ctx.organization.slug}`;
 
   return (
     <div className="flex flex-col gap-8">
@@ -21,17 +32,28 @@ export default async function DashboardPage() {
           {ctx.organization.name}
         </h1>
         <p className="mt-2 text-[var(--color-ink)]/70">
-          Welcome{ctx.user.firstName ? `, ${ctx.user.firstName}` : ""}. Public
-          booking page will be{" "}
-          <code className="rounded bg-[var(--color-muted)] px-1.5 py-0.5 text-sm">
-            /book/{ctx.organization.slug}
-          </code>{" "}
-          in Phase 2.
+          Welcome{ctx.user.firstName ? `, ${ctx.user.firstName}` : ""}. Plan:{" "}
+          <span className="font-medium">{ctx.organization.plan}</span>
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="rounded-lg border border-[var(--color-border)] bg-white/50 px-4 py-3 text-sm">
+        Public booking link:{" "}
+        <Link
+          href={`/book/${ctx.organization.slug}`}
+          className="font-medium text-[var(--color-accent)] underline-offset-2 hover:underline"
+        >
+          {bookUrl}
+        </Link>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-4">
         {[
+          {
+            label: "Upcoming",
+            value: upcoming,
+            href: "/dashboard/appointments",
+          },
           {
             label: "Locations",
             value: locationCount,
@@ -60,9 +82,12 @@ export default async function DashboardPage() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <ButtonLink href="/dashboard/services">Add a service</ButtonLink>
-        <ButtonLink href="/dashboard/availability" variant="secondary">
-          Edit hours
+        <ButtonLink href="/dashboard/appointments">Appointments</ButtonLink>
+        <ButtonLink href={`/book/${ctx.organization.slug}`} variant="secondary">
+          Open booking page
+        </ButtonLink>
+        <ButtonLink href="/dashboard/billing" variant="ghost">
+          Billing
         </ButtonLink>
       </div>
     </div>

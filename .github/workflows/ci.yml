@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  quality:
+    name: Lint · Typecheck · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Build
+        env:
+          SKIP_ENV_VALIDATION: "1"
+          DATABASE_URL: postgresql://user:pass@localhost:5432/bookflow
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci
+          CLERK_SECRET_KEY: sk_test_ci
+          CLERK_WEBHOOK_SIGNING_SECRET: whsec_ci
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+        run: npm run build

@@ -31,7 +31,9 @@
     "pino": "^10.3.1",
     "react": "^19.1.4",
     "react-dom": "^19.1.4",
+    "resend": "^6.18.0",
     "server-only": "^0.0.1",
+    "stripe": "^22.3.2",
     "svix": "^1.98.0",
     "zod": "^4.4.3"
   },
@@ -39,6 +41,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -1,5 +1,5 @@
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { logger } from "@/lib/logger";
 import {

@@ -7,10 +7,11 @@ AI-powered booking and business management for barbers, salons, and other servic
 - Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4
 - Prisma 7 · PostgreSQL · Clerk · Vercel-ready
 
-## Phase 0–1 (current)
+## Phase 0–2 (current)
 
 - Phase 0: app shell, Clerk auth, env validation, logging, CI
 - Phase 1: organizations, locations, resources, services, hours, availability engine
+- Phase 2: public booking (`/book/[slug]`), appointments board, Resend email, Stripe billing
 
 ## Setup
 
@@ -50,15 +51,15 @@ npm run dev
 
 ## Scripts
 
-| Script               | Purpose                 |
-| -------------------- | ----------------------- |
-| `npm run dev`        | Local development       |
-| `npm run build`      | Production build        |
-| `npm run lint`       | ESLint                  |
-| `npm run typecheck`  | TypeScript              |
-| `npm run format`     | Prettier                |
-| `npm run db:migrate` | Create/apply migrations |
-| `npm run db:studio`  | Prisma Studio           |
+| Script               | Purpose                   |
+| -------------------- | ------------------------- |
+| `npm run dev`        | Local development         |
+| `npm run build`      | Production build          |
+| `npm run lint`       | ESLint                    |
+| `npm run typecheck`  | TypeScript                |
+| `npm run format`     | Prettier                  |
+| `npm run db:migrate` | Create/apply migrations   |
+| `npm run db:studio`  | Prisma Studio             |
 | `npm test`           | Availability engine tests |
 
 ## Architecture

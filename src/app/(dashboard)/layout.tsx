@@ -6,10 +6,12 @@ import { getActiveOrganization } from "@/server/tenant/context";
 
 const NAV = [
   { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/appointments", label: "Appointments" },
   { href: "/dashboard/locations", label: "Locations" },
   { href: "/dashboard/staff", label: "Staff" },
   { href: "/dashboard/services", label: "Services" },
   { href: "/dashboard/availability", label: "Hours" },
+  { href: "/dashboard/billing", label: "Billing" },
 ] as const;
 
 export default async function DashboardLayout({
