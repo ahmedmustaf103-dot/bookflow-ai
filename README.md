@@ -7,11 +7,12 @@ AI-powered booking and business management for barbers, salons, and other servic
 - Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4
 - Prisma 7 · PostgreSQL · Clerk · Vercel-ready
 
-## Phase 0–2 (current)
+## Phase 0–3 (current)
 
 - Phase 0: app shell, Clerk auth, env validation, logging, CI
 - Phase 1: organizations, locations, resources, services, hours, availability engine
 - Phase 2: public booking (`/book/[slug]`), appointments board, Resend email, Stripe billing
+- Phase 3: clients CRM, analytics, settings, reminder outbox + cron, plan entitlements, audit log
 
 ## Setup
 

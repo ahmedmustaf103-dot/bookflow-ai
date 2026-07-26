@@ -1,4 +1,4 @@
-// BookFlow AI — Phase 0–2
+// BookFlow AI — Phase 0–3
 
 generator client {
   provider = "prisma-client"
@@ -60,6 +60,18 @@ enum SubscriptionStatus {
   UNPAID
 }
 
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum OutboxChannel {
+  EMAIL
+}
+
 model User {
   id          String   @id @default(cuid())
   clerkUserId String   @unique
@@ -78,15 +90,17 @@ model User {
 }
 
 model Organization {
-  id               String           @id @default(cuid())
-  name             String
-  slug             String           @unique
-  clerkOrgId       String?          @unique
-  plan             OrganizationPlan @default(TRIAL)
-  stripeCustomerId String?          @unique
-  timezoneDefault  String           @default("UTC")
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                   String           @id @default(cuid())
+  name                 String
+  slug                 String           @unique
+  clerkOrgId           String?          @unique
+  plan                 OrganizationPlan @default(TRIAL)
+  stripeCustomerId     String?          @unique
+  timezoneDefault      String           @default("UTC")
+  reminderHoursBefore  Int              @default(24)
+  publicBookingEnabled Boolean          @default(true)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   memberships  Membership[]
   locations    Location[]
@@ -95,6 +109,8 @@ model Organization {
   clients      Client[]
   bookings     Booking[]
   subscription Subscription?
+  outbox       NotificationOutbox[]
+  auditLogs    AuditLog[]
 
   @@map("organizations")
 }
@@ -229,15 +245,16 @@ model AvailabilityOverride {
 }
 
 model Client {
-  id              String   @id @default(cuid())
-  organizationId  String
-  email           String?
-  phone           String?
-  name            String
-  notes           String?
-  marketingOptIn  Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String?
+  phone          String?
+  name           String
+  notes          String?
+  tags           String[] @default([])
+  marketingOptIn Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   bookings     Booking[]
@@ -306,4 +323,44 @@ model Subscription {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
+}
+
+model NotificationOutbox {
+  id             String        @id @default(cuid())
+  organizationId String
+  bookingId      String?
+  channel        OutboxChannel @default(EMAIL)
+  kind           String
+  toAddress      String?
+  payload        Json
+  status         OutboxStatus  @default(PENDING)
+  attempts       Int           @default(0)
+  scheduledFor   DateTime
+  lastError      String?
+  sentAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledFor])
+  @@index([organizationId, status])
+  @@index([bookingId])
+  @@map("notification_outbox")
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorId        String?
+  action         String
+  entityType     String?
+  entityId       String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
 }

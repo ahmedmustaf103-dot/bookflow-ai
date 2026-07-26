@@ -6,7 +6,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
-type BookingEmailInput = {
+export type BookingEmailInput = {
   to: string;
   organizationName: string;
   clientName: string;
@@ -49,6 +49,43 @@ export async function sendBookingConfirmation(input: BookingEmailInput) {
     logger.info(
       { to: input.to, subject, bookingId: input.bookingId },
       "RESEND_API_KEY missing — skipping confirmation email",
+    );
+    return { skipped: true as const };
+  }
+
+  await resend.emails.send({
+    from: env.RESEND_FROM_EMAIL,
+    to: input.to,
+    subject,
+    html,
+  });
+
+  return { skipped: false as const };
+}
+
+export async function sendBookingReminder(input: BookingEmailInput) {
+  const resend = getResend();
+  const when = whenLabel(input.startAt, input.timezone);
+  const subject = `Reminder: ${input.serviceName} at ${input.organizationName}`;
+  const html = `
+    <div style="font-family: system-ui, sans-serif; line-height: 1.5;">
+      <h1 style="font-size: 20px;">Appointment reminder</h1>
+      <p>Hi ${input.clientName},</p>
+      <p>This is a friendly reminder about your upcoming appointment.</p>
+      <ul>
+        <li><strong>Service:</strong> ${input.serviceName}</li>
+        <li><strong>With:</strong> ${input.resourceName}</li>
+        <li><strong>When:</strong> ${when}</li>
+        <li><strong>Business:</strong> ${input.organizationName}</li>
+      </ul>
+      <p style="color:#666;font-size:12px;">Booking ID: ${input.bookingId}</p>
+    </div>
+  `;
+
+  if (!resend) {
+    logger.info(
+      { to: input.to, subject, bookingId: input.bookingId },
+      "RESEND_API_KEY missing — skipping reminder email",
     );
     return { skipped: true as const };
   }

@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 
 import { err, ok, okEmpty, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
+import {
+  checkLocationEntitlement,
+  checkResourceEntitlement,
+  writeAuditLog,
+} from "@/server/billing/entitlements";
 import { createOrganization } from "@/server/organizations/create";
 import { db } from "@/server/db";
 import {
@@ -47,12 +52,23 @@ export async function createLocationAction(
 
   if (name.length < 2) return err("Location name is required");
 
+  const entitlement = await checkLocationEntitlement(ctx.organization.id);
+  if (!entitlement.ok) return err(entitlement.error);
+
   const location = await db.location.create({
     data: {
       organizationId: ctx.organization.id,
       name,
       timezone: timezone || ctx.organization.timezoneDefault,
     },
+  });
+
+  await writeAuditLog({
+    organizationId: ctx.organization.id,
+    actorId: ctx.user.id,
+    action: "location.created",
+    entityType: "location",
+    entityId: location.id,
   });
 
   revalidatePath("/dashboard/locations");
@@ -72,6 +88,9 @@ export async function createResourceAction(
 
   if (name.length < 1) return err("Resource name is required");
   if (!locationId) return err("Location is required");
+
+  const entitlement = await checkResourceEntitlement(ctx.organization.id);
+  if (!entitlement.ok) return err(entitlement.error);
 
   const location = await db.location.findFirst({
     where: { id: locationId, organizationId: ctx.organization.id },

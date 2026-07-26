@@ -22,6 +22,7 @@ export const env = createEnv({
     STRIPE_PRICE_STARTER: z.string().min(1).optional(),
     STRIPE_PRICE_GROWTH: z.string().min(1).optional(),
     STRIPE_PRICE_BUSINESS: z.string().min(1).optional(),
+    CRON_SECRET: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

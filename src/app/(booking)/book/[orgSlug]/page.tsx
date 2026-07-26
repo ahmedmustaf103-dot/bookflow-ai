@@ -18,6 +18,18 @@ export default async function PublicBookPage({
 
   if (!org) notFound();
 
+  if (!org.publicBookingEnabled) {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
+        <h1 className="font-display text-3xl tracking-tight">{org.name}</h1>
+        <p className="mt-3 text-[var(--color-ink)]/70">
+          Online booking is temporarily unavailable. Please contact the business
+          directly.
+        </p>
+      </div>
+    );
+  }
+
   const services = await db.service.findMany({
     where: { organizationId: org.id, isActive: true },
     include: {

@@ -15,7 +15,12 @@ import {
   sendBookingCancellation,
   sendBookingConfirmation,
 } from "@/server/notifications/email";
+import {
+  cancelRemindersForBooking,
+  enqueueBookingReminder,
+} from "@/server/notifications/outbox";
 import { getPlanLimits } from "@/server/billing/plans";
+import { writeAuditLog } from "@/server/billing/entitlements";
 
 const ACTIVE: BookingStatus[] = ["PENDING", "CONFIRMED"];
 
@@ -87,6 +92,13 @@ export async function createBooking(input: {
     }
 
     await assertBookingQuota(input.organizationId);
+
+    const org = await db.organization.findUniqueOrThrow({
+      where: { id: input.organizationId },
+    });
+    if (input.source === "PUBLIC" && !org.publicBookingEnabled) {
+      return err("Online booking is currently disabled");
+    }
 
     const service = await db.service.findFirst({
       where: {
@@ -219,9 +231,8 @@ export async function createBooking(input: {
       return created;
     });
 
-    if (booking.client.email) {
-      try {
-        await sendBookingConfirmation({
+    const emailPayload = booking.client.email
+      ? {
           to: booking.client.email,
           organizationName: booking.organization.name,
           clientName: booking.client.name,
@@ -230,11 +241,32 @@ export async function createBooking(input: {
           startAt: booking.startAt,
           timezone: booking.location.timezone,
           bookingId: booking.id,
-        });
+        }
+      : null;
+
+    if (emailPayload) {
+      try {
+        await sendBookingConfirmation(emailPayload);
       } catch (e) {
         logger.error(
           { err: e, bookingId: booking.id },
           "Confirmation email failed",
+        );
+      }
+
+      try {
+        await enqueueBookingReminder({
+          organizationId: booking.organizationId,
+          bookingId: booking.id,
+          startAt: booking.startAt,
+          reminderHoursBefore: booking.organization.reminderHoursBefore,
+          plan: booking.organization.plan,
+          emailPayload,
+        });
+      } catch (e) {
+        logger.error(
+          { err: e, bookingId: booking.id },
+          "Failed to enqueue reminder",
         );
       }
     }
@@ -299,24 +331,40 @@ export async function transitionBooking(input: {
       });
     });
 
-    if (input.to === "CANCELLED" && booking.client.email) {
-      try {
-        await sendBookingCancellation({
-          to: booking.client.email,
-          organizationName: booking.organization.name,
-          clientName: booking.client.name,
-          serviceName: booking.service.name,
-          resourceName: booking.resource.name,
-          startAt: booking.startAt,
-          timezone: booking.location.timezone,
-          bookingId: booking.id,
-        });
-      } catch (e) {
-        logger.error(
-          { err: e, bookingId: booking.id },
-          "Cancellation email failed",
-        );
+    if (input.to === "CANCELLED") {
+      await cancelRemindersForBooking(booking.id);
+      if (booking.client.email) {
+        try {
+          await sendBookingCancellation({
+            to: booking.client.email,
+            organizationName: booking.organization.name,
+            clientName: booking.client.name,
+            serviceName: booking.service.name,
+            resourceName: booking.resource.name,
+            startAt: booking.startAt,
+            timezone: booking.location.timezone,
+            bookingId: booking.id,
+          });
+        } catch (e) {
+          logger.error(
+            { err: e, bookingId: booking.id },
+            "Cancellation email failed",
+          );
+        }
       }
+    }
+
+    try {
+      await writeAuditLog({
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+        action: `booking.${input.to.toLowerCase()}`,
+        entityType: "booking",
+        entityId: booking.id,
+        metadata: { from: booking.status, to: input.to },
+      });
+    } catch (e) {
+      logger.error({ err: e }, "Audit log write failed");
     }
 
     return okEmpty();
