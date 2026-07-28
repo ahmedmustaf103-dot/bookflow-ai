@@ -1,4 +1,4 @@
-// BookFlow AI — Phase 0–3
+// BookFlow AI — Phase 0–4
 
 generator client {
   provider = "prisma-client"
@@ -111,6 +111,7 @@ model Organization {
   subscription Subscription?
   outbox       NotificationOutbox[]
   auditLogs    AuditLog[]
+  aiRuns       AiRun[]
 
   @@map("organizations")
 }
@@ -363,4 +364,25 @@ model AuditLog {
 
   @@index([organizationId, createdAt])
   @@map("audit_logs")
+}
+
+model AiRun {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  feature        String
+  provider       String
+  model          String
+  tokensIn       Int      @default(0)
+  tokensOut      Int      @default(0)
+  costCents      Int      @default(0)
+  inputHash      String?
+  outputPreview  String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, feature])
+  @@map("ai_runs")
 }

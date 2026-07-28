@@ -23,6 +23,11 @@ export const env = createEnv({
     STRIPE_PRICE_GROWTH: z.string().min(1).optional(),
     STRIPE_PRICE_BUSINESS: z.string().min(1).optional(),
     CRON_SECRET: z.string().min(1).optional(),
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
+    AI_PROVIDER: z.enum(["openai", "google"]).default("openai"),
+    AI_MODEL_OPENAI: z.string().default("gpt-4o-mini"),
+    AI_MODEL_GOOGLE: z.string().default("gemini-2.0-flash"),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

@@ -4,17 +4,44 @@ export type PlanLimits = {
   locations: number | null;
   resources: number | null;
   bookingsPerMonth: number | null;
+  /** Monthly AI token budget (in+out). null = unlimited */
+  aiTokensPerMonth: number | null;
 };
 
 const LIMITS: Record<OrganizationPlan, PlanLimits> = {
-  TRIAL: { locations: 1, resources: 2, bookingsPerMonth: 50 },
-  STARTER: { locations: 1, resources: 2, bookingsPerMonth: 300 },
-  GROWTH: { locations: 3, resources: 10, bookingsPerMonth: 2000 },
-  BUSINESS: { locations: null, resources: null, bookingsPerMonth: null },
+  TRIAL: {
+    locations: 1,
+    resources: 2,
+    bookingsPerMonth: 50,
+    aiTokensPerMonth: 25_000,
+  },
+  STARTER: {
+    locations: 1,
+    resources: 2,
+    bookingsPerMonth: 300,
+    aiTokensPerMonth: 0,
+  },
+  GROWTH: {
+    locations: 3,
+    resources: 10,
+    bookingsPerMonth: 2000,
+    aiTokensPerMonth: 50_000,
+  },
+  BUSINESS: {
+    locations: null,
+    resources: null,
+    bookingsPerMonth: null,
+    aiTokensPerMonth: 500_000,
+  },
 };
 
 export function getPlanLimits(plan: OrganizationPlan): PlanLimits {
   return LIMITS[plan];
+}
+
+export function planAllowsAi(plan: OrganizationPlan) {
+  const limit = LIMITS[plan].aiTokensPerMonth;
+  return limit === null || limit > 0;
 }
 
 export function priceIdToPlan(

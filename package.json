@@ -20,10 +20,13 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.26",
+    "@ai-sdk/openai": "^4.0.22",
     "@clerk/nextjs": "^7.5.22",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
     "@t3-oss/env-nextjs": "^0.13.11",
+    "ai": "^7.0.40",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
     "next": "15.5.21",
