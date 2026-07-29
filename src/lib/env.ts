@@ -28,6 +28,15 @@ export const env = createEnv({
     AI_PROVIDER: z.enum(["openai", "google"]).default("openai"),
     AI_MODEL_OPENAI: z.string().default("gpt-4o-mini"),
     AI_MODEL_GOOGLE: z.string().default("gemini-2.0-flash"),
+    /** Upstash Redis REST (slot cache + rate limits). Optional in local dev. */
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+    /** JSON overrides, e.g. {"slot_cache":false,"rate_limit":true} */
+    FEATURE_FLAGS: z.string().optional(),
+    /** pg.Pool max connections (use with a pooler URL in production). */
+    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    /** Optional Sentry DSN — enable SDK via instrumentation when set. */
+    SENTRY_DSN: z.string().url().optional(),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

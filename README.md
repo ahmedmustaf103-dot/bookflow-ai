@@ -5,15 +5,16 @@ AI-powered booking and business management for barbers, salons, and other servic
 ## Stack
 
 - Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4
-- Prisma 7 · PostgreSQL · Clerk · Vercel-ready
+- Prisma 7 · PostgreSQL · Clerk · Upstash Redis (optional) · Vercel-ready
 
-## Phase 0–4 (current)
+## Phase 0–5 (current)
 
 - Phase 0: app shell, Clerk auth, env validation, logging, CI
 - Phase 1: organizations, locations, resources, services, hours, availability engine
 - Phase 2: public booking (`/book/[slug]`), appointments board, Resend email, Stripe billing
 - Phase 3: clients CRM, analytics, settings, reminder outbox + cron, plan entitlements, audit log
 - Phase 4: AI summaries, message drafts, booking assistant with tools, token metering
+- Phase 5: Postgres exclusion constraints, Redis slot cache & rate limits, feature flags, vertical packs, pooling/observability hooks
 
 ## Setup
 
@@ -24,6 +25,7 @@ cp .env.example .env.local
 ```
 
 2. Fill in `DATABASE_URL` and Clerk keys from the [Clerk dashboard](https://dashboard.clerk.com).
+   For production, use a **pooled** connection string (Neon/Supabase pooler or PgBouncer) and tune `DATABASE_POOL_MAX`.
 
 3. Install and generate the Prisma client:
 
@@ -38,13 +40,15 @@ npm run db:generate
 npm run db:migrate
 ```
 
-5. Start the app:
+5. (Optional) Add Upstash Redis REST credentials for shared slot cache and rate limits across instances. Without them, in-memory fallbacks work for local/single-instance.
+
+6. Start the app:
 
 ```bash
 npm run dev
 ```
 
-6. Point a Clerk webhook to `https://<your-host>/api/webhooks/clerk` for events:
+7. Point a Clerk webhook to `https://<your-host>/api/webhooks/clerk` for events:
    - `user.created`
    - `user.updated`
    - `user.deleted`
@@ -62,7 +66,7 @@ npm run dev
 | `npm run format`     | Prettier                  |
 | `npm run db:migrate` | Create/apply migrations   |
 | `npm run db:studio`  | Prisma Studio             |
-| `npm test`           | Availability engine tests |
+| `npm test`           | Unit / eval tests         |
 
 ## Architecture
 

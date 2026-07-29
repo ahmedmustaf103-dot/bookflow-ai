@@ -16,7 +16,8 @@ function createPrismaClient() {
     globalForPrisma.pgPool ??
     new Pool({
       connectionString: env.DATABASE_URL,
-      max: 10,
+      // Prefer a pooled connection string (Neon/Supabase/PgBouncer) in production.
+      max: env.DATABASE_POOL_MAX,
     });
 
   if (process.env.NODE_ENV !== "production") {

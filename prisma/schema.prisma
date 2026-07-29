@@ -1,4 +1,4 @@
-// BookFlow AI — Phase 0–4
+// BookFlow AI — Phase 0–5
 
 generator client {
   provider = "prisma-client"
@@ -99,6 +99,8 @@ model Organization {
   timezoneDefault      String           @default("UTC")
   reminderHoursBefore  Int              @default(24)
   publicBookingEnabled Boolean          @default(true)
+  /// Config key: barber_salon | dental | tutors | gyms (see vertical packs)
+  verticalPack         String           @default("barber_salon")
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 

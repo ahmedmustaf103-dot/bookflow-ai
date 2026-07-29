@@ -5,6 +5,12 @@ import { err, ok, type ActionResult } from "@/lib/result";
 import { slugify, withSlugSuffix } from "@/lib/slug";
 import { requireDbUser } from "@/server/auth/session";
 import { setActiveOrganizationId } from "@/server/tenant/context";
+import { isFeatureEnabled } from "@/server/flags";
+import {
+  getVerticalPack,
+  isVerticalPackId,
+  type VerticalPackId,
+} from "@/server/verticals/packs";
 
 async function allocateUniqueSlug(name: string): Promise<string> {
   const base = slugify(name) || "business";
@@ -31,11 +37,20 @@ async function allocateUniqueSlug(name: string): Promise<string> {
 export async function createOrganization(input: {
   name: string;
   timezone?: string;
+  verticalPack?: string;
 }): Promise<ActionResult<{ organizationId: string; slug: string }>> {
   const name = input.name.trim();
   if (name.length < 2) {
     return err("Business name must be at least 2 characters");
   }
+
+  const packId: VerticalPackId =
+    input.verticalPack && isVerticalPackId(input.verticalPack)
+      ? input.verticalPack
+      : "barber_salon";
+  const pack = getVerticalPack(packId);
+  const seedServices =
+    isFeatureEnabled("vertical_packs") && pack.defaultServices.length > 0;
 
   const user = await requireDbUser();
   const slug = await allocateUniqueSlug(name);
@@ -47,6 +62,7 @@ export async function createOrganization(input: {
         name,
         slug,
         timezoneDefault: timezone,
+        verticalPack: packId,
         memberships: {
           create: {
             userId: user.id,
@@ -56,7 +72,12 @@ export async function createOrganization(input: {
         },
         locations: {
           create: {
-            name: "Main location",
+            name:
+              packId === "dental"
+                ? "Main clinic"
+                : packId === "gyms"
+                  ? "Main gym"
+                  : "Main location",
             timezone,
           },
         },
@@ -65,19 +86,22 @@ export async function createOrganization(input: {
     });
 
     const location = org.locations[0];
+    let resourceId: string | null = null;
+
     if (location) {
-      await tx.resource.create({
+      const resource = await tx.resource.create({
         data: {
           organizationId: org.id,
           locationId: location.id,
           name: user.firstName
             ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
-            : "Primary chair",
+            : pack.terminology.resource === "Staff"
+              ? "Primary chair"
+              : `Primary ${pack.terminology.resource.toLowerCase()}`,
           type: "STAFF",
           userId: user.id,
           rules: {
             create: [
-              // Mon–Fri 09:00–17:00 local
               ...[1, 2, 3, 4, 5].map((weekday) => ({
                 weekday,
                 startMin: 9 * 60,
@@ -87,6 +111,27 @@ export async function createOrganization(input: {
           },
         },
       });
+      resourceId = resource.id;
+    }
+
+    if (seedServices && resourceId) {
+      for (const svc of pack.defaultServices) {
+        const created = await tx.service.create({
+          data: {
+            organizationId: org.id,
+            name: svc.name,
+            durationMin: svc.durationMin,
+            priceCents: svc.priceCents,
+            bufferAfter: svc.bufferAfter ?? 0,
+          },
+        });
+        await tx.serviceResource.create({
+          data: {
+            serviceId: created.id,
+            resourceId,
+          },
+        });
+      }
     }
 
     return org;

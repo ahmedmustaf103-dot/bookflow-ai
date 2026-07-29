@@ -22,8 +22,8 @@ export default async function OnboardingPage() {
           Set up your business
         </h1>
         <p className="mt-3 text-[var(--color-ink)]/70">
-          We&apos;ll create your organization, a main location, and a default
-          staff resource with weekday hours.
+          Pick your business type, then we&apos;ll create your organization, a
+          main location, default hours, and starter services.
         </p>
       </div>
       <OnboardingForm />

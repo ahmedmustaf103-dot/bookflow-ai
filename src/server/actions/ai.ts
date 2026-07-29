@@ -13,6 +13,22 @@ import { getConfiguredProvider } from "@/server/ai/provider";
 import { createBooking } from "@/server/bookings/service";
 import { writeAuditLog } from "@/server/billing/entitlements";
 import { getActiveOrganization } from "@/server/tenant/context";
+import { assertRateLimit } from "@/server/rate-limit";
+
+async function assertAiRateLimit(
+  organizationId: string,
+  userId: string,
+): Promise<ActionResult> {
+  const limited = await assertRateLimit({
+    name: "ai",
+    key: `${organizationId}:${userId}`,
+    limit: 30,
+    windowSec: 60,
+    message: "AI rate limit reached — try again in a minute",
+  });
+  if (!limited.ok) return err(limited.error);
+  return ok(undefined);
+}
 
 export async function clientSummaryAction(
   formData: FormData,
@@ -21,6 +37,9 @@ export async function clientSummaryAction(
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "STAFF");
+
+    const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
+    if (!rl.ok) return rl;
 
     if (!getConfiguredProvider()) {
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
@@ -52,6 +71,9 @@ export async function messageDraftAction(
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "STAFF");
+
+    const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
+    if (!rl.ok) return rl;
 
     if (!getConfiguredProvider()) {
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
@@ -87,6 +109,9 @@ export async function bookingAssistantAction(
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "STAFF");
+
+    const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
+    if (!rl.ok) return rl;
 
     if (!getConfiguredProvider()) {
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");

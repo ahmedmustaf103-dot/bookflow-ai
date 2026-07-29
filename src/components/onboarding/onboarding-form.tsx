@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { createOrganizationAction } from "@/server/actions/tenant";
+import { listVerticalPacks } from "@/server/verticals/packs";
 
 const TIMEZONES = [
   "UTC",
@@ -17,6 +18,8 @@ const TIMEZONES = [
   "Europe/Paris",
   "Australia/Sydney",
 ];
+
+const PACKS = listVerticalPacks();
 
 export function OnboardingForm() {
   const router = useRouter();
@@ -51,6 +54,32 @@ export function OnboardingForm() {
           className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 outline-none focus:border-[var(--color-accent)]"
         />
       </label>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium">Business type</legend>
+        <div className="flex flex-col gap-2">
+          {PACKS.map((pack, index) => (
+            <label
+              key={pack.id}
+              className="flex cursor-pointer gap-3 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm has-[:checked]:border-[var(--color-accent)]"
+            >
+              <input
+                type="radio"
+                name="verticalPack"
+                value={pack.id}
+                defaultChecked={index === 0}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">{pack.label}</span>
+                <span className="mt-0.5 block text-[var(--color-ink)]/60">
+                  {pack.description}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium">Timezone</span>

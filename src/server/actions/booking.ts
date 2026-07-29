@@ -11,7 +11,9 @@ import {
   createCheckoutSession,
 } from "@/server/billing/checkout";
 import { env } from "@/lib/env";
+import { getClientIp } from "@/lib/request-ip";
 import { createBooking, transitionBooking } from "@/server/bookings/service";
+import { assertRateLimit } from "@/server/rate-limit";
 import { getActiveOrganization } from "@/server/tenant/context";
 
 export async function createPublicBookingAction(
@@ -32,6 +34,16 @@ export async function createPublicBookingAction(
   }
   if (name.length < 2) return err("Please enter your name");
   if (!email || !email.includes("@")) return err("Please enter a valid email");
+
+  const ip = await getClientIp();
+  const limited = await assertRateLimit({
+    name: "public_booking",
+    key: `${organizationId}:${ip}`,
+    limit: 20,
+    windowSec: 60,
+    message: "Too many booking attempts — please wait a minute",
+  });
+  if (!limited.ok) return err(limited.error);
 
   const startAt = new Date(startAtRaw);
   if (Number.isNaN(startAt.getTime())) return err("Invalid start time");

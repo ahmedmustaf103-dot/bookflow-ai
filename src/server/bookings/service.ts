@@ -21,6 +21,9 @@ import {
 } from "@/server/notifications/outbox";
 import { getPlanLimits } from "@/server/billing/plans";
 import { writeAuditLog } from "@/server/billing/entitlements";
+import { invalidateSlotsForResource } from "@/server/cache/slots";
+import { captureException } from "@/lib/observability";
+import { isBookingOverlapError } from "@/server/bookings/overlap";
 
 const ACTIVE: BookingStatus[] = ["PENDING", "CONFIRMED"];
 
@@ -231,6 +234,12 @@ export async function createBooking(input: {
       return created;
     });
 
+    try {
+      await invalidateSlotsForResource(input.resourceId);
+    } catch (e) {
+      logger.warn({ err: e }, "slot cache invalidate after create failed");
+    }
+
     const emailPayload = booking.client.email
       ? {
           to: booking.client.email,
@@ -273,9 +282,10 @@ export async function createBooking(input: {
 
     return ok({ bookingId: booking.id });
   } catch (e) {
-    if (e instanceof Error && e.message === "SLOT_TAKEN") {
+    if (isBookingOverlapError(e)) {
       return err("That time was just booked — pick another slot");
     }
+    captureException(e, { action: "createBooking" });
     logger.error({ err: e }, "createBooking failed");
     return err(e instanceof Error ? e.message : "Unable to create booking");
   }
@@ -332,6 +342,11 @@ export async function transitionBooking(input: {
     });
 
     if (input.to === "CANCELLED") {
+      try {
+        await invalidateSlotsForResource(booking.resourceId);
+      } catch (e) {
+        logger.warn({ err: e }, "slot cache invalidate after cancel failed");
+      }
       await cancelRemindersForBooking(booking.id);
       if (booking.client.email) {
         try {

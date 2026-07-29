@@ -5,6 +5,10 @@ import { toZonedTime } from "date-fns-tz";
 
 import { db } from "@/server/db";
 import { generateSlots, type Slot } from "@/server/availability/engine";
+import {
+  getCachedSlots,
+  setCachedSlots,
+} from "@/server/cache/slots";
 
 const ACTIVE_BOOKING_STATUSES = ["PENDING", "CONFIRMED"] as const;
 
@@ -38,7 +42,6 @@ export async function getSlotsForServiceResource(input: {
     },
   });
 
-  // Allow preview even if not linked yet when called from dashboard tooling
   const resource = await db.resource.findFirst({
     where: {
       id: input.resourceId,
@@ -56,9 +59,7 @@ export async function getSlotsForServiceResource(input: {
     throw new Error("Resource not found");
   }
 
-  if (!link && service) {
-    // still allow if org admin preview — caller should enforce policy
-  }
+  void link;
 
   const timezone = resource.location.timezone;
   const now = new Date();
@@ -67,6 +68,17 @@ export async function getSlotsForServiceResource(input: {
   const toDate =
     input.toDate ??
     format(addDays(new Date(`${fromDate}T12:00:00Z`), 6), "yyyy-MM-dd");
+
+  const cacheInput = {
+    organizationId: input.organizationId,
+    serviceId: input.serviceId,
+    resourceId: input.resourceId,
+    fromDate,
+    toDate,
+  };
+
+  const cached = await getCachedSlots(cacheInput);
+  if (cached) return cached;
 
   const fromUtc = new Date(`${fromDate}T00:00:00.000Z`);
   const toUtc = new Date(`${toDate}T23:59:59.999Z`);
@@ -81,7 +93,7 @@ export async function getSlotsForServiceResource(input: {
     select: { startAt: true, endAt: true },
   });
 
-  return generateSlots({
+  const slots = generateSlots({
     timezone,
     fromDate,
     toDate,
@@ -94,4 +106,7 @@ export async function getSlotsForServiceResource(input: {
     busy: bookings.map((b) => ({ start: b.startAt, end: b.endAt })),
     now,
   });
+
+  await setCachedSlots(cacheInput, slots);
+  return slots;
 }

@@ -9,6 +9,7 @@ import {
   checkResourceEntitlement,
   writeAuditLog,
 } from "@/server/billing/entitlements";
+import { invalidateSlotsForResource } from "@/server/cache/slots";
 import { createOrganization } from "@/server/organizations/create";
 import { db } from "@/server/db";
 import {
@@ -19,8 +20,9 @@ import {
 export async function createOrganizationAction(formData: FormData) {
   const name = String(formData.get("name") ?? "");
   const timezone = String(formData.get("timezone") ?? "UTC");
+  const verticalPack = String(formData.get("verticalPack") ?? "barber_salon");
 
-  const result = await createOrganization({ name, timezone });
+  const result = await createOrganization({ name, timezone, verticalPack });
   if (result.ok) {
     revalidatePath("/dashboard");
   }
@@ -211,6 +213,8 @@ export async function updateAvailabilityRulesAction(
       });
     }
   });
+
+  await invalidateSlotsForResource(resourceId);
 
   revalidatePath("/dashboard/availability");
   return okEmpty();
