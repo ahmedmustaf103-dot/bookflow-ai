@@ -16,10 +16,7 @@ export function getRequestContext(): RequestContext | undefined {
   return storage.getStore();
 }
 
-export function runWithRequestContext<T>(
-  ctx: RequestContext,
-  fn: () => T,
-): T {
+export function runWithRequestContext<T>(ctx: RequestContext, fn: () => T): T {
   if (!isFeatureEnabled("request_tracing")) {
     return fn();
   }
@@ -30,28 +27,38 @@ export function createRequestId(): string {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** Structured error log with request/tenant context when available. */
+/** Structured error log + Sentry when SENTRY_DSN is configured. */
 export function captureException(
   error: unknown,
   extra?: Record<string, unknown>,
 ): void {
   const ctx = getRequestContext();
-  logger.error(
-    {
-      err: error,
-      requestId: ctx?.requestId,
-      organizationId: ctx?.organizationId,
-      userId: ctx?.userId,
-      path: ctx?.path,
-      ...extra,
-      sentryDsnConfigured: Boolean(process.env.SENTRY_DSN),
-    },
-    "captured exception",
-  );
+  const bindings = {
+    requestId: ctx?.requestId,
+    organizationId: ctx?.organizationId,
+    userId: ctx?.userId,
+    path: ctx?.path,
+    ...extra,
+  };
 
-  // Hook point: when SENTRY_DSN is set, wire @sentry/nextjs in instrumentation.ts
-  if (process.env.SENTRY_DSN && typeof process.env.SENTRY_DSN === "string") {
-    // Intentionally no SDK import yet — keep build light; logs carry context for Axiom/Vercel.
+  logger.error({ err: error, ...bindings }, "captured exception");
+
+  if (process.env.SENTRY_DSN) {
+    void import("@sentry/nextjs")
+      .then((Sentry) => {
+        Sentry.withScope((scope) => {
+          if (ctx?.requestId) scope.setTag("requestId", ctx.requestId);
+          if (ctx?.organizationId) {
+            scope.setTag("organizationId", ctx.organizationId);
+          }
+          if (ctx?.userId) scope.setUser({ id: ctx.userId });
+          if (extra) scope.setExtras(extra);
+          Sentry.captureException(error);
+        });
+      })
+      .catch(() => {
+        // Sentry optional at runtime
+      });
   }
 }
 

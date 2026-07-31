@@ -262,22 +262,28 @@ export async function createBooking(input: {
           "Confirmation email failed",
         );
       }
+    }
 
-      try {
-        await enqueueBookingReminder({
-          organizationId: booking.organizationId,
-          bookingId: booking.id,
-          startAt: booking.startAt,
-          reminderHoursBefore: booking.organization.reminderHoursBefore,
-          plan: booking.organization.plan,
-          emailPayload,
-        });
-      } catch (e) {
-        logger.error(
-          { err: e, bookingId: booking.id },
-          "Failed to enqueue reminder",
-        );
-      }
+    try {
+      await enqueueBookingReminder({
+        organizationId: booking.organizationId,
+        bookingId: booking.id,
+        startAt: booking.startAt,
+        reminderHoursBefore: booking.organization.reminderHoursBefore,
+        plan: booking.organization.plan,
+        organizationName: booking.organization.name,
+        clientName: booking.client.name,
+        serviceName: booking.service.name,
+        resourceName: booking.resource.name,
+        timezone: booking.location.timezone,
+        email: booking.client.email,
+        phone: booking.client.phone,
+      });
+    } catch (e) {
+      logger.error(
+        { err: e, bookingId: booking.id },
+        "Failed to enqueue reminder",
+      );
     }
 
     return ok({ bookingId: booking.id });

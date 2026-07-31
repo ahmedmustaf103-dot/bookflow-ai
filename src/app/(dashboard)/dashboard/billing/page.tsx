@@ -32,13 +32,13 @@ export default async function BillingPage({
       plan: "GROWTH",
       label: "Growth",
       priceId: env.STRIPE_PRICE_GROWTH,
-      blurb: "3 locations · 10 staff · 2,000 bookings/mo",
+      blurb: "3 locations · 10 staff · SMS reminders · AI credits",
     },
     {
       plan: "BUSINESS",
       label: "Business",
       priceId: env.STRIPE_PRICE_BUSINESS,
-      blurb: "Unlimited locations, staff, bookings",
+      blurb: "Unlimited · SMS reminders · higher AI budget",
     },
   ] as const;
 

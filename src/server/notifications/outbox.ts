@@ -2,12 +2,21 @@ import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
-import { planAllowsReminders } from "@/server/billing/entitlements";
+import {
+  planAllowsReminders,
+  planAllowsSms,
+} from "@/server/billing/entitlements";
 import {
   sendBookingReminder,
   type BookingEmailInput,
 } from "@/server/notifications/email";
+import {
+  normalizePhone,
+  sendBookingReminderSms,
+  type BookingSmsInput,
+} from "@/server/notifications/sms";
 import { logger } from "@/lib/logger";
+import { captureException } from "@/lib/observability";
 
 export async function enqueueBookingReminder(input: {
   organizationId: string;
@@ -15,33 +24,60 @@ export async function enqueueBookingReminder(input: {
   startAt: Date;
   reminderHoursBefore: number;
   plan: Parameters<typeof planAllowsReminders>[0];
-  emailPayload: BookingEmailInput & { to: string };
+  organizationName: string;
+  clientName: string;
+  serviceName: string;
+  resourceName: string;
+  timezone: string;
+  email?: string | null;
+  phone?: string | null;
 }) {
-  if (!planAllowsReminders(input.plan)) {
-    return;
-  }
-  if (!input.emailPayload.to) return;
-
   const scheduledFor = new Date(
     input.startAt.getTime() - input.reminderHoursBefore * 60 * 60 * 1000,
   );
+  if (scheduledFor.getTime() <= Date.now()) return;
 
-  // Don't enqueue if already in the past (or too soon) — skip silently
-  if (scheduledFor.getTime() <= Date.now()) {
-    return;
-  }
+  const base = {
+    organizationName: input.organizationName,
+    clientName: input.clientName,
+    serviceName: input.serviceName,
+    resourceName: input.resourceName,
+    startAt: input.startAt,
+    timezone: input.timezone,
+    bookingId: input.bookingId,
+  };
 
-  await db.notificationOutbox.create({
-    data: {
+  const rows: Prisma.NotificationOutboxCreateManyInput[] = [];
+
+  if (planAllowsReminders(input.plan) && input.email) {
+    const emailPayload: BookingEmailInput = { ...base, to: input.email };
+    rows.push({
       organizationId: input.organizationId,
       bookingId: input.bookingId,
       channel: "EMAIL",
       kind: "BOOKING_REMINDER",
-      toAddress: input.emailPayload.to,
+      toAddress: input.email,
       scheduledFor,
-      payload: input.emailPayload as unknown as Prisma.InputJsonValue,
-    },
-  });
+      payload: emailPayload as unknown as Prisma.InputJsonValue,
+    });
+  }
+
+  const phone = normalizePhone(input.phone);
+  if (planAllowsSms(input.plan) && phone) {
+    const smsPayload: BookingSmsInput = { ...base, to: phone };
+    rows.push({
+      organizationId: input.organizationId,
+      bookingId: input.bookingId,
+      channel: "SMS",
+      kind: "BOOKING_REMINDER",
+      toAddress: phone,
+      scheduledFor,
+      payload: smsPayload as unknown as Prisma.InputJsonValue,
+    });
+  }
+
+  if (rows.length === 0) return;
+  await db.notificationOutbox.createMany({ data: rows });
 }
 
 export async function cancelRemindersForBooking(bookingId: string) {
@@ -80,8 +116,13 @@ export async function processDueOutbox(limit = 50) {
       if (item.kind === "BOOKING_REMINDER" && item.channel === "EMAIL") {
         const payload = item.payload as unknown as BookingEmailInput;
         await sendBookingReminder(payload);
+      } else if (item.kind === "BOOKING_REMINDER" && item.channel === "SMS") {
+        const payload = item.payload as unknown as BookingSmsInput;
+        await sendBookingReminderSms(payload);
       } else {
-        throw new Error(`Unsupported outbox kind: ${item.kind}`);
+        throw new Error(
+          `Unsupported outbox kind: ${item.kind}/${item.channel}`,
+        );
       }
 
       await db.notificationOutbox.update({
@@ -91,13 +132,13 @@ export async function processDueOutbox(limit = 50) {
       sent += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
+      captureException(error, { outboxId: item.id, kind: item.kind });
       logger.error({ err: error, outboxId: item.id }, "Outbox send failed");
       await db.notificationOutbox.update({
         where: { id: item.id },
         data: {
           status: item.attempts + 1 >= 5 ? "FAILED" : "PENDING",
           lastError: message.slice(0, 500),
-          // retry in 15 minutes
           scheduledFor:
             item.attempts + 1 >= 5
               ? item.scheduledFor

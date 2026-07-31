@@ -16,6 +16,10 @@ AI-powered booking and business management for barbers, salons, and other servic
 - Phase 4: AI summaries, message drafts, booking assistant with tools, token metering
 - Phase 5: Postgres exclusion constraints, Redis slot cache & rate limits, feature flags, vertical packs, pooling/observability hooks
 
+## Production
+
+See [GO_LIVE.md](./GO_LIVE.md) for the deploy checklist (Clerk, Stripe, Resend, Twilio, Sentry, Vercel cron).
+
 ## Setup
 
 1. Copy env file:
@@ -67,6 +71,7 @@ npm run dev
 | `npm run db:migrate` | Create/apply migrations   |
 | `npm run db:studio`  | Prisma Studio             |
 | `npm test`           | Unit / eval tests         |
+| `npm run test:e2e`   | Playwright smoke tests    |
 
 ## Architecture
 

@@ -20,7 +20,7 @@ export default function HomePage() {
         </ButtonLink>
       </div>
       <p className="text-sm text-[var(--color-ink)]/50">
-        Phase 0 foundation — auth, database, and app shell.
+        Multi-tenant booking, billing, reminders, and AI — ready to deploy.
       </p>
     </section>
   );

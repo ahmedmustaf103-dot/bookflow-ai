@@ -79,8 +79,8 @@ export default async function SettingsPage() {
             />
             <span className="text-xs text-[var(--color-ink)]/50">
               {planAllowsReminders(org.plan)
-                ? "Email reminders enqueue on new bookings (Growth/Business/Trial)."
-                : "Reminders require Growth or Business — Trial still gets them for testing."}
+                ? "Email reminders enqueue on new bookings (Growth/Business/Trial). SMS reminders require Growth/Business plus Twilio."
+                : "Email reminders require Growth or Business (Trial still gets email for testing)."}
             </span>
           </label>
           <label className="flex items-center gap-2 text-sm">

@@ -4,6 +4,11 @@ import type { OrganizationPlan, Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { getPlanLimits, type PlanLimits } from "@/server/billing/plans";
 
+export {
+  planAllowsReminders,
+  planAllowsSms,
+} from "@/server/billing/plans";
+
 export type EntitlementCheck =
   | { ok: true; limits: PlanLimits; plan: OrganizationPlan }
   | { ok: false; error: string; limits: PlanLimits; plan: OrganizationPlan };
@@ -54,10 +59,6 @@ export async function checkResourceEntitlement(
     };
   }
   return { ok: true, limits, plan: org.plan };
-}
-
-export function planAllowsReminders(plan: OrganizationPlan) {
-  return plan === "GROWTH" || plan === "BUSINESS" || plan === "TRIAL";
 }
 
 export async function writeAuditLog(input: {
