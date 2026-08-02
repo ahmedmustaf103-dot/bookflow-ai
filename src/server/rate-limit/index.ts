@@ -2,8 +2,9 @@ import "server-only";
 
 import { Ratelimit } from "@upstash/ratelimit";
 
+import { logger } from "@/lib/logger";
 import { isFeatureEnabled } from "@/server/flags";
-import { getRedis } from "@/server/cache/redis";
+import { getRedis, isRedisConfigured } from "@/server/cache/redis";
 
 type MemoryBucket = { count: number; resetAt: number };
 
@@ -52,8 +53,9 @@ export type RateLimitResult = {
 };
 
 /**
- * Rate-limit a key. No-ops (always allows) when the rate_limit flag is off.
- * Uses Upstash when configured; otherwise process-local memory (dev / single instance).
+ * Rate-limit a key.
+ * Production requires Upstash Redis (fail closed) so limits work across instances.
+ * Local/dev may use in-memory fallback.
  */
 export async function rateLimit(input: {
   name: string;
@@ -73,6 +75,14 @@ export async function rateLimit(input: {
     return { success: result.success, remaining: result.remaining };
   }
 
+  if (process.env.NODE_ENV === "production") {
+    logger.error(
+      { key: fullKey, redisConfigured: isRedisConfigured() },
+      "Rate limit denied: Upstash Redis required in production",
+    );
+    return { success: false, remaining: 0 };
+  }
+
   return memoryLimit(fullKey, input.limit, input.windowSec * 1000);
 }
 
@@ -87,6 +97,10 @@ export async function assertRateLimit(input: {
   if (result.success) return { ok: true };
   return {
     ok: false,
-    error: input.message ?? "Too many requests — try again shortly",
+    error:
+      input.message ??
+      (process.env.NODE_ENV === "production" && !isRedisConfigured()
+        ? "Booking temporarily unavailable — try again shortly"
+        : "Too many requests — try again shortly"),
   };
 }

@@ -3,7 +3,7 @@ import { env } from "@/lib/env";
 import { updateOrganizationSettingsAction } from "@/server/actions/ops";
 import { planAllowsReminders } from "@/server/billing/entitlements";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 const TIMEZONES = [
   "UTC",
@@ -18,7 +18,7 @@ const TIMEZONES = [
 ];
 
 export default async function SettingsPage() {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("ADMIN");
   const org = ctx.organization;
   const bookUrl = `${env.NEXT_PUBLIC_APP_URL}/book/${org.slug}`;
 
@@ -42,6 +42,7 @@ export default async function SettingsPage() {
         <ActionForm
           action={updateOrganizationSettingsAction}
           submitLabel="Save settings"
+          resetOnSuccess={false}
           className="mt-4 flex flex-col gap-3"
         >
           <label className="flex flex-col gap-1 text-sm">

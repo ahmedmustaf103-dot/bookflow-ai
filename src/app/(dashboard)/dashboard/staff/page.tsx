@@ -1,10 +1,10 @@
 import { ActionForm } from "@/components/forms/action-form";
 import { createResourceAction } from "@/server/actions/tenant";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function StaffPage() {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("ADMIN");
 
   const [resources, locations] = await Promise.all([
     db.resource.findMany({

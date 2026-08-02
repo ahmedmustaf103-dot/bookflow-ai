@@ -18,6 +18,8 @@ import {
 import { logger } from "@/lib/logger";
 import { captureException } from "@/lib/observability";
 
+const STALE_PROCESSING_MS = 15 * 60 * 1000;
+
 export async function enqueueBookingReminder(input: {
   organizationId: string;
   bookingId: string;
@@ -91,7 +93,20 @@ export async function cancelRemindersForBooking(bookingId: string) {
   });
 }
 
+async function reclaimStaleProcessing() {
+  const cutoff = new Date(Date.now() - STALE_PROCESSING_MS);
+  await db.notificationOutbox.updateMany({
+    where: {
+      status: "PROCESSING",
+      updatedAt: { lt: cutoff },
+    },
+    data: { status: "PENDING" },
+  });
+}
+
 export async function processDueOutbox(limit = 50) {
+  await reclaimStaleProcessing();
+
   const now = new Date();
   const due = await db.notificationOutbox.findMany({
     where: {
@@ -113,16 +128,31 @@ export async function processDueOutbox(limit = 50) {
     if (claimed.count === 0) continue;
 
     try {
+      let skipped = false;
       if (item.kind === "BOOKING_REMINDER" && item.channel === "EMAIL") {
         const payload = item.payload as unknown as BookingEmailInput;
-        await sendBookingReminder(payload);
+        const result = await sendBookingReminder(payload);
+        skipped = Boolean(result.skipped);
       } else if (item.kind === "BOOKING_REMINDER" && item.channel === "SMS") {
         const payload = item.payload as unknown as BookingSmsInput;
-        await sendBookingReminderSms(payload);
+        const result = await sendBookingReminderSms(payload);
+        skipped = Boolean(result.skipped);
       } else {
         throw new Error(
           `Unsupported outbox kind: ${item.kind}/${item.channel}`,
         );
+      }
+
+      if (skipped) {
+        await db.notificationOutbox.update({
+          where: { id: item.id },
+          data: {
+            status: "FAILED",
+            lastError: "Provider not configured — message was not delivered",
+          },
+        });
+        failed += 1;
+        continue;
       }
 
       await db.notificationOutbox.update({

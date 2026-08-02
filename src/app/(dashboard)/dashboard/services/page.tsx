@@ -1,7 +1,7 @@
 import { ActionForm } from "@/components/forms/action-form";
 import { createServiceAction } from "@/server/actions/tenant";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 function formatMoney(cents: number, currency: string) {
   return new Intl.NumberFormat("en-US", {
@@ -11,7 +11,7 @@ function formatMoney(cents: number, currency: string) {
 }
 
 export default async function ServicesPage() {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("ADMIN");
 
   const [services, resources] = await Promise.all([
     db.service.findMany({

@@ -5,14 +5,14 @@ import { formatInTimeZone } from "date-fns-tz";
 import { ActionForm } from "@/components/forms/action-form";
 import { updateClientAction } from "@/server/actions/ops";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function ClientDetailPage({
   params,
 }: {
   params: Promise<{ clientId: string }>;
 }) {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("STAFF");
   const { clientId } = await params;
 
   const client = await db.client.findFirst({
@@ -67,6 +67,7 @@ export default async function ClientDetailPage({
         <ActionForm
           action={updateClientAction}
           submitLabel="Save client"
+          resetOnSuccess={false}
           className="mt-4 flex flex-col gap-3"
         >
           <input type="hidden" name="clientId" value={client.id} />

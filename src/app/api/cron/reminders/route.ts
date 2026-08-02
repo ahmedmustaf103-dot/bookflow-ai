@@ -7,18 +7,17 @@ import { processDueOutbox } from "@/server/notifications/outbox";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+export async function GET() {
   const headerStore = await headers();
   const authHeader = headerStore.get("authorization");
-  const url = new URL(request.url);
-  const querySecret = url.searchParams.get("secret");
 
   const expected = env.CRON_SECRET;
   if (expected) {
     const bearer = authHeader?.startsWith("Bearer ")
       ? authHeader.slice("Bearer ".length)
       : null;
-    if (bearer !== expected && querySecret !== expected) {
+    // Bearer only — never accept ?secret= (leaks via logs/CDN).
+    if (bearer !== expected) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   } else if (env.NODE_ENV === "production") {

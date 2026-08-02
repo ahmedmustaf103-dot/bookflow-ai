@@ -5,7 +5,7 @@ import {
 import { getStripe } from "@/server/billing/stripe";
 import { env } from "@/lib/env";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 import { Button } from "@/components/ui/button";
 
 export default async function BillingPage({
@@ -13,7 +13,7 @@ export default async function BillingPage({
 }: {
   searchParams: Promise<{ success?: string; canceled?: string }>;
 }) {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("ADMIN");
   const params = await searchParams;
   const stripeReady = Boolean(getStripe());
 

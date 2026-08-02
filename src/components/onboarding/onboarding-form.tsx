@@ -34,13 +34,19 @@ export function OnboardingForm() {
         const formData = new FormData(e.currentTarget);
         setError(null);
         startTransition(async () => {
-          const result = await createOrganizationAction(formData);
-          if (!result.ok) {
-            setError(result.error);
-            return;
+          try {
+            const result = await createOrganizationAction(formData);
+            if (!result.ok) {
+              setError(result.error);
+              return;
+            }
+            router.push("/dashboard");
+            router.refresh();
+          } catch {
+            setError(
+              "Could not reach the server. Refresh and make sure the app is running on the correct localhost port.",
+            );
           }
-          router.push("/dashboard");
-          router.refresh();
         });
       }}
     >

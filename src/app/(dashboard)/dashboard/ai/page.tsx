@@ -2,10 +2,10 @@ import { AiWorkbench } from "./ai-workbench";
 import { getConfiguredProvider } from "@/server/ai/provider";
 import { getPlanLimits, planAllowsAi } from "@/server/billing/plans";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function AiPage() {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("STAFF");
   const limits = getPlanLimits(ctx.organization.plan);
 
   const start = new Date();

@@ -4,7 +4,7 @@ import { ActionForm } from "@/components/forms/action-form";
 import { updateAvailabilityRulesAction } from "@/server/actions/tenant";
 import { getSlotsForServiceResource } from "@/server/availability/slots";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 const DAYS = [
   "Sunday",
@@ -27,7 +27,7 @@ export default async function AvailabilityPage({
 }: {
   searchParams: Promise<{ resourceId?: string; serviceId?: string }>;
 }) {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("ADMIN");
   const params = await searchParams;
 
   const resources = await db.resource.findMany({
@@ -64,6 +64,7 @@ export default async function AvailabilityPage({
         organizationId: ctx.organization.id,
         serviceId: service.id,
         resourceId: resource.id,
+        requireLink: false,
       });
     } catch (e) {
       previewError = e instanceof Error ? e.message : "Failed to load slots";
@@ -106,6 +107,7 @@ export default async function AvailabilityPage({
             <ActionForm
               action={updateAvailabilityRulesAction}
               submitLabel="Save hours"
+              resetOnSuccess={false}
               className="flex max-w-xl flex-col gap-3"
             >
               <input type="hidden" name="resourceId" value={resource.id} />

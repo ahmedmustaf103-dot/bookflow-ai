@@ -11,11 +11,30 @@ const globalForPrisma = globalThis as unknown as {
   pgPool: Pool | undefined;
 };
 
+function connectionString() {
+  // node-pg treats sslmode=require as verify-full today and warns; prefer explicit.
+  // channel_binding=require is unsupported by many node drivers.
+  try {
+    const url = new URL(env.DATABASE_URL);
+    url.searchParams.delete("channel_binding");
+    if (
+      url.searchParams.get("sslmode") === "require" ||
+      url.searchParams.get("sslmode") === "prefer" ||
+      url.searchParams.get("sslmode") === "verify-ca"
+    ) {
+      url.searchParams.set("sslmode", "verify-full");
+    }
+    return url.toString();
+  } catch {
+    return env.DATABASE_URL;
+  }
+}
+
 function createPrismaClient() {
   const pool =
     globalForPrisma.pgPool ??
     new Pool({
-      connectionString: env.DATABASE_URL,
+      connectionString: connectionString(),
       // Prefer a pooled connection string (Neon/Supabase/PgBouncer) in production.
       max: env.DATABASE_POOL_MAX,
     });

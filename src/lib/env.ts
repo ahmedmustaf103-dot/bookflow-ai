@@ -33,8 +33,8 @@ export const env = createEnv({
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
     /** JSON overrides, e.g. {"slot_cache":false,"rate_limit":true} */
     FEATURE_FLAGS: z.string().optional(),
-    /** pg.Pool max connections (use with a pooler URL in production). */
-    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    /** pg.Pool max per instance. Keep 1–2 on Vercel serverless + pooler URL. */
+    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(2),
     /** Optional Sentry DSN — enables @sentry/nextjs when set. */
     SENTRY_DSN: z.string().url().optional(),
     TWILIO_ACCOUNT_SID: z.string().min(1).optional(),

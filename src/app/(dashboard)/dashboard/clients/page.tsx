@@ -3,14 +3,14 @@ import Link from "next/link";
 import { ActionForm } from "@/components/forms/action-form";
 import { createManualClientAction } from "@/server/actions/ops";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function ClientsPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("STAFF");
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
 

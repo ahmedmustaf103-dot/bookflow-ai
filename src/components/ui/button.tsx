@@ -21,7 +21,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-50 ${variantClasses[variant]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-opacity focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none disabled:opacity-50 ${variantClasses[variant]} ${className}`}
       {...props}
     />
   );
@@ -38,7 +38,7 @@ export function ButtonLink({
 }: ButtonLinkProps) {
   return (
     <Link
-      className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-opacity ${variantClasses[variant]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-opacity focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none ${variantClasses[variant]} ${className}`}
       {...props}
     />
   );

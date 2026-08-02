@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { createPublicBookingAction } from "@/server/actions/booking";
+import { fetchPublicSlotsAction } from "@/server/actions/public-slots";
 
 type Service = {
   id: string;
@@ -27,7 +28,7 @@ type Slot = {
 };
 
 function money(cents: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency,
   }).format(cents / 100);
@@ -38,19 +39,18 @@ export function PublicBookingWizard({
   organizationName,
   services,
   resources,
-  slotsByKey,
 }: {
   organizationId: string;
   organizationName: string;
   services: Service[];
   resources: Resource[];
-  /** key = `${serviceId}:${resourceId}` */
-  slotsByKey: Record<string, Slot[]>;
 }) {
   const router = useRouter();
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [resourceId, setResourceId] = useState("");
   const [startAt, setStartAt] = useState("");
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [doneId, setDoneId] = useState<string | null>(null);
@@ -66,7 +66,33 @@ export function PublicBookingWizard({
     filteredResources[0]?.id ??
     "";
 
-  const slots = slotsByKey[`${serviceId}:${activeResourceId}`] ?? [];
+  useEffect(() => {
+    if (!serviceId || !activeResourceId) {
+      setSlots([]);
+      return;
+    }
+    let cancelled = false;
+    setSlotsLoading(true);
+    setStartAt("");
+    void fetchPublicSlotsAction({
+      organizationId,
+      serviceId,
+      resourceId: activeResourceId,
+    }).then((result) => {
+      if (cancelled) return;
+      setSlotsLoading(false);
+      if (!result.ok) {
+        setSlots([]);
+        setError(result.error);
+        return;
+      }
+      setError(null);
+      setSlots(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId, serviceId, activeResourceId]);
 
   if (doneId) {
     return (
@@ -98,17 +124,23 @@ export function PublicBookingWizard({
         <h2 className="text-sm font-semibold tracking-wide text-[var(--color-accent)] uppercase">
           1. Service
         </h2>
-        <div className="mt-3 grid gap-2">
+        <div
+          className="mt-3 grid gap-2"
+          role="radiogroup"
+          aria-label="Service"
+        >
           {services.map((s) => (
             <button
               key={s.id}
               type="button"
+              role="radio"
+              aria-checked={s.id === serviceId}
               onClick={() => {
                 setServiceId(s.id);
                 setResourceId("");
                 setStartAt("");
               }}
-              className={`rounded-lg border px-4 py-3 text-left ${
+              className={`rounded-lg border px-4 py-3 text-left focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none ${
                 s.id === serviceId
                   ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
                   : "border-[var(--color-border)] bg-white/60"
@@ -120,7 +152,7 @@ export function PublicBookingWizard({
                   {money(s.priceCents, s.currency)}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-[var(--color-ink)]/60">
+              <p className="mt-1 text-sm text-[var(--color-ink)]/65">
                 {s.durationMin} min
                 {s.description ? ` · ${s.description}` : ""}
               </p>
@@ -134,20 +166,26 @@ export function PublicBookingWizard({
           2. Who
         </h2>
         {filteredResources.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--color-ink)]/60">
+          <p className="mt-3 text-sm text-[var(--color-ink)]/65">
             No staff assigned to this service yet.
           </p>
         ) : (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div
+            className="mt-3 flex flex-wrap gap-2"
+            role="radiogroup"
+            aria-label="Staff"
+          >
             {filteredResources.map((r) => (
               <button
                 key={r.id}
                 type="button"
+                role="radio"
+                aria-checked={r.id === activeResourceId}
                 onClick={() => {
                   setResourceId(r.id);
                   setStartAt("");
                 }}
-                className={`rounded-md px-3 py-2 text-sm ${
+                className={`rounded-md px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none ${
                   r.id === activeResourceId
                     ? "bg-[var(--color-ink)] text-[var(--color-paper)]"
                     : "border border-[var(--color-border)]"
@@ -164,18 +202,26 @@ export function PublicBookingWizard({
         <h2 className="text-sm font-semibold tracking-wide text-[var(--color-accent)] uppercase">
           3. Time
         </h2>
-        {slots.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--color-ink)]/60">
+        {slotsLoading ? (
+          <p className="mt-3 text-sm text-[var(--color-ink)]/65">Loading times…</p>
+        ) : slots.length === 0 ? (
+          <p className="mt-3 text-sm text-[var(--color-ink)]/65">
             No open slots in the next week.
           </p>
         ) : (
-          <div className="mt-3 grid max-h-64 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+          <div
+            className="mt-3 grid max-h-64 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3"
+            role="radiogroup"
+            aria-label="Appointment time"
+          >
             {slots.map((slot) => (
               <button
                 key={slot.startIso}
                 type="button"
+                role="radio"
+                aria-checked={startAt === slot.startIso}
                 onClick={() => setStartAt(slot.startIso)}
-                className={`rounded-md px-2 py-2 text-left text-xs sm:text-sm ${
+                className={`rounded-md px-2 py-2 text-left text-xs focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none sm:text-sm ${
                   startAt === slot.startIso
                     ? "bg-[var(--color-accent)] text-white"
                     : "border border-[var(--color-border)] bg-white/60"
@@ -217,37 +263,48 @@ export function PublicBookingWizard({
             });
           }}
         >
-          <input
-            name="name"
-            required
-            placeholder="Full name"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="Email"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
-          <input
-            name="phone"
-            type="tel"
-            placeholder="Phone (optional)"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
-          <textarea
-            name="notes"
-            rows={2}
-            placeholder="Notes (optional)"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Full name</span>
+            <input
+              name="name"
+              required
+              autoComplete="name"
+              className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Email</span>
+            <input
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Phone (optional)</span>
+            <input
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Notes (optional)</span>
+            <textarea
+              name="notes"
+              rows={2}
+              className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none"
+            />
+          </label>
           {error ? (
             <p className="text-sm text-red-700" role="alert">
               {error}
             </p>
           ) : null}
-          <Button type="submit" disabled={pending || !startAt}>
+          <Button type="submit" disabled={pending || !startAt || slotsLoading}>
             {pending ? "Booking…" : "Confirm booking"}
           </Button>
         </form>

@@ -86,8 +86,11 @@ export async function createBooking(input: {
 }): Promise<ActionResult<{ bookingId: string }>> {
   try {
     if (input.idempotencyKey) {
-      const existing = await db.booking.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+      const existing = await db.booking.findFirst({
+        where: {
+          organizationId: input.organizationId,
+          idempotencyKey: input.idempotencyKey,
+        },
       });
       if (existing) {
         return ok({ bookingId: existing.id });
@@ -130,12 +133,18 @@ export async function createBooking(input: {
         },
       },
     });
-    if (!link && input.source === "PUBLIC") {
+    if (!link) {
       return err("This staff member does not offer that service");
     }
 
     const endAt = new Date(
       input.startAt.getTime() + service.durationMin * 60_000,
+    );
+    const paddedStart = new Date(
+      input.startAt.getTime() - service.bufferBefore * 60_000,
+    );
+    const paddedEnd = new Date(
+      endAt.getTime() + service.bufferAfter * 60_000,
     );
 
     const day = formatInTimeZone(
@@ -160,16 +169,29 @@ export async function createBooking(input: {
     const booking = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashLockKey(input.resourceId)})`;
 
-      const overlap = await tx.booking.findFirst({
+      const candidates = await tx.booking.findMany({
         where: {
           resourceId: input.resourceId,
           status: { in: ACTIVE },
-          startAt: { lt: endAt },
-          endAt: { gt: input.startAt },
+          startAt: { lt: paddedEnd },
+          endAt: { gt: paddedStart },
+        },
+        include: {
+          service: { select: { bufferBefore: true, bufferAfter: true } },
         },
       });
-      if (overlap) {
-        throw new Error("SLOT_TAKEN");
+
+      for (const other of candidates) {
+        const otherStart =
+          other.startAt.getTime() - other.service.bufferBefore * 60_000;
+        const otherEnd =
+          other.endAt.getTime() + other.service.bufferAfter * 60_000;
+        if (
+          paddedStart.getTime() < otherEnd &&
+          paddedEnd.getTime() > otherStart
+        ) {
+          throw new Error("SLOT_TAKEN");
+        }
       }
 
       let client = input.client.email
@@ -191,7 +213,8 @@ export async function createBooking(input: {
             notes: input.client.notes?.trim() || null,
           },
         });
-      } else {
+      } else if (input.source !== "PUBLIC") {
+        // Staff/AI may refresh contact fields; public bookings must not overwrite PII.
         client = await tx.client.update({
           where: { id: client.id },
           data: {

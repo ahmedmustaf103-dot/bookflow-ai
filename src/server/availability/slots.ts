@@ -1,14 +1,11 @@
 import "server-only";
 
 import { addDays, format } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
 import { db } from "@/server/db";
 import { generateSlots, type Slot } from "@/server/availability/engine";
-import {
-  getCachedSlots,
-  setCachedSlots,
-} from "@/server/cache/slots";
+import { getCachedSlots, setCachedSlots } from "@/server/cache/slots";
 
 const ACTIVE_BOOKING_STATUSES = ["PENDING", "CONFIRMED"] as const;
 
@@ -20,7 +17,11 @@ export async function getSlotsForServiceResource(input: {
   fromDate?: string;
   /** Inclusive local YYYY-MM-DD; defaults to fromDate + 6 days */
   toDate?: string;
+  /** Dashboard preview may allow unlinked pairs; public booking must not */
+  requireLink?: boolean;
 }): Promise<Slot[]> {
+  const requireLink = input.requireLink !== false;
+
   const service = await db.service.findFirst({
     where: {
       id: input.serviceId,
@@ -42,6 +43,10 @@ export async function getSlotsForServiceResource(input: {
     },
   });
 
+  if (requireLink && !link) {
+    return [];
+  }
+
   const resource = await db.resource.findFirst({
     where: {
       id: input.resourceId,
@@ -58,8 +63,6 @@ export async function getSlotsForServiceResource(input: {
   if (!resource) {
     throw new Error("Resource not found");
   }
-
-  void link;
 
   const timezone = resource.location.timezone;
   const now = new Date();
@@ -80,8 +83,9 @@ export async function getSlotsForServiceResource(input: {
   const cached = await getCachedSlots(cacheInput);
   if (cached) return cached;
 
-  const fromUtc = new Date(`${fromDate}T00:00:00.000Z`);
-  const toUtc = new Date(`${toDate}T23:59:59.999Z`);
+  // Bound busy query using location-local day start/end, not UTC midnight.
+  const fromUtc = fromZonedTime(`${fromDate}T00:00:00.000`, timezone);
+  const toUtc = fromZonedTime(`${toDate}T23:59:59.999`, timezone);
 
   const bookings = await db.booking.findMany({
     where: {

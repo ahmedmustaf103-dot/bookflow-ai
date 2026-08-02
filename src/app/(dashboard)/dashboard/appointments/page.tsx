@@ -3,14 +3,14 @@ import { addDays, startOfDay } from "date-fns";
 
 import { AppointmentActions } from "./appointment-actions";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function AppointmentsPage({
   searchParams,
 }: {
   searchParams: Promise<{ day?: string }>;
 }) {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("STAFF");
   const params = await searchParams;
   const tz = ctx.organization.timezoneDefault;
 

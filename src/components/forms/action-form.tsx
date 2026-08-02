@@ -11,6 +11,8 @@ type Props = {
   children: React.ReactNode;
   className?: string;
   submitLabel?: string;
+  /** When true (default), reset form after create-style success. Set false for edit forms. */
+  resetOnSuccess?: boolean;
 };
 
 export function ActionForm({
@@ -18,9 +20,11 @@ export function ActionForm({
   children,
   className,
   submitLabel = "Save",
+  resetOnSuccess = true,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -30,13 +34,17 @@ export function ActionForm({
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         setError(null);
+        setSuccess(false);
         startTransition(async () => {
           const result = await action(formData);
           if (!result.ok) {
             setError(result.error);
             return;
           }
-          e.currentTarget.reset();
+          if (resetOnSuccess) {
+            e.currentTarget.reset();
+          }
+          setSuccess(true);
           router.refresh();
         });
       }}
@@ -45,6 +53,11 @@ export function ActionForm({
       {error ? (
         <p className="text-sm text-red-700" role="alert">
           {error}
+        </p>
+      ) : null}
+      {success ? (
+        <p className="text-sm text-emerald-800" role="status">
+          Saved.
         </p>
       ) : null}
       <Button type="submit" disabled={pending}>

@@ -3,8 +3,17 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import type { MembershipRole } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { getMembershipsForUser, requireDbUser } from "@/server/auth/session";
+import { tenantDb } from "@/server/db/tenant";
+
+const ROLE_RANK: Record<MembershipRole, number> = {
+  VIEWER: 1,
+  STAFF: 2,
+  ADMIN: 3,
+  OWNER: 4,
+};
 
 export const ORG_COOKIE = "bf_org_id";
 
@@ -39,7 +48,17 @@ export async function requireOrgOrRedirect() {
     ...ctx,
     organization: ctx.organization,
     membership: ctx.membership,
+    db: tenantDb(ctx.organization.id),
   };
+}
+
+/** Dashboard page gate — VIEWER cannot access staff PII surfaces. */
+export async function requireOrgRole(minRole: MembershipRole) {
+  const ctx = await requireOrgOrRedirect();
+  if (ROLE_RANK[ctx.membership.role] < ROLE_RANK[minRole]) {
+    redirect("/dashboard");
+  }
+  return ctx;
 }
 
 export async function setActiveOrganizationId(organizationId: string) {

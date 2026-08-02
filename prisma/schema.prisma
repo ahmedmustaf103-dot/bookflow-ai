@@ -281,7 +281,7 @@ model Booking {
   source         BookingSource @default(DASHBOARD)
   notes          String?
   cancelReason   String?
-  idempotencyKey String?       @unique
+  idempotencyKey String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -292,6 +292,7 @@ model Booking {
   client       Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
   events       BookingEvent[]
 
+  @@unique([organizationId, idempotencyKey])
   @@index([organizationId, startAt])
   @@index([resourceId, startAt, endAt])
   @@index([resourceId, status])

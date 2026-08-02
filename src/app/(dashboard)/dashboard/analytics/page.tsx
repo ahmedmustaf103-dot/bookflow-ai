@@ -1,7 +1,7 @@
 import { getOrgAnalytics } from "@/server/analytics/org";
 import { getPlanLimits } from "@/server/billing/plans";
 import { db } from "@/server/db";
-import { requireOrgOrRedirect } from "@/server/tenant/context";
+import { requireOrgRole } from "@/server/tenant/context";
 
 function pct(n: number) {
   return `${Math.round(n * 100)}%`;
@@ -15,7 +15,7 @@ function money(cents: number) {
 }
 
 export default async function AnalyticsPage() {
-  const ctx = await requireOrgOrRedirect();
+  const ctx = await requireOrgRole("STAFF");
   const analytics = await getOrgAnalytics(ctx.organization.id, 30);
   const limits = getPlanLimits(ctx.organization.plan);
 

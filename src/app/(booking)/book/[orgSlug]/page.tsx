@@ -1,9 +1,29 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { formatInTimeZone } from "date-fns-tz";
 
 import { PublicBookingWizard } from "./booking-wizard";
 import { db } from "@/server/db";
-import { getSlotsForServiceResource } from "@/server/availability/slots";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ orgSlug: string }>;
+}): Promise<Metadata> {
+  const { orgSlug } = await params;
+  const org = await db.organization.findUnique({
+    where: { slug: orgSlug },
+    select: { name: true, publicBookingEnabled: true },
+  });
+  if (!org) return { title: "Book online" };
+  return {
+    title: `Book with ${org.name}`,
+    description: `Schedule an appointment online with ${org.name}.`,
+    openGraph: {
+      title: `Book with ${org.name}`,
+      description: `Schedule an appointment online with ${org.name}.`,
+    },
+  };
+}
 
 export default async function PublicBookPage({
   params,
@@ -62,35 +82,6 @@ export default async function PublicBookPage({
   }
 
   const resources = [...resourcesMap.values()];
-  const slotsByKey: Record<
-    string,
-    Array<{ startIso: string; label: string }>
-  > = {};
-
-  for (const service of services) {
-    for (const sr of service.resources) {
-      if (!sr.resource.isActive) continue;
-      try {
-        const slots = await getSlotsForServiceResource({
-          organizationId: org.id,
-          serviceId: service.id,
-          resourceId: sr.resourceId,
-        });
-        const location = await db.location.findUnique({
-          where: { id: sr.resource.locationId },
-        });
-        const tz = location?.timezone ?? org.timezoneDefault;
-        slotsByKey[`${service.id}:${sr.resourceId}`] = slots
-          .slice(0, 48)
-          .map((s) => ({
-            startIso: s.start.toISOString(),
-            label: formatInTimeZone(s.start, tz, "EEE MMM d · HH:mm"),
-          }));
-      } catch {
-        slotsByKey[`${service.id}:${sr.resourceId}`] = [];
-      }
-    }
-  }
 
   return (
     <div className="mx-auto min-h-screen max-w-2xl px-6 py-12">
@@ -123,7 +114,6 @@ export default async function PublicBookPage({
             description: s.description,
           }))}
           resources={resources}
-          slotsByKey={slotsByKey}
         />
       )}
     </div>
