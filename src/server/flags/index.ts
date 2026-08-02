@@ -34,6 +34,10 @@ function parseOverrides(): Partial<Record<FeatureFlag, boolean>> {
 }
 
 export function isFeatureEnabled(flag: FeatureFlag): boolean {
+  // Never allow disabling rate limits in production via env misconfig.
+  if (flag === "rate_limit" && process.env.NODE_ENV === "production") {
+    return true;
+  }
   const overrides = parseOverrides();
   if (flag in overrides) return Boolean(overrides[flag]);
   return DEFAULTS[flag];

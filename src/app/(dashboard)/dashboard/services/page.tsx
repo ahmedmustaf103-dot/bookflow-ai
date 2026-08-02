@@ -1,6 +1,5 @@
 import { ActionForm } from "@/components/forms/action-form";
 import { createServiceAction } from "@/server/actions/tenant";
-import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 
 function formatMoney(cents: number, currency: string) {
@@ -14,13 +13,12 @@ export default async function ServicesPage() {
   const ctx = await requireOrgRole("ADMIN");
 
   const [services, resources] = await Promise.all([
-    db.service.findMany({
-      where: { organizationId: ctx.organization.id },
+    ctx.db.service.findMany({
       include: { resources: { include: { resource: true } } },
       orderBy: { createdAt: "asc" },
     }),
-    db.resource.findMany({
-      where: { organizationId: ctx.organization.id, isActive: true },
+    ctx.db.resource.findMany({
+      where: { isActive: true },
       orderBy: { name: "asc" },
     }),
   ]);

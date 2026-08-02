@@ -137,6 +137,9 @@ export function tenantDb(organizationId: string) {
         count({ args, query }) {
           return query(withOrg(args, organizationId));
         },
+        aggregate({ args, query }) {
+          return query(withOrg(args, organizationId));
+        },
       },
       notificationOutbox: {
         findMany({ args, query }) {

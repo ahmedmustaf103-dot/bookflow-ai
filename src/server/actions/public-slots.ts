@@ -2,35 +2,36 @@
 
 import { formatInTimeZone } from "date-fns-tz";
 
+import { toSafeActionError } from "@/lib/action-errors";
 import { err, ok, type ActionResult } from "@/lib/result";
+import { getClientIp } from "@/lib/request-ip";
 import { db } from "@/server/db";
 import { getSlotsForServiceResource } from "@/server/availability/slots";
 import { assertRateLimit } from "@/server/rate-limit";
-import { getClientIp } from "@/lib/request-ip";
+import { publicSlotsSchema } from "@/server/actions/schemas";
 
 export async function fetchPublicSlotsAction(input: {
   organizationId: string;
   serviceId: string;
   resourceId: string;
-}): Promise<
-  ActionResult<Array<{ startIso: string; label: string }>>
-> {
+}): Promise<ActionResult<Array<{ startIso: string; label: string }>>> {
+  const parsed = publicSlotsSchema.safeParse(input);
+  if (!parsed.success) {
+    return err(parsed.error.issues[0]?.message ?? "Invalid input");
+  }
+
   const ip = await getClientIp();
   const limited = await assertRateLimit({
     name: "public_slots",
-    key: `${input.organizationId}:${ip}`,
+    key: `${parsed.data.organizationId}:${ip}`,
     limit: 60,
     windowSec: 60,
   });
   if (!limited.ok) return err(limited.error);
 
-  if (!input.organizationId || !input.serviceId || !input.resourceId) {
-    return err("Missing fields");
-  }
-
   const org = await db.organization.findFirst({
     where: {
-      id: input.organizationId,
+      id: parsed.data.organizationId,
       publicBookingEnabled: true,
     },
   });
@@ -38,7 +39,7 @@ export async function fetchPublicSlotsAction(input: {
 
   const resource = await db.resource.findFirst({
     where: {
-      id: input.resourceId,
+      id: parsed.data.resourceId,
       organizationId: org.id,
       isActive: true,
     },
@@ -49,8 +50,8 @@ export async function fetchPublicSlotsAction(input: {
   try {
     const slots = await getSlotsForServiceResource({
       organizationId: org.id,
-      serviceId: input.serviceId,
-      resourceId: input.resourceId,
+      serviceId: parsed.data.serviceId,
+      resourceId: parsed.data.resourceId,
       requireLink: true,
     });
     const tz = resource.location.timezone;
@@ -61,6 +62,6 @@ export async function fetchPublicSlotsAction(input: {
       })),
     );
   } catch (e) {
-    return err(e instanceof Error ? e.message : "Unable to load times");
+    return err(toSafeActionError(e, "Unable to load times"));
   }
 }

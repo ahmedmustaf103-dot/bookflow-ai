@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { toSafeActionError } from "@/lib/action-errors";
 import { err, ok, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
 import {
@@ -14,6 +15,13 @@ import { createBooking } from "@/server/bookings/service";
 import { writeAuditLog } from "@/server/billing/entitlements";
 import { getActiveOrganization } from "@/server/tenant/context";
 import { assertRateLimit } from "@/server/rate-limit";
+import {
+  bookingAssistantSchema,
+  clientSummarySchema,
+  confirmAiBookingSchema,
+  messageDraftSchema,
+  parseForm,
+} from "@/server/actions/schemas";
 
 async function assertAiRateLimit(
   organizationId: string,
@@ -45,13 +53,13 @@ export async function clientSummaryAction(
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
     }
 
-    const clientId = String(formData.get("clientId") ?? "");
-    if (!clientId) return err("Client is required");
+    const parsed = parseForm(clientSummarySchema, formData);
+    if (!parsed.ok) return err(parsed.error);
 
     const result = await generateClientSummary({
       organizationId: ctx.organization.id,
       userId: ctx.user.id,
-      clientId,
+      clientId: parsed.data.clientId,
     });
 
     revalidatePath("/dashboard/ai");
@@ -60,7 +68,7 @@ export async function clientSummaryAction(
       tokens: result.usage.tokensIn + result.usage.tokensOut,
     });
   } catch (e) {
-    return err(e instanceof Error ? e.message : "AI summary failed");
+    return err(toSafeActionError(e, "AI summary failed"));
   }
 }
 
@@ -79,17 +87,15 @@ export async function messageDraftAction(
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
     }
 
-    const intent = String(formData.get("intent") ?? "reminder") as
-      "reminder" | "win_back" | "thank_you" | "reschedule";
-    const clientId = String(formData.get("clientId") ?? "") || undefined;
-    const context = String(formData.get("context") ?? "").trim();
+    const parsed = parseForm(messageDraftSchema, formData);
+    if (!parsed.ok) return err(parsed.error);
 
     const result = await generateMessageDraft({
       organizationId: ctx.organization.id,
       userId: ctx.user.id,
-      intent,
-      clientId,
-      context: context || undefined,
+      intent: parsed.data.intent,
+      clientId: parsed.data.clientId,
+      context: parsed.data.context,
     });
 
     revalidatePath("/dashboard/ai");
@@ -98,7 +104,7 @@ export async function messageDraftAction(
       tokens: result.usage.tokensIn + result.usage.tokensOut,
     });
   } catch (e) {
-    return err(e instanceof Error ? e.message : "AI draft failed");
+    return err(toSafeActionError(e, "AI draft failed"));
   }
 }
 
@@ -117,13 +123,13 @@ export async function bookingAssistantAction(
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
     }
 
-    const message = String(formData.get("message") ?? "").trim();
-    if (message.length < 3) return err("Ask a question about booking");
+    const parsed = parseForm(bookingAssistantSchema, formData);
+    if (!parsed.ok) return err(parsed.error);
 
     const result = await runBookingAssistant({
       organizationId: ctx.organization.id,
       userId: ctx.user.id,
-      message,
+      message: parsed.data.message,
     });
 
     await writeAuditLog({
@@ -131,7 +137,7 @@ export async function bookingAssistantAction(
       actorId: ctx.user.id,
       action: "ai.booking_assistant",
       entityType: "ai_run",
-      metadata: { messagePreview: message.slice(0, 120) },
+      metadata: { messagePreview: parsed.data.message.slice(0, 120) },
     });
 
     revalidatePath("/dashboard/ai");
@@ -140,7 +146,7 @@ export async function bookingAssistantAction(
       tokens: result.usage.tokensIn + result.usage.tokensOut,
     });
   } catch (e) {
-    return err(e instanceof Error ? e.message : "Assistant failed");
+    return err(toSafeActionError(e, "Assistant failed"));
   }
 }
 
@@ -152,35 +158,34 @@ export async function confirmAiBookingProposalAction(
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "STAFF");
 
-  const serviceId = String(formData.get("serviceId") ?? "");
-  const resourceId = String(formData.get("resourceId") ?? "");
-  const startAtRaw = String(formData.get("startAt") ?? "");
-  const clientName = String(formData.get("clientName") ?? "").trim();
-  const clientEmail = String(formData.get("clientEmail") ?? "").trim();
-  const clientPhone = String(formData.get("clientPhone") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
+  const limited = await assertRateLimit({
+    name: "ai_booking_confirm",
+    key: `${ctx.organization.id}:${ctx.user.id}`,
+    limit: 20,
+    windowSec: 60,
+  });
+  if (!limited.ok) return err(limited.error);
 
-  if (!serviceId || !resourceId || !startAtRaw || clientName.length < 2) {
-    return err("Incomplete proposal");
-  }
+  const parsed = parseForm(confirmAiBookingSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
 
-  const startAt = new Date(startAtRaw);
+  const startAt = new Date(parsed.data.startAt);
   if (Number.isNaN(startAt.getTime())) return err("Invalid start time");
 
   const result = await createBooking({
     organizationId: ctx.organization.id,
-    serviceId,
-    resourceId,
+    serviceId: parsed.data.serviceId,
+    resourceId: parsed.data.resourceId,
     startAt,
     client: {
-      name: clientName,
-      email: clientEmail || null,
-      phone: clientPhone || null,
-      notes: notes || "Booked via AI assistant (staff confirmed)",
+      name: parsed.data.clientName,
+      email: parsed.data.clientEmail || null,
+      phone: parsed.data.clientPhone || null,
+      notes: parsed.data.notes || "Booked via AI assistant (staff confirmed)",
     },
     source: "AI",
     actorId: ctx.user.id,
-    idempotencyKey: `ai:${ctx.organization.id}:${serviceId}:${resourceId}:${startAt.toISOString()}`,
+    idempotencyKey: `ai:${ctx.organization.id}:${parsed.data.serviceId}:${parsed.data.resourceId}:${startAt.toISOString()}`,
   });
 
   if (result.ok) {

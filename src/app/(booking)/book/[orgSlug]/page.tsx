@@ -14,7 +14,14 @@ export async function generateMetadata({
     where: { slug: orgSlug },
     select: { name: true, publicBookingEnabled: true },
   });
-  if (!org) return { title: "Book online" };
+  if (!org) return { title: "Book online", robots: { index: false } };
+  if (!org.publicBookingEnabled) {
+    return {
+      title: org.name,
+      description: `Online booking is currently unavailable for ${org.name}.`,
+      robots: { index: false, follow: false },
+    };
+  }
   return {
     title: `Book with ${org.name}`,
     description: `Schedule an appointment online with ${org.name}.`,

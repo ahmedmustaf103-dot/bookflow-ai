@@ -4,7 +4,6 @@ import { formatInTimeZone } from "date-fns-tz";
 
 import { ActionForm } from "@/components/forms/action-form";
 import { updateClientAction } from "@/server/actions/ops";
-import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function ClientDetailPage({
@@ -15,8 +14,8 @@ export default async function ClientDetailPage({
   const ctx = await requireOrgRole("STAFF");
   const { clientId } = await params;
 
-  const client = await db.client.findFirst({
-    where: { id: clientId, organizationId: ctx.organization.id },
+  const client = await ctx.db.client.findFirst({
+    where: { id: clientId },
     include: {
       bookings: {
         include: {

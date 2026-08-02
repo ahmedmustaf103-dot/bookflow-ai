@@ -1,12 +1,10 @@
 import { ActionForm } from "@/components/forms/action-form";
 import { createLocationAction } from "@/server/actions/tenant";
-import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function LocationsPage() {
   const ctx = await requireOrgRole("ADMIN");
-  const locations = await db.location.findMany({
-    where: { organizationId: ctx.organization.id },
+  const locations = await ctx.db.location.findMany({
     orderBy: { createdAt: "asc" },
   });
 

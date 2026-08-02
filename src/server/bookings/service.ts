@@ -2,11 +2,15 @@ import "server-only";
 
 import { formatInTimeZone } from "date-fns-tz";
 
-import type {
-  BookingSource,
-  BookingStatus,
+import {
   Prisma,
+  type BookingSource,
+  type BookingStatus,
 } from "@/generated/prisma/client";
+import {
+  toSafeActionError,
+  UserFacingError,
+} from "@/lib/action-errors";
 import { err, ok, okEmpty, type ActionResult } from "@/lib/result";
 import { logger } from "@/lib/logger";
 import { db } from "@/server/db";
@@ -63,7 +67,7 @@ async function assertBookingQuota(organizationId: string) {
   });
 
   if (count >= limits.bookingsPerMonth) {
-    throw new Error(
+    throw new UserFacingError(
       `Monthly booking limit reached for ${org.plan} plan (${limits.bookingsPerMonth})`,
     );
   }
@@ -204,15 +208,33 @@ export async function createBooking(input: {
         : null;
 
       if (!client) {
-        client = await tx.client.create({
-          data: {
-            organizationId: input.organizationId,
-            name: input.client.name.trim(),
-            email: input.client.email?.trim() || null,
-            phone: input.client.phone?.trim() || null,
-            notes: input.client.notes?.trim() || null,
-          },
-        });
+        try {
+          client = await tx.client.create({
+            data: {
+              organizationId: input.organizationId,
+              name: input.client.name.trim(),
+              email: input.client.email?.trim() || null,
+              phone: input.client.phone?.trim() || null,
+              notes: input.client.notes?.trim() || null,
+            },
+          });
+        } catch (createErr) {
+          if (
+            createErr instanceof Prisma.PrismaClientKnownRequestError &&
+            createErr.code === "P2002" &&
+            input.client.email
+          ) {
+            client = await tx.client.findFirst({
+              where: {
+                organizationId: input.organizationId,
+                email: input.client.email,
+              },
+            });
+            if (!client) throw createErr;
+          } else {
+            throw createErr;
+          }
+        }
       } else if (input.source !== "PUBLIC") {
         // Staff/AI may refresh contact fields; public bookings must not overwrite PII.
         client = await tx.client.update({
@@ -314,9 +336,25 @@ export async function createBooking(input: {
     if (isBookingOverlapError(e)) {
       return err("That time was just booked — pick another slot");
     }
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002" &&
+      input.idempotencyKey
+    ) {
+      const existing = await db.booking.findFirst({
+        where: {
+          organizationId: input.organizationId,
+          idempotencyKey: input.idempotencyKey,
+        },
+      });
+      if (existing) return ok({ bookingId: existing.id });
+    }
+    if (e instanceof UserFacingError) {
+      return err(e.message);
+    }
     captureException(e, { action: "createBooking" });
     logger.error({ err: e }, "createBooking failed");
-    return err(e instanceof Error ? e.message : "Unable to create booking");
+    return err(toSafeActionError(e, "Unable to create booking"));
   }
 }
 
@@ -413,6 +451,8 @@ export async function transitionBooking(input: {
 
     return okEmpty();
   } catch (e) {
-    return err(e instanceof Error ? e.message : "Unable to update booking");
+    captureException(e, { action: "transitionBooking" });
+    logger.error({ err: e }, "transitionBooking failed");
+    return err(toSafeActionError(e, "Unable to update booking"));
   }
 }

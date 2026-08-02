@@ -2,7 +2,6 @@ import { ActionForm } from "@/components/forms/action-form";
 import { env } from "@/lib/env";
 import { updateOrganizationSettingsAction } from "@/server/actions/ops";
 import { planAllowsReminders } from "@/server/billing/entitlements";
-import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 
 const TIMEZONES = [
@@ -22,8 +21,7 @@ export default async function SettingsPage() {
   const org = ctx.organization;
   const bookUrl = `${env.NEXT_PUBLIC_APP_URL}/book/${org.slug}`;
 
-  const recentAudit = await db.auditLog.findMany({
-    where: { organizationId: org.id },
+  const recentAudit = await ctx.db.auditLog.findMany({
     orderBy: { createdAt: "desc" },
     take: 10,
   });

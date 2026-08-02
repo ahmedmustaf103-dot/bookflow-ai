@@ -1,7 +1,6 @@
 import { AiWorkbench } from "./ai-workbench";
 import { getConfiguredProvider } from "@/server/ai/provider";
 import { getPlanLimits, planAllowsAi } from "@/server/billing/plans";
-import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function AiPage() {
@@ -13,15 +12,13 @@ export default async function AiPage() {
   start.setUTCHours(0, 0, 0, 0);
 
   const [clients, usage] = await Promise.all([
-    db.client.findMany({
-      where: { organizationId: ctx.organization.id },
+    ctx.db.client.findMany({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
       take: 100,
     }),
-    db.aiRun.aggregate({
+    ctx.db.aiRun.aggregate({
       where: {
-        organizationId: ctx.organization.id,
         createdAt: { gte: start },
       },
       _sum: { tokensIn: true, tokensOut: true },

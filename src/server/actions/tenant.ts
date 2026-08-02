@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { toSafeActionError } from "@/lib/action-errors";
 import { err, ok, okEmpty, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
 import {
@@ -12,17 +13,24 @@ import {
 import { invalidateSlotsForResource } from "@/server/cache/slots";
 import { createOrganization } from "@/server/organizations/create";
 import { db } from "@/server/db";
+import { tenantDb } from "@/server/db/tenant";
 import {
   getActiveOrganization,
   setActiveOrganizationId,
 } from "@/server/tenant/context";
+import {
+  createLocationSchema,
+  createOrganizationSchema,
+  createResourceSchema,
+  createServiceSchema,
+  parseForm,
+} from "@/server/actions/schemas";
 
 export async function createOrganizationAction(formData: FormData) {
-  const name = String(formData.get("name") ?? "");
-  const timezone = String(formData.get("timezone") ?? "UTC");
-  const verticalPack = String(formData.get("verticalPack") ?? "barber_salon");
+  const parsed = parseForm(createOrganizationSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
 
-  const result = await createOrganization({ name, timezone, verticalPack });
+  const result = await createOrganization(parsed.data);
   if (result.ok) {
     revalidatePath("/dashboard");
   }
@@ -47,34 +55,35 @@ export async function createLocationAction(
   }
   await requireMembership(ctx.organization.id, "ADMIN");
 
-  const name = String(formData.get("name") ?? "").trim();
-  const timezone = String(
-    formData.get("timezone") ?? ctx.organization.timezoneDefault,
-  ).trim();
-
-  if (name.length < 2) return err("Location name is required");
+  const parsed = parseForm(createLocationSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
 
   const entitlement = await checkLocationEntitlement(ctx.organization.id);
   if (!entitlement.ok) return err(entitlement.error);
 
-  const location = await db.location.create({
-    data: {
+  try {
+    const location = await db.location.create({
+      data: {
+        organizationId: ctx.organization.id,
+        name: parsed.data.name,
+        timezone:
+          parsed.data.timezone || ctx.organization.timezoneDefault,
+      },
+    });
+
+    await writeAuditLog({
       organizationId: ctx.organization.id,
-      name,
-      timezone: timezone || ctx.organization.timezoneDefault,
-    },
-  });
+      actorId: ctx.user.id,
+      action: "location.created",
+      entityType: "location",
+      entityId: location.id,
+    });
 
-  await writeAuditLog({
-    organizationId: ctx.organization.id,
-    actorId: ctx.user.id,
-    action: "location.created",
-    entityType: "location",
-    entityId: location.id,
-  });
-
-  revalidatePath("/dashboard/locations");
-  return ok({ id: location.id });
+    revalidatePath("/dashboard/locations");
+    return ok({ id: location.id });
+  } catch (e) {
+    return err(toSafeActionError(e, "Unable to create location"));
+  }
 }
 
 export async function createResourceAction(
@@ -84,39 +93,40 @@ export async function createResourceAction(
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
 
-  const name = String(formData.get("name") ?? "").trim();
-  const locationId = String(formData.get("locationId") ?? "");
-  const type = String(formData.get("type") ?? "STAFF");
-
-  if (name.length < 1) return err("Resource name is required");
-  if (!locationId) return err("Location is required");
+  const parsed = parseForm(createResourceSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
 
   const entitlement = await checkResourceEntitlement(ctx.organization.id);
   if (!entitlement.ok) return err(entitlement.error);
 
-  const location = await db.location.findFirst({
-    where: { id: locationId, organizationId: ctx.organization.id },
+  const tdb = tenantDb(ctx.organization.id);
+  const location = await tdb.location.findFirst({
+    where: { id: parsed.data.locationId },
   });
   if (!location) return err("Location not found");
 
-  const resource = await db.resource.create({
-    data: {
-      organizationId: ctx.organization.id,
-      locationId,
-      name,
-      type: type as "STAFF" | "ROOM" | "EQUIPMENT" | "OTHER",
-      rules: {
-        create: [1, 2, 3, 4, 5].map((weekday) => ({
-          weekday,
-          startMin: 9 * 60,
-          endMin: 17 * 60,
-        })),
+  try {
+    const resource = await db.resource.create({
+      data: {
+        organizationId: ctx.organization.id,
+        locationId: parsed.data.locationId,
+        name: parsed.data.name,
+        type: parsed.data.type,
+        rules: {
+          create: [1, 2, 3, 4, 5].map((weekday) => ({
+            weekday,
+            startMin: 9 * 60,
+            endMin: 17 * 60,
+          })),
+        },
       },
-    },
-  });
+    });
 
-  revalidatePath("/dashboard/staff");
-  return ok({ id: resource.id });
+    revalidatePath("/dashboard/staff");
+    return ok({ id: resource.id });
+  } catch (e) {
+    return err(toSafeActionError(e, "Unable to create resource"));
+  }
 }
 
 export async function createServiceAction(
@@ -126,52 +136,54 @@ export async function createServiceAction(
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
 
-  const name = String(formData.get("name") ?? "").trim();
-  const durationMin = Number(formData.get("durationMin") ?? 30);
-  const priceCents = Math.round(Number(formData.get("price") ?? 0) * 100);
-  const bufferAfter = Number(formData.get("bufferAfter") ?? 0);
-  const resourceIds = formData.getAll("resourceIds").map(String);
+  const parsed = parseForm(createServiceSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
 
-  if (name.length < 1) return err("Service name is required");
-  if (!Number.isFinite(durationMin) || durationMin < 5) {
-    return err("Duration must be at least 5 minutes");
-  }
+  const resourceIds = formData
+    .getAll("resourceIds")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 50);
 
-  const service = await db.$transaction(async (tx) => {
-    const created = await tx.service.create({
-      data: {
-        organizationId: ctx.organization!.id,
-        name,
-        durationMin,
-        priceCents: Number.isFinite(priceCents) ? priceCents : 0,
-        bufferAfter: Number.isFinite(bufferAfter) ? bufferAfter : 0,
-      },
-    });
-
-    if (resourceIds.length > 0) {
-      const resources = await tx.resource.findMany({
-        where: {
-          id: { in: resourceIds },
+  try {
+    const service = await db.$transaction(async (tx) => {
+      const created = await tx.service.create({
+        data: {
           organizationId: ctx.organization!.id,
+          name: parsed.data.name,
+          durationMin: parsed.data.durationMin,
+          priceCents: Math.round(parsed.data.price * 100),
+          bufferAfter: parsed.data.bufferAfter,
         },
-        select: { id: true },
       });
 
-      if (resources.length > 0) {
-        await tx.serviceResource.createMany({
-          data: resources.map((r) => ({
-            serviceId: created.id,
-            resourceId: r.id,
-          })),
+      if (resourceIds.length > 0) {
+        const resources = await tx.resource.findMany({
+          where: {
+            id: { in: resourceIds },
+            organizationId: ctx.organization!.id,
+          },
+          select: { id: true },
         });
+
+        if (resources.length > 0) {
+          await tx.serviceResource.createMany({
+            data: resources.map((r) => ({
+              serviceId: created.id,
+              resourceId: r.id,
+            })),
+          });
+        }
       }
-    }
 
-    return created;
-  });
+      return created;
+    });
 
-  revalidatePath("/dashboard/services");
-  return ok({ id: service.id });
+    revalidatePath("/dashboard/services");
+    return ok({ id: service.id });
+  } catch (e) {
+    return err(toSafeActionError(e, "Unable to create service"));
+  }
 }
 
 export async function updateAvailabilityRulesAction(
@@ -181,11 +193,12 @@ export async function updateAvailabilityRulesAction(
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
 
-  const resourceId = String(formData.get("resourceId") ?? "");
-  if (!resourceId) return err("Resource is required");
+  const resourceId = String(formData.get("resourceId") ?? "").trim();
+  if (!resourceId || resourceId.length > 64) return err("Resource is required");
 
-  const resource = await db.resource.findFirst({
-    where: { id: resourceId, organizationId: ctx.organization.id },
+  const tdb = tenantDb(ctx.organization.id);
+  const resource = await tdb.resource.findFirst({
+    where: { id: resourceId },
   });
   if (!resource) return err("Resource not found");
 
@@ -205,19 +218,23 @@ export async function updateAvailabilityRulesAction(
     rules.push({ weekday, startMin, endMin });
   }
 
-  await db.$transaction(async (tx) => {
-    await tx.availabilityRule.deleteMany({ where: { resourceId } });
-    if (rules.length > 0) {
-      await tx.availabilityRule.createMany({
-        data: rules.map((r) => ({ ...r, resourceId })),
-      });
-    }
-  });
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.availabilityRule.deleteMany({ where: { resourceId } });
+      if (rules.length > 0) {
+        await tx.availabilityRule.createMany({
+          data: rules.map((r) => ({ ...r, resourceId })),
+        });
+      }
+    });
 
-  await invalidateSlotsForResource(resourceId);
+    await invalidateSlotsForResource(resourceId);
 
-  revalidatePath("/dashboard/availability");
-  return okEmpty();
+    revalidatePath("/dashboard/availability");
+    return okEmpty();
+  } catch (e) {
+    return err(toSafeActionError(e, "Unable to update hours"));
+  }
 }
 
 function parseHm(value: string): number | null {

@@ -2,7 +2,6 @@ import { formatInTimeZone } from "date-fns-tz";
 import { addDays, startOfDay } from "date-fns";
 
 import { AppointmentActions } from "./appointment-actions";
-import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function AppointmentsPage({
@@ -20,9 +19,8 @@ export default async function AppointmentsPage({
   const rangeStart = addDays(startOfDay(dayStart), -1);
   const rangeEnd = addDays(startOfDay(dayStart), 2);
 
-  const bookings = await db.booking.findMany({
+  const bookings = await ctx.db.booking.findMany({
     where: {
-      organizationId: ctx.organization.id,
       startAt: { gte: rangeStart, lt: rangeEnd },
     },
     include: {

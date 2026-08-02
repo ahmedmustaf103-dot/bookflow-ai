@@ -3,7 +3,6 @@ import { formatInTimeZone } from "date-fns-tz";
 import { ActionForm } from "@/components/forms/action-form";
 import { updateAvailabilityRulesAction } from "@/server/actions/tenant";
 import { getSlotsForServiceResource } from "@/server/availability/slots";
-import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 
 const DAYS = [
@@ -30,8 +29,8 @@ export default async function AvailabilityPage({
   const ctx = await requireOrgRole("ADMIN");
   const params = await searchParams;
 
-  const resources = await db.resource.findMany({
-    where: { organizationId: ctx.organization.id, isActive: true },
+  const resources = await ctx.db.resource.findMany({
+    where: { isActive: true },
     include: {
       location: true,
       rules: true,
@@ -43,8 +42,8 @@ export default async function AvailabilityPage({
   const resource =
     resources.find((r) => r.id === params.resourceId) ?? resources[0] ?? null;
 
-  const services = await db.service.findMany({
-    where: { organizationId: ctx.organization.id, isActive: true },
+  const services = await ctx.db.service.findMany({
+    where: { isActive: true },
     orderBy: { name: "asc" },
   });
 

@@ -3,7 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
-export default function Error({
+export default function DashboardError({
   error,
   reset,
 }: {
@@ -15,10 +15,10 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="mx-auto flex min-h-[50vh] max-w-lg flex-col items-center justify-center gap-4 px-6 text-center">
+    <div className="mx-auto flex min-h-[40vh] max-w-lg flex-col items-center justify-center gap-4 px-6 text-center">
       <h1 className="font-display text-2xl">Something went wrong</h1>
       <p className="text-sm text-[var(--color-ink)]/70">
-        An unexpected error occurred. Please try again.
+        This page hit an unexpected error. You can try again.
       </p>
       <button
         type="button"

@@ -1,6 +1,5 @@
 import { getOrgAnalytics } from "@/server/analytics/org";
 import { getPlanLimits } from "@/server/billing/plans";
-import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 
 function pct(n: number) {
@@ -20,15 +19,10 @@ export default async function AnalyticsPage() {
   const limits = getPlanLimits(ctx.organization.plan);
 
   const [locationCount, resourceCount, monthBookings] = await Promise.all([
-    db.location.count({
-      where: { organizationId: ctx.organization.id, isActive: true },
-    }),
-    db.resource.count({
-      where: { organizationId: ctx.organization.id, isActive: true },
-    }),
-    db.booking.count({
+    ctx.db.location.count({ where: { isActive: true } }),
+    ctx.db.resource.count({ where: { isActive: true } }),
+    ctx.db.booking.count({
       where: {
-        organizationId: ctx.organization.id,
         createdAt: {
           gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         },

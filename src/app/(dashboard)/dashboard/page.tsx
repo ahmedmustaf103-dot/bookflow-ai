@@ -2,21 +2,18 @@ import Link from "next/link";
 
 import { ButtonLink } from "@/components/ui/button";
 import { env } from "@/lib/env";
-import { db } from "@/server/db";
 import { requireOrgOrRedirect } from "@/server/tenant/context";
 
 export default async function DashboardPage() {
   const ctx = await requireOrgOrRedirect();
-  const orgId = ctx.organization.id;
 
   const [locationCount, resourceCount, serviceCount, upcoming] =
     await Promise.all([
-      db.location.count({ where: { organizationId: orgId, isActive: true } }),
-      db.resource.count({ where: { organizationId: orgId, isActive: true } }),
-      db.service.count({ where: { organizationId: orgId, isActive: true } }),
-      db.booking.count({
+      ctx.db.location.count({ where: { isActive: true } }),
+      ctx.db.resource.count({ where: { isActive: true } }),
+      ctx.db.service.count({ where: { isActive: true } }),
+      ctx.db.booking.count({
         where: {
-          organizationId: orgId,
           status: { in: ["PENDING", "CONFIRMED"] },
           startAt: { gte: new Date() },
         },

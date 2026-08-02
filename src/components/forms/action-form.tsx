@@ -30,22 +30,28 @@ export function ActionForm({
   return (
     <form
       className={className}
+      aria-busy={pending}
       onSubmit={(e) => {
         e.preventDefault();
-        const formData = new FormData(e.currentTarget);
+        const form = e.currentTarget;
+        const formData = new FormData(form);
         setError(null);
         setSuccess(false);
         startTransition(async () => {
-          const result = await action(formData);
-          if (!result.ok) {
-            setError(result.error);
-            return;
+          try {
+            const result = await action(formData);
+            if (!result.ok) {
+              setError(result.error);
+              return;
+            }
+            if (resetOnSuccess) {
+              form.reset();
+            }
+            setSuccess(true);
+            router.refresh();
+          } catch {
+            setError("Something went wrong. Please try again.");
           }
-          if (resetOnSuccess) {
-            e.currentTarget.reset();
-          }
-          setSuccess(true);
-          router.refresh();
         });
       }}
     >
@@ -60,7 +66,7 @@ export function ActionForm({
           Saved.
         </p>
       ) : null}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending} aria-disabled={pending}>
         {pending ? "Saving…" : submitLabel}
       </Button>
     </form>

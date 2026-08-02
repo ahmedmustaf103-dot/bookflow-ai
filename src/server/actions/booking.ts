@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import type { BookingStatus } from "@/generated/prisma/client";
 import { err, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
 import {
@@ -15,25 +14,30 @@ import { getClientIp } from "@/lib/request-ip";
 import { createBooking, transitionBooking } from "@/server/bookings/service";
 import { assertRateLimit } from "@/server/rate-limit";
 import { getActiveOrganization } from "@/server/tenant/context";
+import {
+  checkoutSchema,
+  parseForm,
+  publicBookingSchema,
+  transitionBookingSchema,
+} from "@/server/actions/schemas";
 
 export async function createPublicBookingAction(
   formData: FormData,
 ): Promise<ActionResult<{ bookingId: string }>> {
-  const organizationId = String(formData.get("organizationId") ?? "");
-  const serviceId = String(formData.get("serviceId") ?? "");
-  const resourceId = String(formData.get("resourceId") ?? "");
-  const startAtRaw = String(formData.get("startAt") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
-  const idempotencyKey = String(formData.get("idempotencyKey") ?? "").trim();
+  const parsed = parseForm(publicBookingSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
 
-  if (!organizationId || !serviceId || !resourceId || !startAtRaw) {
-    return err("Missing booking details");
-  }
-  if (name.length < 2) return err("Please enter your name");
-  if (!email || !email.includes("@")) return err("Please enter a valid email");
+  const {
+    organizationId,
+    serviceId,
+    resourceId,
+    startAt: startAtRaw,
+    name,
+    email,
+    phone,
+    notes,
+    idempotencyKey,
+  } = parsed.data;
 
   const ip = await getClientIp();
   const limited = await assertRateLimit({
@@ -53,9 +57,14 @@ export async function createPublicBookingAction(
     serviceId,
     resourceId,
     startAt,
-    client: { name, email, phone: phone || null, notes: notes || null },
+    client: {
+      name,
+      email,
+      phone: phone ?? null,
+      notes: notes ?? null,
+    },
     source: "PUBLIC",
-    idempotencyKey: idempotencyKey || null,
+    idempotencyKey: idempotencyKey ?? null,
   });
 }
 
@@ -69,18 +78,23 @@ export async function transitionBookingAction(
 
   await requireMembership(ctx.organization.id, "STAFF");
 
-  const bookingId = String(formData.get("bookingId") ?? "");
-  const to = String(formData.get("to") ?? "") as BookingStatus;
-  const cancelReason = String(formData.get("cancelReason") ?? "").trim();
+  const limited = await assertRateLimit({
+    name: "booking_transition",
+    key: `${ctx.organization.id}:${ctx.user.id}`,
+    limit: 60,
+    windowSec: 60,
+  });
+  if (!limited.ok) return err(limited.error);
 
-  if (!bookingId || !to) return err("Missing fields");
+  const parsed = parseForm(transitionBookingSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
 
   const result = await transitionBooking({
     organizationId: ctx.organization.id,
-    bookingId,
-    to,
+    bookingId: parsed.data.bookingId,
+    to: parsed.data.to,
     actorId: ctx.user.id,
-    cancelReason: cancelReason || null,
+    cancelReason: parsed.data.cancelReason ?? null,
   });
 
   if (result.ok) {
@@ -97,7 +111,24 @@ export async function startCheckoutAction(formData: FormData): Promise<void> {
     throw new Error("No organization");
   }
 
-  const plan = String(formData.get("plan") ?? "STARTER");
+  await requireMembership(ctx.organization.id, "ADMIN");
+
+  const limited = await assertRateLimit({
+    name: "checkout",
+    key: ctx.organization.id,
+    limit: 10,
+    windowSec: 60,
+  });
+  if (!limited.ok) {
+    throw new Error(limited.error);
+  }
+
+  const parsed = parseForm(checkoutSchema, formData);
+  if (!parsed.ok) {
+    throw new Error(parsed.error);
+  }
+
+  const plan = parsed.data.plan;
   const priceId =
     plan === "GROWTH"
       ? env.STRIPE_PRICE_GROWTH
@@ -125,6 +156,8 @@ export async function openBillingPortalAction(): Promise<void> {
   if (!ctx.organization) {
     throw new Error("No organization");
   }
+
+  await requireMembership(ctx.organization.id, "ADMIN");
 
   const result = await createBillingPortalSession(ctx.organization.id);
   if (!result.ok) {

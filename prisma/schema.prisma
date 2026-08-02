@@ -294,8 +294,11 @@ model Booking {
 
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, startAt])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status, startAt])
   @@index([resourceId, startAt, endAt])
   @@index([resourceId, status])
+  @@index([resourceId, status, startAt])
   @@index([clientId])
   @@map("bookings")
 }

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 
 export type OrgAnalytics = {
@@ -37,14 +38,14 @@ export async function getOrgAnalytics(
         startAt: { gte: new Date() },
       },
     }),
-    db.booking.findMany({
-      where: {
-        organizationId,
-        status: { in: ["COMPLETED", "CONFIRMED"] },
-        startAt: { gte: since },
-      },
-      select: { service: { select: { priceCents: true } } },
-    }),
+    db.$queryRaw<Array<{ cents: number }>>(Prisma.sql`
+      SELECT COALESCE(SUM(s."priceCents"), 0)::int AS cents
+      FROM bookings b
+      INNER JOIN services s ON s.id = b."serviceId"
+      WHERE b."organizationId" = ${organizationId}
+        AND b.status IN ('COMPLETED', 'CONFIRMED')
+        AND b."startAt" >= ${since}
+    `),
   ]);
 
   const counts: Record<string, number> = {};
@@ -60,10 +61,7 @@ export async function getOrgAnalytics(
   const noShowRate =
     attendedOrMissed === 0 ? 0 : bookingsNoShow / attendedOrMissed;
 
-  const estimatedRevenueCents = revenueRows.reduce(
-    (sum, row) => sum + row.service.priceCents,
-    0,
-  );
+  const estimatedRevenueCents = revenueRows[0]?.cents ?? 0;
 
   return {
     bookingsTotal,
