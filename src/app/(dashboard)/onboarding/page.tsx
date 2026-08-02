@@ -18,7 +18,7 @@ export default async function OnboardingPage() {
         <p className="text-sm font-medium tracking-[0.16em] text-[var(--color-accent)] uppercase">
           Get started
         </p>
-        <h1 className="font-display mt-2 text-4xl tracking-tight">
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
           Set up your business
         </h1>
         <p className="mt-3 text-[var(--color-ink)]/70">

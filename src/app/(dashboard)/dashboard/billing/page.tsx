@@ -7,6 +7,8 @@ import { env } from "@/lib/env";
 import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { Surface } from "@/components/ui/surface";
 
 export default async function BillingPage({
   searchParams,
@@ -43,34 +45,34 @@ export default async function BillingPage({
   ] as const;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">Billing</h1>
-        <p className="mt-2 text-[var(--color-ink)]/70">
-          Current plan:{" "}
-          <span className="font-medium text-[var(--color-ink)]">
-            {ctx.organization.plan}
-          </span>
-          {subscription
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Billing"
+        description={`Current plan: ${ctx.organization.plan}${
+          subscription
             ? ` · Stripe ${subscription.status}`
-            : " · No Stripe subscription"}
-        </p>
-      </div>
+            : " · No Stripe subscription"
+        }`}
+      />
 
       {params.success ? (
-        <p className="rounded-md bg-[var(--color-accent-soft)] px-4 py-3 text-sm">
-          Checkout completed — subscription syncs via webhook within a few
-          seconds.
-        </p>
+        <Surface className="border-[var(--accent)] bg-[var(--accent-soft)]">
+          <p className="text-sm text-[var(--ink)]">
+            Checkout completed — subscription syncs via webhook within a few
+            seconds.
+          </p>
+        </Surface>
       ) : null}
       {params.canceled ? (
-        <p className="rounded-md border border-[var(--color-border)] px-4 py-3 text-sm">
-          Checkout canceled.
-        </p>
+        <Surface>
+          <p className="text-sm text-[var(--ink-secondary)]">
+            Checkout canceled.
+          </p>
+        </Surface>
       ) : null}
 
       {!stripeReady ? (
-        <p className="text-sm text-[var(--color-ink)]/65">
+        <p className="text-sm text-[var(--ink-tertiary)]">
           Add <code>STRIPE_SECRET_KEY</code> and price IDs to{" "}
           <code>.env.local</code> to enable Checkout.
         </p>
@@ -78,12 +80,9 @@ export default async function BillingPage({
         <>
           <div className="grid gap-4 md:grid-cols-3">
             {prices.map((p) => (
-              <div
-                key={p.plan}
-                className="flex flex-col rounded-lg border border-[var(--color-border)] p-5"
-              >
-                <h2 className="font-display text-xl">{p.label}</h2>
-                <p className="mt-2 flex-1 text-sm text-[var(--color-ink)]/65">
+              <Surface key={p.plan} className="flex flex-col">
+                <h2 className="text-sm font-semibold">{p.label}</h2>
+                <p className="mt-2 flex-1 text-sm text-[var(--ink-tertiary)]">
                   {p.blurb}
                 </p>
                 {p.priceId ? (
@@ -94,11 +93,11 @@ export default async function BillingPage({
                     </Button>
                   </form>
                 ) : (
-                  <p className="mt-4 text-xs text-[var(--color-ink)]/45">
+                  <p className="mt-4 text-xs text-[var(--ink-tertiary)]">
                     Price ID not configured
                   </p>
                 )}
-              </div>
+              </Surface>
             ))}
           </div>
 

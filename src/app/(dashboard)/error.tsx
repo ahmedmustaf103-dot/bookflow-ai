@@ -3,6 +3,8 @@
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
+import { Button } from "@/components/ui/button";
+
 export default function DashboardError({
   error,
   reset,
@@ -16,17 +18,13 @@ export default function DashboardError({
 
   return (
     <div className="mx-auto flex min-h-[40vh] max-w-lg flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="font-display text-2xl">Something went wrong</h1>
-      <p className="text-sm text-[var(--color-ink)]/70">
+      <h1 className="text-xl font-semibold tracking-tight">Something went wrong</h1>
+      <p className="text-sm text-[var(--ink-secondary)]">
         This page hit an unexpected error. You can try again.
       </p>
-      <button
-        type="button"
-        onClick={reset}
-        className="rounded-md bg-[var(--color-ink)] px-4 py-2 text-sm text-[var(--color-paper)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none"
-      >
+      <Button type="button" onClick={reset}>
         Try again
-      </button>
+      </Button>
     </div>
   );
 }

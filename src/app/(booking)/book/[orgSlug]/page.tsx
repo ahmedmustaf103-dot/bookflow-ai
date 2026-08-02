@@ -48,8 +48,8 @@ export default async function PublicBookPage({
   if (!org.publicBookingEnabled) {
     return (
       <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
-        <h1 className="font-display text-3xl tracking-tight">{org.name}</h1>
-        <p className="mt-3 text-[var(--color-ink)]/70">
+        <h1 className="text-xl font-semibold tracking-tight">{org.name}</h1>
+        <p className="mt-3 text-sm text-[var(--ink-secondary)]">
           Online booking is temporarily unavailable. Please contact the business
           directly.
         </p>
@@ -91,38 +91,40 @@ export default async function PublicBookPage({
   const resources = [...resourcesMap.values()];
 
   return (
-    <div className="mx-auto min-h-screen max-w-2xl px-6 py-12">
-      <header className="mb-10">
-        <p className="text-sm font-medium tracking-[0.16em] text-[var(--color-accent)] uppercase">
-          Book online
-        </p>
-        <h1 className="font-display mt-2 text-4xl tracking-tight">
-          {org.name}
-        </h1>
-        <p className="mt-2 text-[var(--color-ink)]/70">
-          Pick a service, choose who you&apos;d like, and confirm a time.
-        </p>
-      </header>
+    <div className="min-h-screen bg-[var(--bg)]">
+      <div className="mx-auto max-w-xl px-4 py-10 sm:px-6 sm:py-14">
+        <header className="mb-8">
+          <p className="text-[11px] font-medium tracking-[0.14em] text-[var(--ink-tertiary)] uppercase">
+            BookFlow AI
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--ink)] sm:text-3xl">
+            {org.name}
+          </h1>
+          <p className="mt-2 text-sm text-[var(--ink-secondary)]">
+            Pick a service, choose who you&apos;d like, and confirm a time.
+          </p>
+        </header>
 
-      {services.length === 0 ? (
-        <p className="text-[var(--color-ink)]/60">
-          This business hasn&apos;t published services yet.
-        </p>
-      ) : (
-        <PublicBookingWizard
-          organizationId={org.id}
-          organizationName={org.name}
-          services={services.map((s) => ({
-            id: s.id,
-            name: s.name,
-            durationMin: s.durationMin,
-            priceCents: s.priceCents,
-            currency: s.currency,
-            description: s.description,
-          }))}
-          resources={resources}
-        />
-      )}
+        {services.length === 0 ? (
+          <p className="text-sm text-[var(--ink-secondary)]">
+            This business hasn&apos;t published services yet.
+          </p>
+        ) : (
+          <PublicBookingWizard
+            organizationId={org.id}
+            organizationName={org.name}
+            services={services.map((s) => ({
+              id: s.id,
+              name: s.name,
+              durationMin: s.durationMin,
+              priceCents: s.priceCents,
+              currency: s.currency,
+              description: s.description,
+            }))}
+            resources={resources}
+          />
+        )}
+      </div>
     </div>
   );
 }

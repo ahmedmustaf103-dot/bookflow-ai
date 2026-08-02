@@ -1,14 +1,19 @@
+import { Skeleton } from "@/components/ui/skeleton";
+
 export default function DashboardLoading() {
   return (
-    <div
-      className="animate-pulse space-y-4 p-1"
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <div className="h-9 w-48 rounded-md bg-[var(--color-border)]" />
-      <div className="h-4 w-72 rounded bg-[var(--color-border)]" />
-      <div className="mt-6 h-40 rounded-lg bg-[var(--color-border)]" />
-      <div className="h-40 rounded-lg bg-[var(--color-border)]" />
+    <div className="space-y-6" aria-busy="true" aria-live="polite">
+      <div className="space-y-2">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
+      </div>
+      <Skeleton className="h-48" />
     </div>
   );
 }

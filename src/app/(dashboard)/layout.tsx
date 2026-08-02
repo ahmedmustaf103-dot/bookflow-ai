@@ -1,7 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 
 import { AppClerkProvider } from "@/components/providers/clerk-provider";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import {
+  DashboardShell,
+  type NavItem,
+} from "@/components/dashboard/dashboard-shell";
 import { getActiveOrganization } from "@/server/tenant/context";
 import { getVerticalPack } from "@/server/verticals/packs";
 import type { MembershipRole } from "@/generated/prisma/client";
@@ -25,57 +28,81 @@ export default async function DashboardLayout({
     ctx.organization?.verticalPack ?? "barber_salon",
   );
   const role = ctx.membership?.role ?? "VIEWER";
-  const atLeast = (min: MembershipRole) =>
-    ROLE_RANK[role] >= ROLE_RANK[min];
+  const atLeast = (min: MembershipRole) => ROLE_RANK[role] >= ROLE_RANK[min];
 
-  const nav = ctx.organization
-    ? [
-        { href: "/dashboard", label: "Overview", min: "VIEWER" as const },
-        {
-          href: "/dashboard/appointments",
-          label: "Appointments",
-          min: "STAFF" as const,
-        },
-        {
-          href: "/dashboard/clients",
-          label: pack.terminology.clients,
-          min: "STAFF" as const,
-        },
-        { href: "/dashboard/ai", label: "AI", min: "STAFF" as const },
-        {
-          href: "/dashboard/analytics",
-          label: "Analytics",
-          min: "STAFF" as const,
-        },
-        {
-          href: "/dashboard/locations",
-          label: `${pack.terminology.location}s`,
-          min: "ADMIN" as const,
-        },
-        {
-          href: "/dashboard/staff",
-          label: pack.terminology.resources,
-          min: "ADMIN" as const,
-        },
-        {
-          href: "/dashboard/services",
-          label: pack.terminology.services,
-          min: "ADMIN" as const,
-        },
-        {
-          href: "/dashboard/availability",
-          label: "Hours",
-          min: "ADMIN" as const,
-        },
-        { href: "/dashboard/billing", label: "Billing", min: "ADMIN" as const },
-        {
-          href: "/dashboard/settings",
-          label: "Settings",
-          min: "ADMIN" as const,
-        },
-      ]
+  const nav: NavItem[] = ctx.organization
+    ? (
+        [
+          {
+            href: "/dashboard",
+            label: "Overview",
+            group: "operate" as const,
+            min: "VIEWER" as const,
+          },
+          {
+            href: "/dashboard/appointments",
+            label: "Appointments",
+            group: "operate" as const,
+            min: "STAFF" as const,
+          },
+          {
+            href: "/dashboard/clients",
+            label: pack.terminology.clients,
+            group: "operate" as const,
+            min: "STAFF" as const,
+          },
+          {
+            href: "/dashboard/ai",
+            label: "AI",
+            group: "operate" as const,
+            min: "STAFF" as const,
+          },
+          {
+            href: "/dashboard/analytics",
+            label: "Analytics",
+            group: "operate" as const,
+            min: "STAFF" as const,
+          },
+          {
+            href: "/dashboard/locations",
+            label: `${pack.terminology.location}s`,
+            group: "setup" as const,
+            min: "ADMIN" as const,
+          },
+          {
+            href: "/dashboard/staff",
+            label: pack.terminology.resources,
+            group: "setup" as const,
+            min: "ADMIN" as const,
+          },
+          {
+            href: "/dashboard/services",
+            label: pack.terminology.services,
+            group: "setup" as const,
+            min: "ADMIN" as const,
+          },
+          {
+            href: "/dashboard/availability",
+            label: "Hours",
+            group: "setup" as const,
+            min: "ADMIN" as const,
+          },
+          {
+            href: "/dashboard/billing",
+            label: "Billing",
+            group: "setup" as const,
+            min: "ADMIN" as const,
+          },
+          {
+            href: "/dashboard/settings",
+            label: "Settings",
+            group: "setup" as const,
+            min: "ADMIN" as const,
+          },
+        ] as const
+      )
         .filter((item) => atLeast(item.min))
-        .map(({ href, label }) => ({ href, label }))
+        .map(({ href, label, group }) => ({ href, label, group }))
     : [];
 
   return (

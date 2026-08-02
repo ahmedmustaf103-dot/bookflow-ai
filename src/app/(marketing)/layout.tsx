@@ -13,7 +13,10 @@ export default function MarketingLayout({
     <AppClerkProvider>
       <div className="flex min-h-screen flex-col">
         <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
-          <Link href="/" className="font-display text-xl tracking-tight">
+          <Link
+            href="/"
+            className="text-sm font-semibold tracking-tight text-[var(--ink)]"
+          >
             BookFlow AI
           </Link>
           <nav className="flex items-center gap-3">

@@ -1,4 +1,9 @@
 import { ActionForm } from "@/components/forms/action-form";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { Surface } from "@/components/ui/surface";
 import { createLocationAction } from "@/server/actions/tenant";
 import { requireOrgRole } from "@/server/tenant/context";
 
@@ -9,59 +14,67 @@ export default async function LocationsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">Locations</h1>
-        <p className="mt-2 text-[var(--color-ink)]/70">
-          Physical or virtual sites. Each has its own timezone.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Locations"
+        description="Physical or virtual sites. Each has its own timezone."
+      />
 
-      <ul className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
-        {locations.map((loc) => (
-          <li
-            key={loc.id}
-            className="flex items-center justify-between gap-4 px-4 py-3"
-          >
-            <div>
-              <p className="font-medium">{loc.name}</p>
-              <p className="text-sm text-[var(--color-ink)]/60">
-                {loc.timezone}
-              </p>
-            </div>
-            <span className="text-xs tracking-wide text-[var(--color-ink)]/50 uppercase">
-              {loc.isActive ? "Active" : "Inactive"}
-            </span>
-          </li>
-        ))}
-        {locations.length === 0 ? (
-          <li className="px-4 py-6 text-sm text-[var(--color-ink)]/60">
-            No locations yet.
-          </li>
-        ) : null}
-      </ul>
+      {locations.length === 0 ? (
+        <EmptyState
+          title="No locations yet"
+          description="Add your first location below."
+        />
+      ) : (
+        <Surface padding="none" className="overflow-hidden">
+          <ul className="divide-y divide-[var(--border)]">
+            {locations.map((loc) => (
+              <li
+                key={loc.id}
+                className="flex items-center justify-between gap-4 px-4 py-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">{loc.name}</p>
+                  <p className="text-xs text-[var(--ink-tertiary)]">
+                    {loc.timezone}
+                  </p>
+                </div>
+                <span className="text-xs tracking-wide text-[var(--ink-tertiary)] uppercase">
+                  {loc.isActive ? "Active" : "Inactive"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Surface>
+      )}
 
-      <section className="max-w-md">
-        <h2 className="text-lg font-semibold">Add location</h2>
+      <Surface className="max-w-md">
+        <h2 className="text-sm font-semibold">Add location</h2>
         <ActionForm
           action={createLocationAction}
           submitLabel="Add location"
           className="mt-4 flex flex-col gap-3"
         >
-          <input
-            name="name"
-            required
-            placeholder="Downtown"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
-          <input
-            name="timezone"
-            defaultValue={ctx.organization.timezoneDefault}
-            placeholder="America/New_York"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
+          <div>
+            <Label htmlFor="location-name">Name</Label>
+            <Input
+              id="location-name"
+              name="name"
+              required
+              placeholder="Downtown"
+            />
+          </div>
+          <div>
+            <Label htmlFor="location-timezone">Timezone</Label>
+            <Input
+              id="location-timezone"
+              name="timezone"
+              defaultValue={ctx.organization.timezoneDefault}
+              placeholder="America/New_York"
+            />
+          </div>
         </ActionForm>
-      </section>
+      </Surface>
     </div>
   );
 }

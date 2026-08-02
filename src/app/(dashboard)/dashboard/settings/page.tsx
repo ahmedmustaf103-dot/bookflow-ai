@@ -1,4 +1,9 @@
 import { ActionForm } from "@/components/forms/action-form";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input, Select } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { Surface } from "@/components/ui/surface";
 import { env } from "@/lib/env";
 import { updateOrganizationSettingsAction } from "@/server/actions/ops";
 import { planAllowsReminders } from "@/server/billing/entitlements";
@@ -27,62 +32,55 @@ export default async function SettingsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-10">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">Settings</h1>
-        <p className="mt-2 text-[var(--color-ink)]/70">
-          Business preferences, booking page, and reminders.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Settings"
+        description="Business preferences, booking page, and reminders."
+      />
 
-      <section className="max-w-lg">
-        <h2 className="text-lg font-semibold">Organization</h2>
+      <Surface className="max-w-lg">
+        <h2 className="text-sm font-semibold">Organization</h2>
         <ActionForm
           action={updateOrganizationSettingsAction}
           submitLabel="Save settings"
           resetOnSuccess={false}
           className="mt-4 flex flex-col gap-3"
         >
-          <label className="flex flex-col gap-1 text-sm">
-            Business name
-            <input
-              name="name"
-              required
-              defaultValue={org.name}
-              className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Default timezone
-            <select
+          <div>
+            <Label htmlFor="org-name">Business name</Label>
+            <Input id="org-name" name="name" required defaultValue={org.name} />
+          </div>
+          <div>
+            <Label htmlFor="org-timezone">Default timezone</Label>
+            <Select
+              id="org-timezone"
               name="timezoneDefault"
               defaultValue={org.timezoneDefault}
-              className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2"
             >
               {TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Reminder lead time (hours)
-            <input
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="org-reminder">Reminder lead time (hours)</Label>
+            <Input
+              id="org-reminder"
               name="reminderHoursBefore"
               type="number"
               min={1}
               max={168}
               defaultValue={org.reminderHoursBefore}
-              className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2"
             />
-            <span className="text-xs text-[var(--color-ink)]/50">
+            <p className="mt-1.5 text-xs text-[var(--ink-tertiary)]">
               {planAllowsReminders(org.plan)
                 ? "Email reminders enqueue on new bookings (Growth/Business/Trial). SMS reminders require Growth/Business plus Twilio."
                 : "Email reminders require Growth or Business (Trial still gets email for testing)."}
-            </span>
-          </label>
-          <label className="flex items-center gap-2 text-sm">
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-[var(--ink)]">
             <input
               type="checkbox"
               name="publicBookingEnabled"
@@ -91,34 +89,37 @@ export default async function SettingsPage() {
             Public booking page enabled
           </label>
         </ActionForm>
-      </section>
+      </Surface>
 
-      <section className="rounded-lg border border-[var(--color-border)] p-5 text-sm">
-        <h2 className="font-semibold">Public booking URL</h2>
-        <p className="mt-2 break-all text-[var(--color-accent)]">{bookUrl}</p>
-        <p className="mt-1 text-[var(--color-ink)]/55">Slug: {org.slug}</p>
-      </section>
+      <Surface className="max-w-lg">
+        <h2 className="text-sm font-semibold">Public booking URL</h2>
+        <p className="mt-2 break-all text-sm text-[var(--accent)]">{bookUrl}</p>
+        <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
+          Slug: {org.slug}
+        </p>
+      </Surface>
 
-      <section>
-        <h2 className="text-lg font-semibold">Recent audit log</h2>
-        <ul className="mt-3 divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] text-sm">
-          {recentAudit.map((row) => (
-            <li key={row.id} className="px-4 py-3">
-              <p className="font-medium">{row.action}</p>
-              <p className="text-[var(--color-ink)]/55">
-                {row.createdAt.toISOString()}
-                {row.entityType ? ` · ${row.entityType}` : ""}
-                {row.entityId ? `:${row.entityId.slice(0, 8)}` : ""}
-              </p>
-            </li>
-          ))}
-          {recentAudit.length === 0 ? (
-            <li className="px-4 py-6 text-[var(--color-ink)]/60">
-              No audited actions yet.
-            </li>
-          ) : null}
-        </ul>
-      </section>
+      <div>
+        <h2 className="mb-3 text-sm font-semibold">Recent audit log</h2>
+        {recentAudit.length === 0 ? (
+          <EmptyState title="No audited actions yet" />
+        ) : (
+          <Surface padding="none" className="overflow-hidden">
+            <ul className="divide-y divide-[var(--border)] text-sm">
+              {recentAudit.map((row) => (
+                <li key={row.id} className="px-4 py-3">
+                  <p className="font-medium">{row.action}</p>
+                  <p className="text-xs text-[var(--ink-tertiary)]">
+                    {row.createdAt.toISOString()}
+                    {row.entityType ? ` · ${row.entityType}` : ""}
+                    {row.entityId ? `:${row.entityId.slice(0, 8)}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </Surface>
+        )}
+      </div>
     </div>
   );
 }

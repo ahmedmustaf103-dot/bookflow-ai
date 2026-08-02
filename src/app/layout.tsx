@@ -1,17 +1,7 @@
 import type { Metadata } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
 
 import "./globals.css";
-
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -37,9 +27,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={GeistSans.variable}>
       <body
-        className={`${dmSans.variable} ${fraunces.variable} min-h-screen font-sans antialiased`}
+        className={`${GeistSans.className} min-h-screen font-sans antialiased`}
       >
         {children}
       </body>

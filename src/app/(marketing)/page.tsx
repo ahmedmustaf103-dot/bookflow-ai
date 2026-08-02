@@ -6,7 +6,7 @@ export default function HomePage() {
       <p className="text-sm font-medium tracking-[0.18em] text-[var(--color-accent)] uppercase">
         Booking OS for service businesses
       </p>
-      <h1 className="font-display max-w-3xl text-5xl leading-[1.05] tracking-tight md:text-6xl">
+      <h1 className="max-w-3xl text-5xl leading-[1.05] font-semibold tracking-tight md:text-6xl">
         BookFlow AI
       </h1>
       <p className="max-w-xl text-lg leading-relaxed text-[var(--color-ink)]/75">

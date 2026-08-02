@@ -2,6 +2,8 @@ import { ActionForm } from "@/components/forms/action-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { Surface } from "@/components/ui/surface";
 import { createResourceAction } from "@/server/actions/tenant";
 import { requireOrgRole } from "@/server/tenant/context";
 
@@ -20,15 +22,11 @@ export default async function StaffPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">
-          Staff & resources
-        </h1>
-        <p className="mt-2 text-[var(--color-ink)]/70">
-          Bookable capacity units — chairs, rooms, or people.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Staff & resources"
+        description="Bookable capacity units — chairs, rooms, or people."
+      />
 
       {resources.length === 0 ? (
         <EmptyState
@@ -36,25 +34,27 @@ export default async function StaffPage() {
           description="Add your first bookable resource below."
         />
       ) : (
-        <ul className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
-          {resources.map((r) => (
-            <li
-              key={r.id}
-              className="flex items-center justify-between gap-4 px-4 py-3"
-            >
-              <div>
-                <p className="font-medium">{r.name}</p>
-                <p className="text-sm text-[var(--color-ink)]/60">
-                  {r.type} · {r.location.name}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <Surface padding="none" className="overflow-hidden">
+          <ul className="divide-y divide-[var(--border)]">
+            {resources.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-4 px-4 py-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">{r.name}</p>
+                  <p className="text-xs text-[var(--ink-tertiary)]">
+                    {r.type} · {r.location.name}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Surface>
       )}
 
-      <section className="max-w-md">
-        <h2 className="text-lg font-semibold">Add resource</h2>
+      <Surface className="max-w-md">
+        <h2 className="text-sm font-semibold">Add resource</h2>
         <ActionForm
           action={createResourceAction}
           submitLabel="Add resource"
@@ -67,7 +67,6 @@ export default async function StaffPage() {
               name="name"
               required
               placeholder="Chair 2"
-              className="mt-1"
             />
           </div>
           <div>
@@ -76,7 +75,6 @@ export default async function StaffPage() {
               id="resource-location"
               name="locationId"
               required
-              className="mt-1"
               defaultValue={locations[0]?.id}
             >
               {locations.map((l) => (
@@ -88,12 +86,7 @@ export default async function StaffPage() {
           </div>
           <div>
             <Label htmlFor="resource-type">Type</Label>
-            <Select
-              id="resource-type"
-              name="type"
-              defaultValue="STAFF"
-              className="mt-1"
-            >
+            <Select id="resource-type" name="type" defaultValue="STAFF">
               <option value="STAFF">Staff</option>
               <option value="ROOM">Room</option>
               <option value="EQUIPMENT">Equipment</option>
@@ -101,7 +94,7 @@ export default async function StaffPage() {
             </Select>
           </div>
         </ActionForm>
-      </section>
+      </Surface>
     </div>
   );
 }

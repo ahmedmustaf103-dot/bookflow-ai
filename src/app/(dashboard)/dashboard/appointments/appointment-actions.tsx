@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import type { BookingStatus } from "@/generated/prisma/client";
+import { Button } from "@/components/ui/button";
 import { transitionBookingAction } from "@/server/actions/booking";
 
 const ACTIONS: Partial<
@@ -36,13 +37,15 @@ export function AppointmentActions({
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-1.5">
         {actions.map((action) => (
-          <button
+          <Button
             key={action.to}
             type="button"
+            size="sm"
+            variant={action.to === "CANCELLED" ? "danger" : "secondary"}
             disabled={pending}
-            className="min-h-10 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:outline-none"
+            aria-busy={pending}
             onClick={() => {
               const formData = new FormData();
               formData.set("bookingId", bookingId);
@@ -62,11 +65,11 @@ export function AppointmentActions({
             }}
           >
             {action.label}
-          </button>
+          </Button>
         ))}
       </div>
       {error ? (
-        <p className="text-xs text-red-700" role="alert">
+        <p className="text-xs text-[var(--danger)]" role="alert">
           {error}
         </p>
       ) : null}

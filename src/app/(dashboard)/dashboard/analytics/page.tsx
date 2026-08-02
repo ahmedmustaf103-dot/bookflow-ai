@@ -1,3 +1,6 @@
+import { PageHeader } from "@/components/ui/page-header";
+import { Stat } from "@/components/ui/stat";
+import { Surface } from "@/components/ui/surface";
 import { getOrgAnalytics } from "@/server/analytics/org";
 import { getPlanLimits } from "@/server/billing/plans";
 import { requireOrgRole } from "@/server/tenant/context";
@@ -32,61 +35,34 @@ export default async function AnalyticsPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">Analytics</h1>
-        <p className="mt-2 text-[var(--color-ink)]/70">
-          Last 30 days for {ctx.organization.name}.
-        </p>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Analytics"
+        description={`Last 30 days for ${ctx.organization.name}.`}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Bookings" value={analytics.bookingsTotal} />
+        <Stat label="Upcoming" value={analytics.upcoming} />
+        <Stat label="No-show rate" value={pct(analytics.noShowRate)} />
+        <Stat
+          label="Est. revenue"
+          value={money(analytics.estimatedRevenueCents)}
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Bookings", value: String(analytics.bookingsTotal) },
-          { label: "Upcoming", value: String(analytics.upcoming) },
-          { label: "No-show rate", value: pct(analytics.noShowRate) },
-          {
-            label: "Est. revenue",
-            value: money(analytics.estimatedRevenueCents),
-          },
-        ].map((card) => (
-          <div
-            key={card.label}
-            className="rounded-lg border border-[var(--color-border)] p-5"
-          >
-            <p className="text-sm text-[var(--color-ink)]/60">{card.label}</p>
-            <p className="font-display mt-2 text-3xl">{card.value}</p>
-          </div>
-        ))}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stat label="Completed" value={analytics.bookingsCompleted} />
+        <Stat label="No-shows" value={analytics.bookingsNoShow} />
+        <Stat label="Cancelled" value={analytics.bookingsCancelled} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-[var(--color-border)] p-5">
-          <p className="text-sm text-[var(--color-ink)]/60">Completed</p>
-          <p className="mt-2 text-2xl font-semibold">
-            {analytics.bookingsCompleted}
-          </p>
-        </div>
-        <div className="rounded-lg border border-[var(--color-border)] p-5">
-          <p className="text-sm text-[var(--color-ink)]/60">No-shows</p>
-          <p className="mt-2 text-2xl font-semibold">
-            {analytics.bookingsNoShow}
-          </p>
-        </div>
-        <div className="rounded-lg border border-[var(--color-border)] p-5">
-          <p className="text-sm text-[var(--color-ink)]/60">Cancelled</p>
-          <p className="mt-2 text-2xl font-semibold">
-            {analytics.bookingsCancelled}
-          </p>
-        </div>
-      </div>
-
-      <section className="rounded-lg border border-[var(--color-border)] p-5">
-        <h2 className="text-lg font-semibold">Plan usage</h2>
-        <p className="mt-1 text-sm text-[var(--color-ink)]/60">
+      <Surface>
+        <h2 className="text-sm font-semibold">Plan usage</h2>
+        <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
           Current plan: {ctx.organization.plan}
         </p>
-        <ul className="mt-4 space-y-2 text-sm">
+        <ul className="mt-4 space-y-2 text-sm text-[var(--ink-secondary)]">
           <li>
             Locations: {locationCount}
             {limits.locations != null ? ` / ${limits.locations}` : " / ∞"}
@@ -103,7 +79,7 @@ export default async function AnalyticsPage() {
           </li>
           <li>Clients on file: {analytics.uniqueClients}</li>
         </ul>
-      </section>
+      </Surface>
     </div>
   );
 }

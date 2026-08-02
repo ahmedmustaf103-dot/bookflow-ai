@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/page-header";
 import { AiWorkbench } from "./ai-workbench";
 import { getConfiguredProvider } from "@/server/ai/provider";
 import { getPlanLimits, planAllowsAi } from "@/server/billing/plans";
@@ -28,16 +29,15 @@ export default async function AiPage() {
   const tokensUsed = (usage._sum.tokensIn ?? 0) + (usage._sum.tokensOut ?? 0);
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">AI</h1>
-        <p className="mt-2 text-[var(--color-ink)]/70">
-          Assistive tools only — AI never books without staff confirmation.
-          {!planAllowsAi(ctx.organization.plan)
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="AI"
+        description={`Assistive tools only — AI never books without staff confirmation.${
+          !planAllowsAi(ctx.organization.plan)
             ? " Your current plan has no AI budget."
-            : null}
-        </p>
-      </div>
+            : ""
+        }`}
+      />
 
       <AiWorkbench
         clients={clients}

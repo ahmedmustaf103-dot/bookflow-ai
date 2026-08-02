@@ -1,14 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  --color-paper: #f7f4ef;
-  --color-ink: #1a1814;
-  --color-muted: #ebe6dc;
-  --color-border: #d4cdc0;
-  --color-accent: #0f6e56;
-  --color-accent-soft: #d8efe6;
-  --background: var(--color-paper);
-  --foreground: var(--color-ink);
+  /* Linear-craft BookFlow tokens */
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --ink: #0a0a0a;
+  --ink-secondary: #52525b;
+  --ink-tertiary: #71717a;
+  --muted: #f4f4f5;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --accent: #0f6e56;
+  --accent-soft: #e8f5f0;
+  --accent-hover: #0c5a46;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+  --warning: #ca8a04;
+  --warning-soft: #fefce8;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* Back-compat aliases used across the app */
+  --color-paper: var(--bg);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --background: var(--bg);
+  --foreground: var(--ink);
 }
 
 @theme inline {
@@ -20,19 +43,34 @@
   --color-border: var(--color-border);
   --color-accent: var(--color-accent);
   --color-accent-soft: var(--color-accent-soft);
-  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
-  background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, #d8efe6 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, #ebe6dc 0%, transparent 50%),
-    var(--color-paper);
-  color: var(--color-ink);
+  background: var(--bg);
+  color: var(--ink);
   font-family: var(--font-sans);
+  font-feature-settings: "ss01" on, "cv01" on;
 }
 
 .font-display {
   font-family: var(--font-display);
+}
+
+@keyframes bf-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bf-page-enter {
+  animation: bf-fade-in 180ms ease-out;
 }

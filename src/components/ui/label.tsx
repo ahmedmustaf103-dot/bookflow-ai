@@ -6,7 +6,7 @@ export function Label({
 }: ComponentProps<"label">) {
   return (
     <label
-      className={`block text-sm font-medium text-[var(--color-ink)] ${className}`}
+      className={`mb-1.5 block text-xs font-medium text-[var(--ink-secondary)] ${className}`}
       {...props}
     />
   );

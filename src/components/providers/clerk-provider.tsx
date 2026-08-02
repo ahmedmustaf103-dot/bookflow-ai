@@ -4,16 +4,16 @@ import { ClerkProvider } from "@clerk/nextjs";
 
 const appearance = {
   variables: {
-    colorPrimary: "#1F4B3A",
-    colorText: "#1a1a1a",
-    colorBackground: "#F7F4EF",
+    colorPrimary: "#0f6e56",
+    colorText: "#0a0a0a",
+    colorBackground: "#ffffff",
     borderRadius: "0.375rem",
-    fontFamily: "var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif",
+    fontFamily: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
   },
   elements: {
-    card: "shadow-none border border-[var(--color-border)]",
+    card: "shadow-none border border-[var(--border)]",
     formButtonPrimary:
-      "bg-[var(--color-accent)] hover:opacity-90 normal-case",
+      "bg-[var(--accent)] hover:bg-[var(--accent-hover)] normal-case",
   },
 } as const;
 

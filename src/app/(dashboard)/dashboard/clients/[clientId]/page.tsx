@@ -3,6 +3,12 @@ import { notFound } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 
 import { ActionForm } from "@/components/forms/action-form";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input, Textarea } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusPill } from "@/components/ui/status-pill";
+import { Surface } from "@/components/ui/surface";
 import { updateClientAction } from "@/server/actions/ops";
 import { requireOrgRole } from "@/server/tenant/context";
 
@@ -39,30 +45,24 @@ export default async function ClientDetailPage({
   const noShows = client.bookings.filter((b) => b.status === "NO_SHOW").length;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <Link
-          href="/dashboard/clients"
-          className="text-sm text-[var(--color-ink)]/60 hover:text-[var(--color-ink)]"
-        >
-          ← Clients
-        </Link>
-        <h1 className="font-display mt-2 text-3xl tracking-tight">
-          {client.name}
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-ink)]/65">
-          Lifetime value (completed):{" "}
-          {new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-          }).format(lifetimeValueCents / 100)}
-          {" · "}
-          {noShows} no-show{noShows === 1 ? "" : "s"}
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <Link
+        href="/dashboard/clients"
+        className="text-sm text-[var(--ink-tertiary)] hover:text-[var(--ink)]"
+      >
+        ← Clients
+      </Link>
 
-      <section className="max-w-lg">
-        <h2 className="text-lg font-semibold">Profile</h2>
+      <PageHeader
+        title={client.name}
+        description={`Lifetime value (completed): ${new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(lifetimeValueCents / 100)} · ${noShows} no-show${noShows === 1 ? "" : "s"}`}
+      />
+
+      <Surface className="max-w-lg">
+        <h2 className="text-sm font-semibold">Profile</h2>
         <ActionForm
           action={updateClientAction}
           submitLabel="Save client"
@@ -70,66 +70,87 @@ export default async function ClientDetailPage({
           className="mt-4 flex flex-col gap-3"
         >
           <input type="hidden" name="clientId" value={client.id} />
-          <input
-            name="name"
-            required
-            defaultValue={client.name}
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
-          <input
-            name="email"
-            type="email"
-            defaultValue={client.email ?? ""}
-            placeholder="Email"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
-          <input
-            name="phone"
-            defaultValue={client.phone ?? ""}
-            placeholder="Phone"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
-          <input
-            name="tags"
-            defaultValue={client.tags.join(", ")}
-            placeholder="Tags (comma-separated)"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
-          <textarea
-            name="notes"
-            rows={4}
-            defaultValue={client.notes ?? ""}
-            placeholder="Internal notes"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          />
+          <div>
+            <Label htmlFor="client-name">Name</Label>
+            <Input
+              id="client-name"
+              name="name"
+              required
+              defaultValue={client.name}
+            />
+          </div>
+          <div>
+            <Label htmlFor="client-email">Email</Label>
+            <Input
+              id="client-email"
+              name="email"
+              type="email"
+              defaultValue={client.email ?? ""}
+              placeholder="Email"
+            />
+          </div>
+          <div>
+            <Label htmlFor="client-phone">Phone</Label>
+            <Input
+              id="client-phone"
+              name="phone"
+              defaultValue={client.phone ?? ""}
+              placeholder="Phone"
+            />
+          </div>
+          <div>
+            <Label htmlFor="client-tags">Tags</Label>
+            <Input
+              id="client-tags"
+              name="tags"
+              defaultValue={client.tags.join(", ")}
+              placeholder="Tags (comma-separated)"
+            />
+          </div>
+          <div>
+            <Label htmlFor="client-notes">Notes</Label>
+            <Textarea
+              id="client-notes"
+              name="notes"
+              rows={4}
+              defaultValue={client.notes ?? ""}
+              placeholder="Internal notes"
+            />
+          </div>
         </ActionForm>
-      </section>
+      </Surface>
 
-      <section>
-        <h2 className="text-lg font-semibold">History</h2>
-        <ul className="mt-3 divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
-          {client.bookings.map((b) => (
-            <li key={b.id} className="px-4 py-3 text-sm">
-              <p className="font-medium">
-                {formatInTimeZone(
-                  b.startAt,
-                  b.location.timezone,
-                  "EEE MMM d · HH:mm",
-                )}{" "}
-                · {b.service.name}
-              </p>
-              <p className="text-[var(--color-ink)]/60">
-                {b.resource.name} · {b.status}
-              </p>
-            </li>
-          ))}
-          {client.bookings.length === 0 ? (
-            <li className="px-4 py-6 text-[var(--color-ink)]/60">
-              No bookings yet.
-            </li>
-          ) : null}
-        </ul>
-      </section>
+      <div>
+        <h2 className="mb-3 text-sm font-semibold">History</h2>
+        {client.bookings.length === 0 ? (
+          <EmptyState title="No bookings yet" />
+        ) : (
+          <Surface padding="none" className="overflow-hidden">
+            <ul className="divide-y divide-[var(--border)]">
+              {client.bookings.map((b) => (
+                <li key={b.id} className="px-4 py-3 text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium">
+                        {formatInTimeZone(
+                          b.startAt,
+                          b.location.timezone,
+                          "EEE MMM d · HH:mm",
+                        )}{" "}
+                        · {b.service.name}
+                      </p>
+                      <p className="text-xs text-[var(--ink-tertiary)]">
+                        {b.resource.name}
+                      </p>
+                    </div>
+                    <StatusPill status={b.status} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Surface>
+        )}
+      </div>
     </div>
   );
 }
