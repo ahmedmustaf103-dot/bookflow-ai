@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/forms/action-form";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +39,12 @@ export default async function ServicesPage() {
       {services.length === 0 ? (
         <EmptyState
           title="No services yet"
-          description="Add your first cut or treatment below."
+          description="Add your first cut or treatment so customers can book."
+          action={
+            <ButtonLink href="#add-service" variant="primary" size="sm">
+              Add service
+            </ButtonLink>
+          }
         />
       ) : (
         <Surface padding="none" className="overflow-hidden">
@@ -66,7 +72,7 @@ export default async function ServicesPage() {
         </Surface>
       )}
 
-      <Surface className="max-w-md">
+      <Surface id="add-service" className="max-w-md scroll-mt-6">
         <h2 className="text-sm font-semibold">Add service</h2>
         <ActionForm
           action={createServiceAction}

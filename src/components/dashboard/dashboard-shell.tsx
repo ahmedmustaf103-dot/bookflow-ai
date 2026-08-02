@@ -7,6 +7,7 @@ import { UserButton } from "@clerk/nextjs";
 
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import { Kbd } from "@/components/ui/kbd";
+import { ToastEventBridge, ToastProvider } from "@/components/ui/toast";
 
 export type NavItem = { href: string; label: string; group: "operate" | "setup" };
 
@@ -89,6 +90,8 @@ export function DashboardShell({
   const flatNav = nav.map(({ href, label }) => ({ href, label }));
 
   return (
+    <ToastProvider>
+    <ToastEventBridge />
     <div className="flex min-h-screen bg-[var(--bg)]">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] md:flex">
@@ -169,5 +172,6 @@ export function DashboardShell({
 
       {nav.length > 0 ? <CommandPalette nav={flatNav} /> : null}
     </div>
+    </ToastProvider>
   );
 }

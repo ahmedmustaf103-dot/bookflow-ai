@@ -23,7 +23,7 @@ import {
 
 export async function createPublicBookingAction(
   formData: FormData,
-): Promise<ActionResult<{ bookingId: string }>> {
+): Promise<ActionResult<{ bookingId: string; isFirstBooking?: boolean }>> {
   const parsed = parseForm(publicBookingSchema, formData);
   if (!parsed.ok) return err(parsed.error);
 

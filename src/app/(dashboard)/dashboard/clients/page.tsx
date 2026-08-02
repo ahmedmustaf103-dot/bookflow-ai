@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { ActionForm } from "@/components/forms/action-form";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,17 +66,28 @@ export default async function ClientsPage({
           description={
             query
               ? "Try a different search term."
-              : "Clients appear when someone books or you add one below."
+              : "Clients appear when someone books — or add one manually."
+          }
+          action={
+            query ? undefined : (
+              <ButtonLink href="#add-client" variant="primary" size="sm">
+                Add client
+              </ButtonLink>
+            )
           }
         />
       ) : (
         <Surface padding="none" className="overflow-hidden">
           <ul className="divide-y divide-[var(--border)]">
-            {clients.map((c) => (
-              <li key={c.id}>
+            {clients.map((c, i) => (
+              <li
+                key={c.id}
+                className="bf-stagger-item"
+                style={{ ["--bf-i" as string]: Math.min(i, 6) }}
+              >
                 <Link
                   href={`/dashboard/clients/${c.id}`}
-                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[var(--muted)]/70 focus-visible:bg-[var(--muted)] focus-visible:outline-none"
+                  className="bf-row-hover flex items-center justify-between gap-4 px-4 py-3 hover:bg-[var(--muted)]/70 focus-visible:bg-[var(--muted)] focus-visible:outline-none"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{c.name}</p>
@@ -101,7 +112,7 @@ export default async function ClientsPage({
         </Surface>
       )}
 
-      <Surface className="max-w-md">
+      <Surface id="add-client" className="max-w-md scroll-mt-6">
         <h2 className="text-sm font-semibold">Add client</h2>
         <ActionForm
           action={createManualClientAction}

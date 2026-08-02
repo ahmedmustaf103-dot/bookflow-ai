@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -15,6 +15,7 @@ type Props<T> = {
   rowKey: (row: T) => string;
   emptyTitle: string;
   emptyDescription?: string;
+  emptyAction?: ReactNode;
 };
 
 export function DataTable<T>({
@@ -23,10 +24,15 @@ export function DataTable<T>({
   rowKey,
   emptyTitle,
   emptyDescription,
+  emptyAction,
 }: Props<T>) {
   if (rows.length === 0) {
     return (
-      <EmptyState title={emptyTitle} description={emptyDescription} />
+      <EmptyState
+        title={emptyTitle}
+        description={emptyDescription}
+        action={emptyAction}
+      />
     );
   }
 
@@ -47,10 +53,11 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row, i) => (
               <tr
                 key={rowKey(row)}
-                className="border-b border-[var(--border)] last:border-0 transition-colors hover:bg-[var(--muted)]/50"
+                className="bf-stagger-item bf-row-hover border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/50"
+                style={{ "--bf-i": Math.min(i, 6) } as CSSProperties}
               >
                 {columns.map((col) => (
                   <td

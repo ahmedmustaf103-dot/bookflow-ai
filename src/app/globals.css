@@ -71,6 +71,111 @@ body {
   }
 }
 
+@keyframes bf-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bf-check-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bf-success-bg {
+  0% {
+    background-color: transparent;
+  }
+  30% {
+    background-color: var(--success-soft);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes bf-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bf-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .bf-page-enter {
   animation: bf-fade-in 180ms ease-out;
+}
+
+.bf-toast-enter {
+  animation: bf-toast-in 160ms ease-out;
+}
+
+.bf-check {
+  display: inline-flex;
+  animation: bf-check-pop 220ms ease-out;
+}
+
+.bf-success-flash {
+  border-radius: var(--radius-control);
+  padding: 0.25rem 0.5rem;
+  animation: bf-success-bg 1.2s ease-out;
+}
+
+.bf-stagger-item {
+  animation: bf-stagger-in 200ms ease-out both;
+  animation-delay: calc(var(--bf-i, 0) * 30ms);
+}
+
+.bf-dialog-enter {
+  animation: bf-dialog-in 140ms ease-out;
+}
+
+.bf-row-hover {
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-page-enter,
+  .bf-toast-enter,
+  .bf-check,
+  .bf-success-flash,
+  .bf-stagger-item,
+  .bf-dialog-enter {
+    animation: none !important;
+  }
+
+  .bf-row-hover {
+    transition: none !important;
+  }
 }

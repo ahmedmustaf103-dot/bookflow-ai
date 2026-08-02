@@ -84,7 +84,16 @@ export default async function AppointmentsPage({
         rows={dayBookings}
         rowKey={(b) => b.id}
         emptyTitle="No appointments this day"
-        emptyDescription={`Share /book/${ctx.organization.slug} to get bookings.`}
+        emptyDescription="Share your booking link to fill the day."
+        emptyAction={
+          <ButtonLink
+            href={`/book/${ctx.organization.slug}`}
+            variant="primary"
+            size="sm"
+          >
+            Open booking page
+          </ButtonLink>
+        }
         columns={[
           {
             key: "time",
@@ -135,18 +144,6 @@ export default async function AppointmentsPage({
           },
         ]}
       />
-
-      {dayBookings.length === 0 ? (
-        <div className="mt-4">
-          <ButtonLink
-            href={`/book/${ctx.organization.slug}`}
-            variant="secondary"
-            size="sm"
-          >
-            Open booking page
-          </ButtonLink>
-        </div>
-      ) : null}
     </div>
   );
 }

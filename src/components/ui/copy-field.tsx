@@ -3,9 +3,19 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
-export function CopyField({ value, label }: { value: string; label: string }) {
+export function CopyField({
+  value,
+  label,
+  onCopied,
+}: {
+  value: string;
+  label: string;
+  onCopied?: () => void;
+}) {
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   return (
     <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
@@ -25,10 +35,18 @@ export function CopyField({ value, label }: { value: string; label: string }) {
         onClick={async () => {
           await navigator.clipboard.writeText(value);
           setCopied(true);
+          toast("Link copied", "success");
+          onCopied?.();
           window.setTimeout(() => setCopied(false), 1500);
         }}
       >
-        {copied ? "Copied" : "Copy"}
+        {copied ? (
+          <span className="bf-check inline-flex items-center gap-1">
+            ✓ Copied
+          </span>
+        ) : (
+          "Copy"
+        )}
       </Button>
     </div>
   );

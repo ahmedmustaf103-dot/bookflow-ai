@@ -87,7 +87,7 @@ export async function createBooking(input: {
   source: BookingSource;
   idempotencyKey?: string | null;
   actorId?: string | null;
-}): Promise<ActionResult<{ bookingId: string }>> {
+}): Promise<ActionResult<{ bookingId: string; isFirstBooking?: boolean }>> {
   try {
     if (input.idempotencyKey) {
       const existing = await db.booking.findFirst({
@@ -97,9 +97,13 @@ export async function createBooking(input: {
         },
       });
       if (existing) {
-        return ok({ bookingId: existing.id });
+        return ok({ bookingId: existing.id, isFirstBooking: false });
       }
     }
+
+    const priorCount = await db.booking.count({
+      where: { organizationId: input.organizationId },
+    });
 
     await assertBookingQuota(input.organizationId);
 
@@ -331,7 +335,10 @@ export async function createBooking(input: {
       );
     }
 
-    return ok({ bookingId: booking.id });
+    return ok({
+      bookingId: booking.id,
+      isFirstBooking: priorCount === 0,
+    });
   } catch (e) {
     if (isBookingOverlapError(e)) {
       return err("That time was just booked — pick another slot");

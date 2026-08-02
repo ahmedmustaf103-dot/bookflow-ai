@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 
 import type { BookingStatus } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { transitionBookingAction } from "@/server/actions/booking";
 
 const ACTIONS: Partial<
@@ -29,6 +30,7 @@ export function AppointmentActions({
   status: BookingStatus;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const actions = ACTIONS[status] ?? [];
@@ -58,8 +60,15 @@ export function AppointmentActions({
                 const result = await transitionBookingAction(formData);
                 if (!result.ok) {
                   setError(result.error);
+                  toast(result.error, "error");
                   return;
                 }
+                toast(
+                  action.to === "CANCELLED"
+                    ? "Appointment cancelled"
+                    : `Marked ${action.label.toLowerCase()}`,
+                  "success",
+                );
                 router.refresh();
               });
             }}

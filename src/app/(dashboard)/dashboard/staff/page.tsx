@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/forms/action-form";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +32,12 @@ export default async function StaffPage() {
       {resources.length === 0 ? (
         <EmptyState
           title="No staff or resources yet"
-          description="Add your first bookable resource below."
+          description="Add your first bookable resource to start taking appointments."
+          action={
+            <ButtonLink href="#add-resource" variant="primary" size="sm">
+              Add resource
+            </ButtonLink>
+          }
         />
       ) : (
         <Surface padding="none" className="overflow-hidden">
@@ -53,7 +59,7 @@ export default async function StaffPage() {
         </Surface>
       )}
 
-      <Surface className="max-w-md">
+      <Surface id="add-resource" className="max-w-md scroll-mt-6">
         <h2 className="text-sm font-semibold">Add resource</h2>
         <ActionForm
           action={createResourceAction}

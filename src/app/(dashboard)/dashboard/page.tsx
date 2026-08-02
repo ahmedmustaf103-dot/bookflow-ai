@@ -1,7 +1,8 @@
 import Link from "next/link";
 
+import { SetupChecklist } from "@/components/dashboard/setup-checklist";
+import { OverviewCopyLink } from "@/components/dashboard/overview-copy-link";
 import { ButtonLink } from "@/components/ui/button";
-import { CopyField } from "@/components/ui/copy-field";
 import { PageHeader } from "@/components/ui/page-header";
 import { Stat } from "@/components/ui/stat";
 import { Surface } from "@/components/ui/surface";
@@ -11,7 +12,7 @@ import { requireOrgOrRedirect } from "@/server/tenant/context";
 export default async function DashboardPage() {
   const ctx = await requireOrgOrRedirect();
 
-  const [locationCount, resourceCount, serviceCount, upcoming] =
+  const [locationCount, resourceCount, serviceCount, upcoming, bookingTotal] =
     await Promise.all([
       ctx.db.location.count({ where: { isActive: true } }),
       ctx.db.resource.count({ where: { isActive: true } }),
@@ -22,9 +23,11 @@ export default async function DashboardPage() {
           startAt: { gte: new Date() },
         },
       }),
+      ctx.db.booking.count(),
     ]);
 
   const bookUrl = `${env.NEXT_PUBLIC_APP_URL}/book/${ctx.organization.slug}`;
+  const bookPath = `/book/${ctx.organization.slug}`;
 
   return (
     <div>
@@ -36,22 +39,30 @@ export default async function DashboardPage() {
             <ButtonLink href="/dashboard/appointments" size="sm">
               Appointments
             </ButtonLink>
-            <ButtonLink
-              href={`/book/${ctx.organization.slug}`}
-              variant="secondary"
-              size="sm"
-            >
+            <ButtonLink href={bookPath} variant="secondary" size="sm">
               Booking page
             </ButtonLink>
           </>
         }
       />
 
+      <SetupChecklist
+        orgId={ctx.organization.id}
+        hasServices={serviceCount > 0}
+        hasResources={resourceCount > 0}
+        hasBookings={bookingTotal > 0}
+        bookPath={bookPath}
+      />
+
       <Surface className="mb-6" padding="md">
         <p className="mb-2 text-xs font-medium text-[var(--ink-tertiary)] uppercase">
           Public booking link
         </p>
-        <CopyField value={bookUrl} label="Public booking link" />
+        <OverviewCopyLink
+          orgId={ctx.organization.id}
+          value={bookUrl}
+          label="Public booking link"
+        />
       </Surface>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -80,7 +91,7 @@ export default async function DashboardPage() {
           <Link
             key={stat.label}
             href={stat.href}
-            className="rounded-[var(--radius-panel)] transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
+            className="bf-row-hover rounded-[var(--radius-panel)] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
           >
             <Stat label={stat.label} value={stat.value} />
           </Link>
