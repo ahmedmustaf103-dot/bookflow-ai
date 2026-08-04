@@ -19,8 +19,11 @@ export async function getSlotsForServiceResource(input: {
   toDate?: string;
   /** Dashboard preview may allow unlinked pairs; public booking must not */
   requireLink?: boolean;
+  /** Reschedule flow: ignore this booking's own footprint when computing busy time */
+  excludeBookingId?: string;
 }): Promise<Slot[]> {
   const requireLink = input.requireLink !== false;
+  const skipCache = Boolean(input.excludeBookingId);
 
   const service = await db.service.findFirst({
     where: {
@@ -80,7 +83,7 @@ export async function getSlotsForServiceResource(input: {
     toDate,
   };
 
-  const cached = await getCachedSlots(cacheInput);
+  const cached = skipCache ? null : await getCachedSlots(cacheInput);
   if (cached) return cached;
 
   // Bound busy query using location-local day start/end, not UTC midnight.
@@ -93,9 +96,22 @@ export async function getSlotsForServiceResource(input: {
       status: { in: [...ACTIVE_BOOKING_STATUSES] },
       startAt: { lt: toUtc },
       endAt: { gt: fromUtc },
+      ...(input.excludeBookingId ? { id: { not: input.excludeBookingId } } : {}),
     },
-    select: { startAt: true, endAt: true },
+    select: {
+      startAt: true,
+      endAt: true,
+      service: { select: { bufferBefore: true, bufferAfter: true } },
+    },
   });
+
+  // Expand each peer booking's busy footprint by *its own* service buffers,
+  // not the candidate service's — two different services can have different
+  // padding requirements around the same resource.
+  const busy = bookings.map((b) => ({
+    start: new Date(b.startAt.getTime() - b.service.bufferBefore * 60_000),
+    end: new Date(b.endAt.getTime() + b.service.bufferAfter * 60_000),
+  }));
 
   const slots = generateSlots({
     timezone,
@@ -107,10 +123,12 @@ export async function getSlotsForServiceResource(input: {
     slotIntervalMin: Math.min(15, service.durationMin),
     rules: resource.rules,
     overrides: resource.overrides,
-    busy: bookings.map((b) => ({ start: b.startAt, end: b.endAt })),
+    busy,
     now,
   });
 
-  await setCachedSlots(cacheInput, slots);
+  if (!skipCache) {
+    await setCachedSlots(cacheInput, slots);
+  }
   return slots;
 }

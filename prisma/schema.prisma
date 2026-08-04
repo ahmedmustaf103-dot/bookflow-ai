@@ -282,6 +282,8 @@ model Booking {
   notes          String?
   cancelReason   String?
   idempotencyKey String?
+  /// Opaque token for client self-serve manage / cancel / reschedule links
+  manageToken    String        @unique @default(cuid())
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 

@@ -15,7 +15,7 @@ function slotCacheKey(input: {
   fromDate: string;
   toDate: string;
 }): string {
-  return `slots:${input.organizationId}:${input.serviceId}:${input.resourceId}:${input.fromDate}:${input.toDate}`;
+  return `slots:v2:${input.organizationId}:${input.serviceId}:${input.resourceId}:${input.fromDate}:${input.toDate}`;
 }
 
 export async function getCachedSlots(input: {
@@ -101,7 +101,7 @@ export async function invalidateSlotsForResource(
   const redis = getRedis();
   if (redis) {
     try {
-      const pattern = `slots:*:*:${resourceId}:*`;
+      const pattern = `slots:v2:*:*:${resourceId}:*`;
       let cursor = "0";
       do {
         const [next, keys] = await redis.scan(cursor, {
