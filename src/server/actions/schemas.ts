@@ -98,6 +98,12 @@ export const createManualClientSchema = z.object({
   phone: z
     .union([z.string(), z.undefined()])
     .transform((v) => (v ?? "").trim().slice(0, 32)),
+  notes: z
+    .union([z.string(), z.undefined()])
+    .transform((v) => (v ?? "").trim().slice(0, 5000)),
+  tags: z
+    .union([z.string(), z.undefined()])
+    .transform((v) => (v ?? "").trim().slice(0, 500)),
 });
 
 export const updateOrgSettingsSchema = z.object({

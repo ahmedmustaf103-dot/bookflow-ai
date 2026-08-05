@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { toSafeActionError } from "@/lib/action-errors";
+import { parseTags } from "@/lib/client-tags";
 import { err, ok, okEmpty, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
 import { writeAuditLog } from "@/server/billing/entitlements";
@@ -27,13 +28,7 @@ export async function updateClientAction(
   if (!parsed.ok) return err(parsed.error);
 
   const { clientId, name, email, phone, notes, tags: tagsRaw } = parsed.data;
-  const tags = tagsRaw
-    ? tagsRaw
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .slice(0, 20)
-    : [];
+  const tags = parseTags(tagsRaw);
 
   try {
     const tdb = tenantDb(ctx.organization.id);
@@ -127,6 +122,8 @@ export async function createManualClientAction(
         name: parsed.data.name,
         email: parsed.data.email || null,
         phone: parsed.data.phone || null,
+        notes: parsed.data.notes || null,
+        tags: parseTags(parsed.data.tags),
       },
     });
 
