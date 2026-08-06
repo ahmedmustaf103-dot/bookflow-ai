@@ -37,7 +37,7 @@ export default async function DashboardPage() {
         actions={
           <>
             <ButtonLink href="/dashboard/appointments" size="sm">
-              Appointments
+              Calendar
             </ButtonLink>
             <ButtonLink href={bookPath} variant="secondary" size="sm">
               Booking page

@@ -40,6 +40,9 @@ export const env = createEnv({
     TWILIO_ACCOUNT_SID: z.string().min(1).optional(),
     TWILIO_AUTH_TOKEN: z.string().min(1).optional(),
     TWILIO_FROM_NUMBER: z.string().min(1).optional(),
+    /** Google Calendar OAuth (optional — Settings shows connect when set) */
+    GOOGLE_CALENDAR_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CALENDAR_CLIENT_SECRET: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

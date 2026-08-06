@@ -1,148 +1,134 @@
-import Link from "next/link";
-import { formatInTimeZone } from "date-fns-tz";
-import { addDays, startOfDay } from "date-fns";
+import { addDays, endOfMonth, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
-import { AppointmentActions } from "./appointment-actions";
+import {
+  CalendarBoard,
+  type CalendarBooking,
+} from "./calendar-board";
 import { ButtonLink } from "@/components/ui/button";
-import { DataTable } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatusPill } from "@/components/ui/status-pill";
 import { requireOrgRole } from "@/server/tenant/context";
+
+type View = "day" | "week" | "month";
+
+function rangeForView(day: string, view: View, tz: string) {
+  const anchor = fromZonedTime(`${day}T12:00:00`, tz);
+  if (view === "month") {
+    const start = startOfWeek(startOfMonth(anchor), { weekStartsOn: 1 });
+    const end = endOfWeek(endOfMonth(anchor), { weekStartsOn: 1 });
+    return {
+      from: fromZonedTime(
+        `${formatInTimeZone(start, tz, "yyyy-MM-dd")}T00:00:00`,
+        tz,
+      ),
+      to: fromZonedTime(
+        `${formatInTimeZone(addDays(end, 1), tz, "yyyy-MM-dd")}T00:00:00`,
+        tz,
+      ),
+    };
+  }
+  if (view === "week") {
+    const start = startOfWeek(anchor, { weekStartsOn: 1 });
+    const end = endOfWeek(anchor, { weekStartsOn: 1 });
+    return {
+      from: fromZonedTime(
+        `${formatInTimeZone(start, tz, "yyyy-MM-dd")}T00:00:00`,
+        tz,
+      ),
+      to: fromZonedTime(
+        `${formatInTimeZone(addDays(end, 1), tz, "yyyy-MM-dd")}T00:00:00`,
+        tz,
+      ),
+    };
+  }
+  return {
+    from: fromZonedTime(`${day}T00:00:00`, tz),
+    to: fromZonedTime(
+      `${formatInTimeZone(addDays(anchor, 1), tz, "yyyy-MM-dd")}T00:00:00`,
+      tz,
+    ),
+  };
+}
 
 export default async function AppointmentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ day?: string }>;
+  searchParams: Promise<{
+    day?: string;
+    view?: string;
+    resourceId?: string;
+  }>;
 }) {
   const ctx = await requireOrgRole("STAFF");
   const params = await searchParams;
   const tz = ctx.organization.timezoneDefault;
+  const day =
+    params.day ?? formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
+  const view: View =
+    params.view === "week" || params.view === "month" ? params.view : "day";
+  const resourceId = params.resourceId?.trim() || undefined;
 
-  const day = params.day ?? formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
-  const dayStart = new Date(`${day}T00:00:00.000Z`);
-  const rangeStart = addDays(startOfDay(dayStart), -1);
-  const rangeEnd = addDays(startOfDay(dayStart), 2);
+  const { from, to } = rangeForView(day, view, tz);
 
-  const bookings = await ctx.db.booking.findMany({
-    where: {
-      startAt: { gte: rangeStart, lt: rangeEnd },
-    },
-    include: {
-      client: true,
-      service: true,
-      resource: true,
-      location: true,
-    },
-    orderBy: { startAt: "asc" },
-  });
+  const [bookings, resources] = await Promise.all([
+    ctx.db.booking.findMany({
+      where: {
+        startAt: { gte: from, lt: to },
+        ...(resourceId ? { resourceId } : {}),
+        status: { not: "CANCELLED" },
+      },
+      include: {
+        client: true,
+        service: true,
+        resource: true,
+        location: true,
+      },
+      orderBy: { startAt: "asc" },
+    }),
+    ctx.db.resource.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
-  const dayBookings = bookings.filter(
-    (b) =>
-      formatInTimeZone(b.startAt, b.location.timezone, "yyyy-MM-dd") === day,
-  );
-
-  const prev = formatInTimeZone(
-    addDays(new Date(`${day}T12:00:00Z`), -1),
-    "UTC",
-    "yyyy-MM-dd",
-  );
-  const next = formatInTimeZone(
-    addDays(new Date(`${day}T12:00:00Z`), 1),
-    "UTC",
-    "yyyy-MM-dd",
-  );
+  const calendarBookings: CalendarBooking[] = bookings.map((b) => ({
+    id: b.id,
+    startAt: b.startAt.toISOString(),
+    endAt: b.endAt.toISOString(),
+    status: b.status,
+    source: b.source,
+    clientName: b.client.name,
+    serviceName: b.service.name,
+    resourceId: b.resourceId,
+    resourceName: b.resource.name,
+    timezone: b.location.timezone,
+    durationMin: b.service.durationMin,
+  }));
 
   return (
-    <div>
+    <div className="flex flex-col gap-4">
       <PageHeader
-        title="Appointments"
-        description="Day board for your active organization."
+        title="Calendar"
+        description="Day, week, and month views — drag bookings to reschedule. Filter by staff."
         actions={
-          <div className="inline-flex items-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-0.5">
-            <Link
-              href={`/dashboard/appointments?day=${prev}`}
-              aria-label="Previous day"
-              className="rounded-[5px] px-3 py-1.5 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
-            >
-              Prev
-            </Link>
-            <span className="min-w-[7.5rem] px-2 text-center text-xs font-semibold tabular-nums">
-              {day}
-            </span>
-            <Link
-              href={`/dashboard/appointments?day=${next}`}
-              aria-label="Next day"
-              className="rounded-[5px] px-3 py-1.5 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
-            >
-              Next
-            </Link>
-          </div>
+          <ButtonLink
+            href={`/book/${ctx.organization.slug}`}
+            variant="secondary"
+            size="sm"
+          >
+            Booking page
+          </ButtonLink>
         }
       />
 
-      <DataTable
-        rows={dayBookings}
-        rowKey={(b) => b.id}
-        emptyTitle="No appointments this day"
-        emptyDescription="Share your booking link to fill the day."
-        emptyAction={
-          <ButtonLink
-            href={`/book/${ctx.organization.slug}`}
-            variant="primary"
-            size="sm"
-          >
-            Open booking page
-          </ButtonLink>
-        }
-        columns={[
-          {
-            key: "time",
-            header: "Time",
-            className: "w-24",
-            cell: (b) => (
-              <span className="font-medium tabular-nums">
-                {formatInTimeZone(b.startAt, b.location.timezone, "HH:mm")}
-              </span>
-            ),
-          },
-          {
-            key: "service",
-            header: "Service",
-            cell: (b) => b.service.name,
-          },
-          {
-            key: "client",
-            header: "Client",
-            cell: (b) => (
-              <div>
-                <p className="font-medium">{b.client.name}</p>
-                <p className="text-xs text-[var(--ink-tertiary)]">
-                  {[b.client.email, b.resource.name].filter(Boolean).join(" · ")}
-                </p>
-              </div>
-            ),
-          },
-          {
-            key: "status",
-            header: "Status",
-            cell: (b) => (
-              <div className="flex flex-col gap-1">
-                <StatusPill status={b.status} />
-                <span className="text-[10px] text-[var(--ink-tertiary)] uppercase">
-                  {b.source}
-                </span>
-              </div>
-            ),
-          },
-          {
-            key: "actions",
-            header: "",
-            className: "text-right",
-            cell: (b) => (
-              <AppointmentActions bookingId={b.id} status={b.status} />
-            ),
-          },
-        ]}
+      <CalendarBoard
+        day={day}
+        view={view}
+        timezone={tz}
+        resourceId={resourceId}
+        resources={resources}
+        bookings={calendarBookings}
       />
     </div>
   );

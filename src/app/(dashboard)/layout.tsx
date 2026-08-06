@@ -41,7 +41,7 @@ export default async function DashboardLayout({
           },
           {
             href: "/dashboard/appointments",
-            label: "Appointments",
+            label: "Calendar",
             group: "operate" as const,
             min: "STAFF" as const,
           },

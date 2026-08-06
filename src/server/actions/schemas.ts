@@ -31,6 +31,11 @@ export const transitionBookingSchema = z.object({
   cancelReason: optionalText(500),
 });
 
+export const rescheduleBookingSchema = z.object({
+  bookingId: id,
+  startAt: z.string().trim().min(1),
+});
+
 export const checkoutSchema = z.object({
   plan: z.enum(["STARTER", "GROWTH", "BUSINESS"]).default("STARTER"),
 });

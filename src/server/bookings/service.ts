@@ -28,6 +28,10 @@ import { writeAuditLog } from "@/server/billing/entitlements";
 import { invalidateSlotsForResource } from "@/server/cache/slots";
 import { captureException } from "@/lib/observability";
 import { isBookingOverlapError } from "@/server/bookings/overlap";
+import {
+  pushGoogleCalendarCancel,
+  pushGoogleCalendarUpsert,
+} from "@/server/integrations/google-calendar";
 
 const ACTIVE: BookingStatus[] = ["PENDING", "CONFIRMED"];
 
@@ -335,6 +339,17 @@ export async function createBooking(input: {
       );
     }
 
+    void pushGoogleCalendarUpsert({
+      organizationId: booking.organizationId,
+      bookingId: booking.id,
+      googleEventId: booking.googleEventId,
+      summary: `${booking.service.name} · ${booking.client.name}`,
+      description: `With ${booking.resource.name}`,
+      startAt: booking.startAt,
+      endAt: booking.endAt,
+      timezone: booking.location.timezone,
+    });
+
     return ok({
       bookingId: booking.id,
       isFirstBooking: priorCount === 0,
@@ -456,10 +471,194 @@ export async function transitionBooking(input: {
       logger.error({ err: e }, "Audit log write failed");
     }
 
+    if (input.to === "CANCELLED") {
+      void pushGoogleCalendarCancel({
+        organizationId: booking.organizationId,
+        bookingId: booking.id,
+        googleEventId: booking.googleEventId,
+      });
+    }
+
     return okEmpty();
   } catch (e) {
     captureException(e, { action: "transitionBooking" });
     logger.error({ err: e }, "transitionBooking failed");
     return err(toSafeActionError(e, "Unable to update booking"));
+  }
+}
+
+export async function rescheduleBooking(input: {
+  organizationId: string;
+  bookingId: string;
+  startAt: Date;
+  actorId?: string | null;
+}): Promise<ActionResult<{ bookingId: string }>> {
+  try {
+    if (Number.isNaN(input.startAt.getTime())) {
+      return err("Invalid start time");
+    }
+    if (input.startAt.getTime() < Date.now() - 60_000) {
+      return err("Choose a future time");
+    }
+
+    const booking = await db.booking.findFirst({
+      where: {
+        id: input.bookingId,
+        organizationId: input.organizationId,
+      },
+      include: {
+        service: true,
+        resource: true,
+        client: true,
+        location: true,
+        organization: true,
+      },
+    });
+
+    if (!booking) return err("Booking not found");
+    if (booking.status !== "PENDING" && booking.status !== "CONFIRMED") {
+      return err("Only upcoming bookings can be rescheduled");
+    }
+
+    const endAt = new Date(
+      input.startAt.getTime() + booking.service.durationMin * 60_000,
+    );
+    const paddedStart = new Date(
+      input.startAt.getTime() - booking.service.bufferBefore * 60_000,
+    );
+    const paddedEnd = new Date(
+      endAt.getTime() + booking.service.bufferAfter * 60_000,
+    );
+
+    const day = formatInTimeZone(
+      input.startAt,
+      booking.location.timezone,
+      "yyyy-MM-dd",
+    );
+    const slots = await getSlotsForServiceResource({
+      organizationId: input.organizationId,
+      serviceId: booking.serviceId,
+      resourceId: booking.resourceId,
+      fromDate: day,
+      toDate: day,
+      excludeBookingId: booking.id,
+    });
+    if (!slots.some((s) => s.start.getTime() === input.startAt.getTime())) {
+      return err("That time is no longer available");
+    }
+
+    const previousStart = booking.startAt;
+
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashLockKey(booking.resourceId)})`;
+
+      const candidates = await tx.booking.findMany({
+        where: {
+          resourceId: booking.resourceId,
+          status: { in: ACTIVE },
+          id: { not: booking.id },
+          startAt: { lt: paddedEnd },
+          endAt: { gt: paddedStart },
+        },
+        include: {
+          service: { select: { bufferBefore: true, bufferAfter: true } },
+        },
+      });
+
+      for (const other of candidates) {
+        const otherStart =
+          other.startAt.getTime() - other.service.bufferBefore * 60_000;
+        const otherEnd =
+          other.endAt.getTime() + other.service.bufferAfter * 60_000;
+        if (
+          paddedStart.getTime() < otherEnd &&
+          paddedEnd.getTime() > otherStart
+        ) {
+          throw new Error("SLOT_TAKEN");
+        }
+      }
+
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: { startAt: input.startAt, endAt },
+      });
+      await tx.bookingEvent.create({
+        data: {
+          bookingId: booking.id,
+          type: "RESCHEDULED",
+          actorId: input.actorId ?? null,
+          payload: {
+            from: previousStart.toISOString(),
+            to: input.startAt.toISOString(),
+          },
+        },
+      });
+    });
+
+    try {
+      await invalidateSlotsForResource(booking.resourceId);
+    } catch (e) {
+      logger.warn({ err: e }, "slot cache invalidate after reschedule failed");
+    }
+
+    await cancelRemindersForBooking(booking.id);
+    try {
+      await enqueueBookingReminder({
+        organizationId: booking.organizationId,
+        bookingId: booking.id,
+        startAt: input.startAt,
+        reminderHoursBefore: booking.organization.reminderHoursBefore,
+        plan: booking.organization.plan,
+        organizationName: booking.organization.name,
+        clientName: booking.client.name,
+        serviceName: booking.service.name,
+        resourceName: booking.resource.name,
+        timezone: booking.location.timezone,
+        email: booking.client.email,
+        phone: booking.client.phone,
+      });
+    } catch (e) {
+      logger.error(
+        { err: e, bookingId: booking.id },
+        "Failed to enqueue reminder after reschedule",
+      );
+    }
+
+    void pushGoogleCalendarUpsert({
+      organizationId: booking.organizationId,
+      bookingId: booking.id,
+      googleEventId: booking.googleEventId,
+      summary: `${booking.service.name} · ${booking.client.name}`,
+      description: `With ${booking.resource.name}`,
+      startAt: input.startAt,
+      endAt,
+      timezone: booking.location.timezone,
+    });
+
+    try {
+      await writeAuditLog({
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+        action: "booking.rescheduled",
+        entityType: "booking",
+        entityId: booking.id,
+        metadata: {
+          from: previousStart.toISOString(),
+          to: input.startAt.toISOString(),
+        },
+      });
+    } catch (e) {
+      logger.error({ err: e }, "Audit log write failed");
+    }
+
+    return ok({ bookingId: booking.id });
+  } catch (e) {
+    if (isBookingOverlapError(e)) {
+      return err("That time was just booked — pick another slot");
+    }
+    if (e instanceof UserFacingError) return err(e.message);
+    captureException(e, { action: "rescheduleBooking" });
+    logger.error({ err: e }, "rescheduleBooking failed");
+    return err(toSafeActionError(e, "Unable to reschedule booking"));
   }
 }
