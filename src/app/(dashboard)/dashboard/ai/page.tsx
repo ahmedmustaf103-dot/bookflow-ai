@@ -4,15 +4,21 @@ import { getConfiguredProvider } from "@/server/ai/provider";
 import { getPlanLimits, planAllowsAi } from "@/server/billing/plans";
 import { requireOrgRole } from "@/server/tenant/context";
 
-export default async function AiPage() {
+export default async function AiPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ clientId?: string; intent?: string }>;
+}) {
   const ctx = await requireOrgRole("STAFF");
+  const params = await searchParams;
   const limits = getPlanLimits(ctx.organization.plan);
+  const allowsAi = planAllowsAi(ctx.organization.plan);
 
   const start = new Date();
   start.setUTCDate(1);
   start.setUTCHours(0, 0, 0, 0);
 
-  const [clients, usage] = await Promise.all([
+  const [clients, usage, recentRuns] = await Promise.all([
     ctx.db.client.findMany({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
@@ -24,6 +30,18 @@ export default async function AiPage() {
       },
       _sum: { tokensIn: true, tokensOut: true },
     }),
+    ctx.db.aiRun.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: {
+        id: true,
+        feature: true,
+        createdAt: true,
+        outputPreview: true,
+        tokensIn: true,
+        tokensOut: true,
+      },
+    }),
   ]);
 
   const tokensUsed = (usage._sum.tokensIn ?? 0) + (usage._sum.tokensOut ?? 0);
@@ -32,19 +50,25 @@ export default async function AiPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="AI"
-        description={`Assistive tools only — AI never books without staff confirmation.${
-          !planAllowsAi(ctx.organization.plan)
-            ? " Your current plan has no AI budget."
-            : ""
-        }`}
+        description="Time-saving assists for staff: client briefs, message drafts, insights, and booking recommendations. AI never books or sends without you."
       />
 
       <AiWorkbench
         clients={clients}
         providerReady={Boolean(getConfiguredProvider())}
+        planAllowsAi={allowsAi}
         planLabel={ctx.organization.plan}
         tokensUsed={tokensUsed}
         tokensLimit={limits.aiTokensPerMonth}
+        initialClientId={params.clientId}
+        initialIntent={params.intent}
+        recentRuns={recentRuns.map((r) => ({
+          id: r.id,
+          feature: r.feature,
+          createdAt: r.createdAt.toISOString(),
+          outputPreview: r.outputPreview,
+          tokens: r.tokensIn + r.tokensOut,
+        }))}
       />
     </div>
   );

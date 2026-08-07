@@ -88,15 +88,29 @@ export default async function ClientDetailPage({
           "No contact details yet"
         }
         actions={
-          isRepeat ? (
-            <span className="inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold tracking-wide text-[var(--accent)] uppercase">
-              Repeat customer
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-[var(--muted)] px-2.5 py-1 text-xs font-medium text-[var(--ink-tertiary)]">
-              New customer
-            </span>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/dashboard/ai?clientId=${encodeURIComponent(client.id)}`}
+              className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--muted)]"
+            >
+              AI summary
+            </Link>
+            <Link
+              href={`/dashboard/ai?clientId=${encodeURIComponent(client.id)}&intent=follow_up`}
+              className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--muted)]"
+            >
+              Draft follow-up
+            </Link>
+            {isRepeat ? (
+              <span className="inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold tracking-wide text-[var(--accent)] uppercase">
+                Repeat customer
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-[var(--muted)] px-2.5 py-1 text-xs font-medium text-[var(--ink-tertiary)]">
+                New customer
+              </span>
+            )}
+          </div>
         }
       />
 

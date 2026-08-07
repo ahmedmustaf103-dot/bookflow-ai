@@ -126,7 +126,14 @@ export const clientSummarySchema = z.object({
 
 export const messageDraftSchema = z.object({
   intent: z
-    .enum(["reminder", "win_back", "thank_you", "reschedule"])
+    .enum([
+      "reminder",
+      "win_back",
+      "thank_you",
+      "reschedule",
+      "review_request",
+      "follow_up",
+    ])
     .default("reminder"),
   clientId: optionalText(64),
   context: optionalText(4000),

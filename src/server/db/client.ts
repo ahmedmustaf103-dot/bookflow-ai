@@ -6,8 +6,12 @@ import { Pool } from "pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { env } from "@/lib/env";
 
+/** Bump when adding Prisma models so next-dev global client is recreated. */
+const PRISMA_CLIENT_VERSION = 2;
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaVersion: number | undefined;
   pgPool: Pool | undefined;
 };
 
@@ -54,8 +58,13 @@ function createPrismaClient() {
   });
 }
 
-export const db = globalForPrisma.prisma ?? createPrismaClient();
+export const db =
+  globalForPrisma.prisma &&
+  globalForPrisma.prismaVersion === PRISMA_CLIENT_VERSION
+    ? globalForPrisma.prisma
+    : createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = db;
+  globalForPrisma.prismaVersion = PRISMA_CLIENT_VERSION;
 }

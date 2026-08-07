@@ -10,6 +10,7 @@ import {
   type ToolSet,
 } from "ai";
 
+import { UserFacingError } from "@/lib/action-errors";
 import { env } from "@/lib/env";
 import { hashPrompt } from "@/lib/hash";
 import { db } from "@/server/db";
@@ -39,7 +40,7 @@ export function getLanguageModel(): {
 } {
   const provider = getConfiguredProvider();
   if (!provider) {
-    throw new Error(
+    throw new UserFacingError(
       "No AI provider configured. Set OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY.",
     );
   }
@@ -79,7 +80,7 @@ export async function assertAiBudget(organizationId: string) {
   });
 
   if (!planAllowsAi(org.plan)) {
-    throw new Error(
+    throw new UserFacingError(
       `${org.plan} plan does not include AI. Upgrade to Growth or Business.`,
     );
   }
@@ -102,7 +103,7 @@ export async function assertAiBudget(organizationId: string) {
     (aggregates._sum.tokensIn ?? 0) + (aggregates._sum.tokensOut ?? 0);
 
   if (used >= limits.aiTokensPerMonth) {
-    throw new Error(
+    throw new UserFacingError(
       `Monthly AI token budget reached (${limits.aiTokensPerMonth.toLocaleString()}). Upgrade or wait until next month.`,
     );
   }
@@ -154,6 +155,7 @@ export async function runAiText(input: {
     modelId,
     tokensIn,
     tokensOut,
+    steps: result.steps,
   };
 }
 
@@ -202,5 +204,6 @@ export async function runAiMessages(input: {
     modelId,
     tokensIn,
     tokensOut,
+    steps: result.steps,
   };
 }

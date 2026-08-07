@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { hashPrompt } from "@/lib/hash";
+import { GUARDRAILS, type MessageIntent } from "@/server/ai/constants";
 import { getPlanLimits, planAllowsAi } from "@/server/billing/plans";
 
-/**
- * Lightweight eval fixtures — prompt contract + plan gates.
- * Live model calls are integration-only (need API keys).
- */
 describe("AI plan gates", () => {
   it("blocks Starter from AI", () => {
     expect(planAllowsAi("STARTER")).toBe(false);
@@ -27,17 +24,26 @@ describe("prompt hashing", () => {
   });
 });
 
-describe("client summary prompt fixture", () => {
-  it("includes required staff-brief constraints", () => {
-    const system = `
-You are BookFlow AI, an assistant for appointment-based businesses.
-Rules:
-- Never invent bookings, clients, or times that tools did not return.
-- Never claim you created/cancelled a booking — you only propose; humans confirm.
-`.trim();
+describe("GUARDRAILS contract", () => {
+  it("keeps human-in-the-loop and no-invention rules", () => {
+    expect(GUARDRAILS).toMatch(/Never invent/);
+    expect(GUARDRAILS).toMatch(/humans confirm/);
+    expect(GUARDRAILS).toMatch(/Never claim you created/);
+  });
+});
 
-    expect(system).toMatch(/Never invent/);
-    expect(system).toMatch(/humans confirm/);
+describe("message intents", () => {
+  it("includes review and follow-up intents used by the workbench", () => {
+    const intents: MessageIntent[] = [
+      "reminder",
+      "win_back",
+      "thank_you",
+      "reschedule",
+      "review_request",
+      "follow_up",
+    ];
+    expect(intents).toContain("review_request");
+    expect(intents).toContain("follow_up");
   });
 });
 

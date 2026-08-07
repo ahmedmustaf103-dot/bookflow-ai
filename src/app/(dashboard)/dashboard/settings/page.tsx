@@ -8,6 +8,7 @@ import { Surface } from "@/components/ui/surface";
 import { env } from "@/lib/env";
 import { updateOrganizationSettingsAction } from "@/server/actions/ops";
 import { planAllowsReminders } from "@/server/billing/entitlements";
+import { db } from "@/server/db";
 import { isGoogleCalendarConfigured } from "@/server/integrations/google-calendar";
 import { requireOrgRole } from "@/server/tenant/context";
 
@@ -33,7 +34,8 @@ export default async function SettingsPage({
   const bookUrl = `${env.NEXT_PUBLIC_APP_URL}/book/${org.slug}`;
   const { gcal } = await searchParams;
   const gcalConfigured = isGoogleCalendarConfigured();
-  const gcalConnection = await ctx.db.googleCalendarConnection.findUnique({
+  // Use root db — tenantDb proxy does not expose googleCalendarConnection.
+  const gcalConnection = await db.googleCalendarConnection.findUnique({
     where: { organizationId: org.id },
   });
 

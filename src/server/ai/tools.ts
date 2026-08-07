@@ -93,7 +93,7 @@ export function createOrgAiTools(organizationId: string) {
 
     getClientHistory: tool({
       description:
-        "Get recent booking history for a client (no PII beyond name)",
+        "Get client notes, tags, status tallies, and recent bookings before recommending times",
       inputSchema: z.object({
         clientId: z.string(),
         limit: z.number().int().min(1).max(20).optional(),
@@ -108,7 +108,7 @@ export function createOrgAiTools(organizationId: string) {
             tags: true,
             bookings: {
               orderBy: { startAt: "desc" },
-              take: limit,
+              take: Math.max(limit, 20),
               select: {
                 id: true,
                 startAt: true,
@@ -122,12 +122,32 @@ export function createOrgAiTools(organizationId: string) {
         });
         if (!client) return { error: "Client not found" };
 
+        const tallies = {
+          completed: 0,
+          noShow: 0,
+          cancelled: 0,
+          upcoming: 0,
+        };
+        const now = Date.now();
+        for (const b of client.bookings) {
+          if (b.status === "COMPLETED") tallies.completed += 1;
+          if (b.status === "NO_SHOW") tallies.noShow += 1;
+          if (b.status === "CANCELLED") tallies.cancelled += 1;
+          if (
+            b.startAt.getTime() >= now &&
+            (b.status === "PENDING" || b.status === "CONFIRMED")
+          ) {
+            tallies.upcoming += 1;
+          }
+        }
+
         return {
           id: client.id,
           name: client.name,
           notes: client.notes,
           tags: client.tags,
-          bookings: client.bookings.map((b) => ({
+          tallies,
+          bookings: client.bookings.slice(0, limit).map((b) => ({
             id: b.id,
             when: formatInTimeZone(
               b.startAt,
@@ -144,7 +164,7 @@ export function createOrgAiTools(organizationId: string) {
 
     getAvailableSlots: tool({
       description:
-        "Get open appointment slots for a service + resource over the next days",
+        "Get open appointment slots for a service + resource (defaults to the next week). Always call this before proposeBooking.",
       inputSchema: z.object({
         serviceId: z.string(),
         resourceId: z.string(),
