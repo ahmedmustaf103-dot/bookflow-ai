@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { toSafeActionError } from "@/lib/action-errors";
+import { toSafeActionError, toSafeAiError } from "@/lib/action-errors";
 import { err, ok, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
 import type { AiBookingProposal, MessageIntent } from "@/server/ai/constants";
@@ -70,7 +70,7 @@ export async function clientSummaryAction(
       tokens: result.usage.tokensIn + result.usage.tokensOut,
     });
   } catch (e) {
-    return err(toSafeActionError(e, "AI summary failed"));
+    return err(toSafeAiError(e, "AI summary failed"));
   }
 }
 
@@ -106,7 +106,7 @@ export async function messageDraftAction(
       tokens: result.usage.tokensIn + result.usage.tokensOut,
     });
   } catch (e) {
-    return err(toSafeActionError(e, "AI draft failed"));
+    return err(toSafeAiError(e, "AI draft failed"));
   }
 }
 
@@ -140,7 +140,7 @@ export async function insightDigestAction(
       tokens: result.usage.tokensIn + result.usage.tokensOut,
     });
   } catch (e) {
-    return err(toSafeActionError(e, "AI insights failed"));
+    return err(toSafeAiError(e, "AI insights failed"));
   }
 }
 

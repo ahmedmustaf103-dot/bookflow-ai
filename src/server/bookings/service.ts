@@ -16,12 +16,13 @@ import { logger } from "@/lib/logger";
 import { db } from "@/server/db";
 import { getSlotsForServiceResource } from "@/server/availability/slots";
 import {
-  sendBookingCancellation,
-  sendBookingConfirmation,
-} from "@/server/notifications/email";
-import {
+  cancelPendingAutomationForBooking,
   cancelRemindersForBooking,
+  enqueueBookingCancellation,
+  enqueueBookingConfirmation,
   enqueueBookingReminder,
+  enqueuePostVisitAutomation,
+  type BookingNotifyContext,
 } from "@/server/notifications/outbox";
 import { getPlanLimits } from "@/server/billing/plans";
 import { writeAuditLog } from "@/server/billing/entitlements";
@@ -42,6 +43,48 @@ const TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   NO_SHOW: [],
   CANCELLED: [],
 };
+
+function notifyContext(booking: {
+  id: string;
+  organizationId: string;
+  startAt: Date;
+  endAt: Date;
+  manageToken: string;
+  organization: {
+    name: string;
+    slug: string;
+    plan: BookingNotifyContext["plan"];
+    reviewUrl?: string | null;
+  };
+  client: {
+    name: string;
+    email: string | null;
+    phone: string | null;
+    marketingOptIn?: boolean;
+  };
+  service: { name: string };
+  resource: { name: string };
+  location: { timezone: string };
+}): BookingNotifyContext {
+  return {
+    organizationId: booking.organizationId,
+    organizationName: booking.organization.name,
+    organizationSlug: booking.organization.slug,
+    plan: booking.organization.plan,
+    bookingId: booking.id,
+    manageToken: booking.manageToken,
+    startAt: booking.startAt,
+    endAt: booking.endAt,
+    timezone: booking.location.timezone,
+    clientName: booking.client.name,
+    clientEmail: booking.client.email,
+    clientPhone: booking.client.phone,
+    marketingOptIn: booking.client.marketingOptIn ?? false,
+    serviceName: booking.service.name,
+    resourceName: booking.resource.name,
+    reviewUrl: booking.organization.reviewUrl ?? null,
+  };
+}
 
 function hashLockKey(resourceId: string): number {
   let h = 0;
@@ -293,28 +336,15 @@ export async function createBooking(input: {
       logger.warn({ err: e }, "slot cache invalidate after create failed");
     }
 
-    const emailPayload = booking.client.email
-      ? {
-          to: booking.client.email,
-          organizationName: booking.organization.name,
-          clientName: booking.client.name,
-          serviceName: booking.service.name,
-          resourceName: booking.resource.name,
-          startAt: booking.startAt,
-          timezone: booking.location.timezone,
-          bookingId: booking.id,
-        }
-      : null;
+    const ctx = notifyContext(booking);
 
-    if (emailPayload) {
-      try {
-        await sendBookingConfirmation(emailPayload);
-      } catch (e) {
-        logger.error(
-          { err: e, bookingId: booking.id },
-          "Confirmation email failed",
-        );
-      }
+    try {
+      await enqueueBookingConfirmation(ctx);
+    } catch (e) {
+      logger.error(
+        { err: e, bookingId: booking.id },
+        "Failed to enqueue confirmation email",
+      );
     }
 
     try {
@@ -325,6 +355,8 @@ export async function createBooking(input: {
         reminderHoursBefore: booking.organization.reminderHoursBefore,
         plan: booking.organization.plan,
         organizationName: booking.organization.name,
+        organizationSlug: booking.organization.slug,
+        manageToken: booking.manageToken,
         clientName: booking.client.name,
         serviceName: booking.service.name,
         resourceName: booking.resource.name,
@@ -436,25 +468,34 @@ export async function transitionBooking(input: {
       } catch (e) {
         logger.warn({ err: e }, "slot cache invalidate after cancel failed");
       }
-      await cancelRemindersForBooking(booking.id);
-      if (booking.client.email) {
-        try {
-          await sendBookingCancellation({
-            to: booking.client.email,
-            organizationName: booking.organization.name,
-            clientName: booking.client.name,
-            serviceName: booking.service.name,
-            resourceName: booking.resource.name,
-            startAt: booking.startAt,
-            timezone: booking.location.timezone,
-            bookingId: booking.id,
-          });
-        } catch (e) {
-          logger.error(
-            { err: e, bookingId: booking.id },
-            "Cancellation email failed",
-          );
-        }
+      await cancelPendingAutomationForBooking(booking.id);
+      try {
+        await enqueueBookingCancellation(notifyContext(booking));
+      } catch (e) {
+        logger.error(
+          { err: e, bookingId: booking.id },
+          "Failed to enqueue cancellation email",
+        );
+      }
+    }
+
+    if (input.to === "COMPLETED") {
+      const org = booking.organization;
+      try {
+        await enqueuePostVisitAutomation({
+          ctx: notifyContext(booking),
+          followUpEnabled: org.followUpEnabled,
+          followUpHoursAfter: org.followUpHoursAfter,
+          reviewRequestEnabled: org.reviewRequestEnabled,
+          reviewRequestHoursAfter: org.reviewRequestHoursAfter,
+          rebookingEnabled: org.rebookingEnabled,
+          rebookingDaysAfter: org.rebookingDaysAfter,
+        });
+      } catch (e) {
+        logger.error(
+          { err: e, bookingId: booking.id },
+          "Failed to enqueue post-visit automation",
+        );
       }
     }
 
@@ -610,6 +651,8 @@ export async function rescheduleBooking(input: {
         reminderHoursBefore: booking.organization.reminderHoursBefore,
         plan: booking.organization.plan,
         organizationName: booking.organization.name,
+        organizationSlug: booking.organization.slug,
+        manageToken: booking.manageToken,
         clientName: booking.client.name,
         serviceName: booking.service.name,
         resourceName: booking.resource.name,

@@ -13,7 +13,7 @@ export type BookingSmsInput = {
   clientName: string;
   serviceName: string;
   resourceName: string;
-  startAt: Date;
+  startAt: Date | string;
   timezone: string;
   bookingId: string;
 };
@@ -32,8 +32,9 @@ function getTwilio() {
   };
 }
 
-function whenLabel(startAt: Date, timezone: string) {
-  return formatInTimeZone(startAt, timezone, "EEE MMM d · HH:mm zzz");
+function whenLabel(startAt: Date | string, timezone: string) {
+  const date = startAt instanceof Date ? startAt : new Date(startAt);
+  return formatInTimeZone(date, timezone, "EEE MMM d · HH:mm zzz");
 }
 
 export { normalizePhone };

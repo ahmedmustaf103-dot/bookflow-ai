@@ -29,10 +29,10 @@ export async function GET() {
 
   try {
     const result = await processDueOutbox(100);
-    logger.info(result, "Processed reminder outbox");
+    logger.info(result, "Processed notification outbox");
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    logger.error({ err: error }, "Cron reminders failed");
+    logger.error({ err: error }, "Cron notification outbox failed");
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

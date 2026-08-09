@@ -1,32 +1,163 @@
 import "server-only";
 
-import type { Prisma } from "@/generated/prisma/client";
+import {
+  Prisma,
+  type OrganizationPlan,
+} from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import {
   planAllowsReminders,
   planAllowsSms,
 } from "@/server/billing/entitlements";
 import {
+  sendBookingCancellation,
+  sendBookingConfirmation,
   sendBookingReminder,
+  sendFollowUpEmail,
+  sendRebookingReminderEmail,
+  sendReviewRequestEmail,
   type BookingEmailInput,
 } from "@/server/notifications/email";
+import {
+  bookingDedupeKey,
+  CANCEL_ON_BOOKING_CANCEL,
+  OUTBOX_KINDS,
+  reminderDedupeKey,
+} from "@/server/notifications/kinds";
 import {
   normalizePhone,
   sendBookingReminderSms,
   type BookingSmsInput,
 } from "@/server/notifications/sms";
+import { bookingManageUrl, publicBookingUrl } from "@/lib/booking-urls";
 import { logger } from "@/lib/logger";
 import { captureException } from "@/lib/observability";
 
 const STALE_PROCESSING_MS = 15 * 60 * 1000;
+const MAX_ATTEMPTS = 5;
+const RETRY_DELAY_MS = 15 * 60 * 1000;
+const PROVIDER_MISSING_DELAY_MS = 6 * 60 * 60 * 1000;
+
+export type BookingNotifyContext = {
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  plan: OrganizationPlan;
+  bookingId: string;
+  manageToken: string;
+  startAt: Date;
+  endAt: Date;
+  timezone: string;
+  clientName: string;
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  marketingOptIn?: boolean;
+  serviceName: string;
+  resourceName: string;
+  reviewUrl?: string | null;
+};
+
+function emailPayload(
+  ctx: BookingNotifyContext,
+  to: string,
+): BookingEmailInput {
+  return {
+    to,
+    organizationName: ctx.organizationName,
+    clientName: ctx.clientName,
+    serviceName: ctx.serviceName,
+    resourceName: ctx.resourceName,
+    startAt: ctx.startAt.toISOString(),
+    timezone: ctx.timezone,
+    bookingId: ctx.bookingId,
+    manageUrl: bookingManageUrl(ctx.manageToken),
+    bookUrl: publicBookingUrl(ctx.organizationSlug),
+    reviewUrl: ctx.reviewUrl ?? null,
+  };
+}
+
+async function enqueueRow(row: {
+  organizationId: string;
+  bookingId: string;
+  channel: "EMAIL" | "SMS";
+  kind: string;
+  dedupeKey: string;
+  toAddress: string;
+  scheduledFor: Date;
+  payload: BookingEmailInput | BookingSmsInput;
+}) {
+  try {
+    await db.notificationOutbox.create({
+      data: {
+        organizationId: row.organizationId,
+        bookingId: row.bookingId,
+        channel: row.channel,
+        kind: row.kind,
+        dedupeKey: row.dedupeKey,
+        toAddress: row.toAddress,
+        scheduledFor: row.scheduledFor,
+        payload: row.payload as unknown as Prisma.InputJsonValue,
+      },
+    });
+  } catch (e) {
+    // Idempotent: ignore duplicate dedupe keys
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002"
+    ) {
+      return;
+    }
+    throw e;
+  }
+}
+
+/** Confirmation email — due immediately; retries via outbox. */
+export async function enqueueBookingConfirmation(ctx: BookingNotifyContext) {
+  if (!ctx.clientEmail) return;
+  const payload = emailPayload(ctx, ctx.clientEmail);
+  await enqueueRow({
+    organizationId: ctx.organizationId,
+    bookingId: ctx.bookingId,
+    channel: "EMAIL",
+    kind: OUTBOX_KINDS.BOOKING_CONFIRMATION,
+    dedupeKey: bookingDedupeKey(
+      OUTBOX_KINDS.BOOKING_CONFIRMATION,
+      ctx.bookingId,
+    ),
+    toAddress: ctx.clientEmail,
+    scheduledFor: new Date(),
+    payload,
+  });
+}
+
+/** Cancellation email — due immediately. */
+export async function enqueueBookingCancellation(ctx: BookingNotifyContext) {
+  if (!ctx.clientEmail) return;
+  const payload = emailPayload(ctx, ctx.clientEmail);
+  await enqueueRow({
+    organizationId: ctx.organizationId,
+    bookingId: ctx.bookingId,
+    channel: "EMAIL",
+    kind: OUTBOX_KINDS.BOOKING_CANCELLATION,
+    dedupeKey: bookingDedupeKey(
+      OUTBOX_KINDS.BOOKING_CANCELLATION,
+      ctx.bookingId,
+    ),
+    toAddress: ctx.clientEmail,
+    scheduledFor: new Date(),
+    payload,
+  });
+}
 
 export async function enqueueBookingReminder(input: {
   organizationId: string;
   bookingId: string;
   startAt: Date;
   reminderHoursBefore: number;
-  plan: Parameters<typeof planAllowsReminders>[0];
+  plan: OrganizationPlan;
   organizationName: string;
+  organizationSlug: string;
+  manageToken: string;
   clientName: string;
   serviceName: string;
   resourceName: string;
@@ -39,54 +170,142 @@ export async function enqueueBookingReminder(input: {
   );
   if (scheduledFor.getTime() <= Date.now()) return;
 
-  const base = {
+  const ctx: BookingNotifyContext = {
+    organizationId: input.organizationId,
     organizationName: input.organizationName,
+    organizationSlug: input.organizationSlug,
+    plan: input.plan,
+    bookingId: input.bookingId,
+    manageToken: input.manageToken,
+    startAt: input.startAt,
+    endAt: input.startAt,
+    timezone: input.timezone,
     clientName: input.clientName,
+    clientEmail: input.email,
+    clientPhone: input.phone,
     serviceName: input.serviceName,
     resourceName: input.resourceName,
-    startAt: input.startAt,
-    timezone: input.timezone,
-    bookingId: input.bookingId,
   };
 
-  const rows: Prisma.NotificationOutboxCreateManyInput[] = [];
-
   if (planAllowsReminders(input.plan) && input.email) {
-    const emailPayload: BookingEmailInput = { ...base, to: input.email };
-    rows.push({
+    await enqueueRow({
       organizationId: input.organizationId,
       bookingId: input.bookingId,
       channel: "EMAIL",
-      kind: "BOOKING_REMINDER",
+      kind: OUTBOX_KINDS.BOOKING_REMINDER,
+      dedupeKey: reminderDedupeKey(input.bookingId, "EMAIL", input.startAt),
       toAddress: input.email,
       scheduledFor,
-      payload: emailPayload as unknown as Prisma.InputJsonValue,
+      payload: emailPayload(ctx, input.email),
     });
   }
 
   const phone = normalizePhone(input.phone);
   if (planAllowsSms(input.plan) && phone) {
-    const smsPayload: BookingSmsInput = { ...base, to: phone };
-    rows.push({
+    const smsPayload: BookingSmsInput = {
+      to: phone,
+      organizationName: input.organizationName,
+      clientName: input.clientName,
+      serviceName: input.serviceName,
+      resourceName: input.resourceName,
+      startAt: input.startAt.toISOString(),
+      timezone: input.timezone,
+      bookingId: input.bookingId,
+    };
+    await enqueueRow({
       organizationId: input.organizationId,
       bookingId: input.bookingId,
       channel: "SMS",
-      kind: "BOOKING_REMINDER",
+      kind: OUTBOX_KINDS.BOOKING_REMINDER,
+      dedupeKey: reminderDedupeKey(input.bookingId, "SMS", input.startAt),
       toAddress: phone,
       scheduledFor,
-      payload: smsPayload as unknown as Prisma.InputJsonValue,
+      payload: smsPayload,
+    });
+  }
+}
+
+/** Post-visit: follow-up, review request, rebooking nudge. */
+export async function enqueuePostVisitAutomation(input: {
+  ctx: BookingNotifyContext;
+  followUpEnabled: boolean;
+  followUpHoursAfter: number;
+  reviewRequestEnabled: boolean;
+  reviewRequestHoursAfter: number;
+  rebookingEnabled: boolean;
+  rebookingDaysAfter: number;
+}) {
+  const { ctx } = input;
+  if (!ctx.clientEmail) return;
+
+  const payload = emailPayload(ctx, ctx.clientEmail);
+  // Schedule from visit end (or now if marked complete early).
+  const base = Math.max(ctx.endAt.getTime(), Date.now());
+
+  if (input.followUpEnabled) {
+    await enqueueRow({
+      organizationId: ctx.organizationId,
+      bookingId: ctx.bookingId,
+      channel: "EMAIL",
+      kind: OUTBOX_KINDS.FOLLOW_UP,
+      dedupeKey: bookingDedupeKey(OUTBOX_KINDS.FOLLOW_UP, ctx.bookingId),
+      toAddress: ctx.clientEmail,
+      scheduledFor: new Date(base + input.followUpHoursAfter * 60 * 60 * 1000),
+      payload,
     });
   }
 
-  if (rows.length === 0) return;
-  await db.notificationOutbox.createMany({ data: rows });
+  if (input.reviewRequestEnabled) {
+    await enqueueRow({
+      organizationId: ctx.organizationId,
+      bookingId: ctx.bookingId,
+      channel: "EMAIL",
+      kind: OUTBOX_KINDS.REVIEW_REQUEST,
+      dedupeKey: bookingDedupeKey(OUTBOX_KINDS.REVIEW_REQUEST, ctx.bookingId),
+      toAddress: ctx.clientEmail,
+      scheduledFor: new Date(
+        base + input.reviewRequestHoursAfter * 60 * 60 * 1000,
+      ),
+      payload,
+    });
+  }
+
+  // Rebooking nudge after a completed visit (staff can disable in settings).
+  if (input.rebookingEnabled) {
+    await enqueueRow({
+      organizationId: ctx.organizationId,
+      bookingId: ctx.bookingId,
+      channel: "EMAIL",
+      kind: OUTBOX_KINDS.REBOOKING_REMINDER,
+      dedupeKey: bookingDedupeKey(
+        OUTBOX_KINDS.REBOOKING_REMINDER,
+        ctx.bookingId,
+      ),
+      toAddress: ctx.clientEmail,
+      scheduledFor: new Date(
+        base + input.rebookingDaysAfter * 24 * 60 * 60 * 1000,
+      ),
+      payload,
+    });
+  }
 }
 
 export async function cancelRemindersForBooking(bookingId: string) {
   await db.notificationOutbox.updateMany({
     where: {
       bookingId,
-      kind: "BOOKING_REMINDER",
+      kind: OUTBOX_KINDS.BOOKING_REMINDER,
+      status: { in: ["PENDING", "PROCESSING"] },
+    },
+    data: { status: "CANCELLED" },
+  });
+}
+
+export async function cancelPendingAutomationForBooking(bookingId: string) {
+  await db.notificationOutbox.updateMany({
+    where: {
+      bookingId,
+      kind: { in: [...CANCEL_ON_BOOKING_CANCEL] },
       status: { in: ["PENDING", "PROCESSING"] },
     },
     data: { status: "CANCELLED" },
@@ -104,6 +323,58 @@ async function reclaimStaleProcessing() {
   });
 }
 
+function normalizePayloadDate<T extends { startAt: Date | string }>(
+  payload: T,
+): T {
+  return {
+    ...payload,
+    startAt:
+      payload.startAt instanceof Date
+        ? payload.startAt
+        : new Date(payload.startAt),
+  };
+}
+
+async function dispatchOutboxItem(item: {
+  kind: string;
+  channel: "EMAIL" | "SMS";
+  payload: Prisma.JsonValue;
+}): Promise<{ skipped: boolean }> {
+  if (item.channel === "EMAIL") {
+    const payload = normalizePayloadDate(
+      item.payload as unknown as BookingEmailInput,
+    );
+    switch (item.kind) {
+      case OUTBOX_KINDS.BOOKING_CONFIRMATION:
+        return sendBookingConfirmation(payload);
+      case OUTBOX_KINDS.BOOKING_REMINDER:
+        return sendBookingReminder(payload);
+      case OUTBOX_KINDS.BOOKING_CANCELLATION:
+        return sendBookingCancellation(payload);
+      case OUTBOX_KINDS.FOLLOW_UP:
+        return sendFollowUpEmail(payload);
+      case OUTBOX_KINDS.REVIEW_REQUEST:
+        return sendReviewRequestEmail(payload);
+      case OUTBOX_KINDS.REBOOKING_REMINDER:
+        return sendRebookingReminderEmail(payload);
+      default:
+        throw new Error(`Unsupported outbox kind: ${item.kind}/EMAIL`);
+    }
+  }
+
+  if (
+    item.kind === OUTBOX_KINDS.BOOKING_REMINDER &&
+    item.channel === "SMS"
+  ) {
+    const payload = normalizePayloadDate(
+      item.payload as unknown as BookingSmsInput,
+    );
+    return sendBookingReminderSms(payload);
+  }
+
+  throw new Error(`Unsupported outbox kind: ${item.kind}/${item.channel}`);
+}
+
 export async function processDueOutbox(limit = 50) {
   await reclaimStaleProcessing();
 
@@ -119,6 +390,7 @@ export async function processDueOutbox(limit = 50) {
 
   let sent = 0;
   let failed = 0;
+  let deferred = 0;
 
   for (const item of due) {
     const claimed = await db.notificationOutbox.updateMany({
@@ -127,31 +399,26 @@ export async function processDueOutbox(limit = 50) {
     });
     if (claimed.count === 0) continue;
 
-    try {
-      let skipped = false;
-      if (item.kind === "BOOKING_REMINDER" && item.channel === "EMAIL") {
-        const payload = item.payload as unknown as BookingEmailInput;
-        const result = await sendBookingReminder(payload);
-        skipped = Boolean(result.skipped);
-      } else if (item.kind === "BOOKING_REMINDER" && item.channel === "SMS") {
-        const payload = item.payload as unknown as BookingSmsInput;
-        const result = await sendBookingReminderSms(payload);
-        skipped = Boolean(result.skipped);
-      } else {
-        throw new Error(
-          `Unsupported outbox kind: ${item.kind}/${item.channel}`,
-        );
-      }
+    const attempts = item.attempts + 1;
 
-      if (skipped) {
+    try {
+      const result = await dispatchOutboxItem(item);
+
+      if (result.skipped) {
+        // Provider not configured — keep retrying later instead of hard-fail.
         await db.notificationOutbox.update({
           where: { id: item.id },
           data: {
-            status: "FAILED",
-            lastError: "Provider not configured — message was not delivered",
+            status: attempts >= MAX_ATTEMPTS ? "FAILED" : "PENDING",
+            lastError: "Provider not configured — will retry",
+            scheduledFor:
+              attempts >= MAX_ATTEMPTS
+                ? item.scheduledFor
+                : new Date(Date.now() + PROVIDER_MISSING_DELAY_MS),
           },
         });
-        failed += 1;
+        if (attempts >= MAX_ATTEMPTS) failed += 1;
+        else deferred += 1;
         continue;
       }
 
@@ -167,17 +434,17 @@ export async function processDueOutbox(limit = 50) {
       await db.notificationOutbox.update({
         where: { id: item.id },
         data: {
-          status: item.attempts + 1 >= 5 ? "FAILED" : "PENDING",
+          status: attempts >= MAX_ATTEMPTS ? "FAILED" : "PENDING",
           lastError: message.slice(0, 500),
           scheduledFor:
-            item.attempts + 1 >= 5
+            attempts >= MAX_ATTEMPTS
               ? item.scheduledFor
-              : new Date(Date.now() + 15 * 60 * 1000),
+              : new Date(Date.now() + RETRY_DELAY_MS),
         },
       });
       failed += 1;
     }
   }
 
-  return { processed: due.length, sent, failed };
+  return { processed: due.length, sent, failed, deferred };
 }

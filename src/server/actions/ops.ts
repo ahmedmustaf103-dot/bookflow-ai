@@ -82,6 +82,13 @@ export async function updateOrganizationSettingsAction(
         timezoneDefault: parsed.data.timezoneDefault,
         reminderHoursBefore: parsed.data.reminderHoursBefore,
         publicBookingEnabled: parsed.data.publicBookingEnabled,
+        followUpEnabled: parsed.data.followUpEnabled,
+        followUpHoursAfter: parsed.data.followUpHoursAfter,
+        reviewRequestEnabled: parsed.data.reviewRequestEnabled,
+        reviewRequestHoursAfter: parsed.data.reviewRequestHoursAfter,
+        reviewUrl: parsed.data.reviewUrl,
+        rebookingEnabled: parsed.data.rebookingEnabled,
+        rebookingDaysAfter: parsed.data.rebookingDaysAfter,
       },
     });
 
@@ -94,6 +101,9 @@ export async function updateOrganizationSettingsAction(
       metadata: {
         reminderHoursBefore: parsed.data.reminderHoursBefore,
         publicBookingEnabled: parsed.data.publicBookingEnabled,
+        followUpEnabled: parsed.data.followUpEnabled,
+        reviewRequestEnabled: parsed.data.reviewRequestEnabled,
+        rebookingEnabled: parsed.data.rebookingEnabled,
       },
     });
 

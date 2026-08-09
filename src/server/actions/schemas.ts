@@ -111,13 +111,29 @@ export const createManualClientSchema = z.object({
     .transform((v) => (v ?? "").trim().slice(0, 500)),
 });
 
+const checkboxOn = z
+  .union([z.literal("on"), z.literal(""), z.undefined()])
+  .transform((v) => v === "on");
+
 export const updateOrgSettingsSchema = z.object({
   name: z.string().trim().min(2, "Business name is required").max(120),
   timezoneDefault: z.string().trim().min(1, "Timezone is required").max(64),
   reminderHoursBefore: z.coerce.number().int().min(1).max(168),
-  publicBookingEnabled: z
-    .union([z.literal("on"), z.literal(""), z.undefined()])
-    .transform((v) => v === "on"),
+  publicBookingEnabled: checkboxOn,
+  followUpEnabled: checkboxOn,
+  followUpHoursAfter: z.coerce.number().int().min(1).max(168),
+  reviewRequestEnabled: checkboxOn,
+  reviewRequestHoursAfter: z.coerce.number().int().min(1).max(336),
+  reviewUrl: z
+    .union([z.string(), z.undefined()])
+    .transform((v) => (v ?? "").trim())
+    .refine(
+      (v) => v === "" || z.string().url().safeParse(v).success,
+      { message: "Review URL must be a valid URL" },
+    )
+    .transform((v) => (v === "" ? null : v)),
+  rebookingEnabled: checkboxOn,
+  rebookingDaysAfter: z.coerce.number().int().min(1).max(365),
 });
 
 export const clientSummarySchema = z.object({

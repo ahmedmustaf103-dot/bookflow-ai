@@ -27,7 +27,7 @@ export const env = createEnv({
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
     AI_PROVIDER: z.enum(["openai", "google"]).default("openai"),
     AI_MODEL_OPENAI: z.string().default("gpt-4o-mini"),
-    AI_MODEL_GOOGLE: z.string().default("gemini-2.0-flash"),
+    AI_MODEL_GOOGLE: z.string().default("gemini-2.5-flash"),
     /** Upstash Redis REST (slot cache + rate limits). Optional in local dev. */
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),

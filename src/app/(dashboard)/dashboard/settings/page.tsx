@@ -48,7 +48,7 @@ export default async function SettingsPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Settings"
-        description="Business preferences, booking page, and reminders."
+        description="Business preferences, booking page, and customer automation."
       />
 
       <Surface className="max-w-lg">
@@ -101,6 +101,84 @@ export default async function SettingsPage({
             />
             Public booking page enabled
           </label>
+
+          <div className="mt-2 border-t border-[var(--border)] pt-4">
+            <h3 className="text-sm font-semibold">Customer automation</h3>
+            <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
+              Messages queue in the outbox with retries. Nothing sends without a
+              client email (and Twilio for SMS reminders).
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-[var(--ink)]">
+            <input
+              type="checkbox"
+              name="followUpEnabled"
+              defaultChecked={org.followUpEnabled}
+            />
+            Send follow-up email after completed visits
+          </label>
+          <div>
+            <Label htmlFor="org-followup-hours">Follow-up delay (hours)</Label>
+            <Input
+              id="org-followup-hours"
+              name="followUpHoursAfter"
+              type="number"
+              min={1}
+              max={168}
+              defaultValue={org.followUpHoursAfter}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-[var(--ink)]">
+            <input
+              type="checkbox"
+              name="reviewRequestEnabled"
+              defaultChecked={org.reviewRequestEnabled}
+            />
+            Send review request after completed visits
+          </label>
+          <div>
+            <Label htmlFor="org-review-hours">Review request delay (hours)</Label>
+            <Input
+              id="org-review-hours"
+              name="reviewRequestHoursAfter"
+              type="number"
+              min={1}
+              max={336}
+              defaultValue={org.reviewRequestHoursAfter}
+            />
+          </div>
+          <div>
+            <Label htmlFor="org-review-url">Review URL (optional)</Label>
+            <Input
+              id="org-review-url"
+              name="reviewUrl"
+              type="url"
+              placeholder="https://g.page/r/..."
+              defaultValue={org.reviewUrl ?? ""}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-[var(--ink)]">
+            <input
+              type="checkbox"
+              name="rebookingEnabled"
+              defaultChecked={org.rebookingEnabled}
+            />
+            Send rebooking reminder after completed visits
+          </label>
+          <div>
+            <Label htmlFor="org-rebook-days">Rebooking delay (days)</Label>
+            <Input
+              id="org-rebook-days"
+              name="rebookingDaysAfter"
+              type="number"
+              min={1}
+              max={365}
+              defaultValue={org.rebookingDaysAfter}
+            />
+          </div>
         </ActionForm>
       </Surface>
 

@@ -123,13 +123,19 @@ export async function runAiText(input: {
   await assertAiBudget(input.organizationId);
   const { provider, modelId, model } = getLanguageModel();
 
-  const result = await generateText({
-    model,
-    system: input.system,
-    prompt: input.prompt,
-    tools: input.tools,
-    stopWhen: stepCountIs(input.maxSteps ?? (input.tools ? 5 : 1)),
-  });
+  let result;
+  try {
+    result = await generateText({
+      model,
+      system: input.system,
+      prompt: input.prompt,
+      tools: input.tools,
+      stopWhen: stepCountIs(input.maxSteps ?? (input.tools ? 5 : 1)),
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "AI provider request failed";
+    throw new UserFacingError(message);
+  }
 
   const tokensIn = result.usage?.inputTokens ?? 0;
   const tokensOut = result.usage?.outputTokens ?? 0;

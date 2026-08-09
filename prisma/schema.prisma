@@ -99,6 +99,16 @@ model Organization {
   stripeCustomerId     String?          @unique
   timezoneDefault      String           @default("UTC")
   reminderHoursBefore  Int              @default(24)
+  /// Post-visit thank-you / check-in email
+  followUpEnabled          Boolean @default(true)
+  followUpHoursAfter       Int     @default(24)
+  /// Ask for a public review after a completed visit
+  reviewRequestEnabled     Boolean @default(true)
+  reviewRequestHoursAfter  Int     @default(72)
+  reviewUrl                String?
+  /// Nudge clients to book again after a completed visit
+  rebookingEnabled         Boolean @default(true)
+  rebookingDaysAfter       Int     @default(28)
   publicBookingEnabled Boolean          @default(true)
   /// Config key: barber_salon | dental | tutors | gyms (see vertical packs)
   verticalPack         String           @default("barber_salon")
@@ -360,6 +370,8 @@ model NotificationOutbox {
   bookingId      String?
   channel        OutboxChannel @default(EMAIL)
   kind           String
+  /// Stable key for idempotent enqueue (unique when set)
+  dedupeKey      String?       @unique
   toAddress      String?
   payload        Json
   status         OutboxStatus  @default(PENDING)
