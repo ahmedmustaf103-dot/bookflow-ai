@@ -40,6 +40,9 @@ yarn-error.log*
 # local white-label uploads (Blob used in production)
 /public/uploads
 
+# audit reports
+/lighthouse-reports
+
 
 # vercel
 .vercel

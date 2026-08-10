@@ -11,153 +11,85 @@ function withOrg<T extends OrgArgs>(args: T, organizationId: string): T {
   };
 }
 
+function modelScope(organizationId: string) {
+  return {
+    findMany({
+      args,
+      query,
+    }: {
+      args: OrgArgs;
+      query: (args: OrgArgs) => Promise<unknown>;
+    }) {
+      return query(withOrg(args, organizationId));
+    },
+    findFirst({
+      args,
+      query,
+    }: {
+      args: OrgArgs;
+      query: (args: OrgArgs) => Promise<unknown>;
+    }) {
+      return query(withOrg(args, organizationId));
+    },
+    updateMany({
+      args,
+      query,
+    }: {
+      args: OrgArgs;
+      query: (args: OrgArgs) => Promise<unknown>;
+    }) {
+      return query(withOrg(args, organizationId));
+    },
+    deleteMany({
+      args,
+      query,
+    }: {
+      args: OrgArgs;
+      query: (args: OrgArgs) => Promise<unknown>;
+    }) {
+      return query(withOrg(args, organizationId));
+    },
+    count({
+      args,
+      query,
+    }: {
+      args: OrgArgs;
+      query: (args: OrgArgs) => Promise<unknown>;
+    }) {
+      return query(withOrg(args, organizationId));
+    },
+    aggregate({
+      args,
+      query,
+    }: {
+      args: OrgArgs;
+      query: (args: OrgArgs) => Promise<unknown>;
+    }) {
+      return query(withOrg(args, organizationId));
+    },
+  };
+}
+
 /**
  * Tenant-scoped Prisma client. Injects organizationId into list/update/delete/count.
  * Prefer this over raw `db` in dashboard code after membership is verified.
- * Creates still require explicit organizationId.
+ * Creates still require explicit organizationId. For id lookups use findOrg*.
  */
 export function tenantDb(organizationId: string) {
+  const s = modelScope(organizationId);
   return db.$extends({
     query: {
-      location: {
-        findMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        findFirst({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        updateMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        deleteMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        count({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-      },
-      resource: {
-        findMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        findFirst({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        updateMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        deleteMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        count({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-      },
-      service: {
-        findMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        findFirst({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        updateMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        deleteMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        count({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-      },
-      booking: {
-        findMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        findFirst({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        updateMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        deleteMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        count({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-      },
-      client: {
-        findMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        findFirst({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        updateMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        deleteMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        count({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-      },
-      auditLog: {
-        findMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        findFirst({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        updateMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        deleteMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        count({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-      },
-      aiRun: {
-        findMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        findFirst({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        updateMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        deleteMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        count({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        aggregate({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-      },
-      notificationOutbox: {
-        findMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        findFirst({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        updateMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        deleteMany({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-        count({ args, query }) {
-          return query(withOrg(args, organizationId));
-        },
-      },
+      location: s,
+      resource: s,
+      service: s,
+      booking: s,
+      client: s,
+      auditLog: s,
+      aiRun: s,
+      notificationOutbox: s,
+      membership: s,
+      subscription: s,
+      googleCalendarConnection: s,
     },
   });
 }
@@ -171,5 +103,25 @@ export async function findOrgBooking(
 ) {
   return db.booking.findFirst({
     where: { id: bookingId, organizationId },
+  });
+}
+
+/** Load a client by id only if it belongs to the organization. */
+export async function findOrgClient(
+  organizationId: string,
+  clientId: string,
+) {
+  return db.client.findFirst({
+    where: { id: clientId, organizationId },
+  });
+}
+
+/** Load a service by id only if it belongs to the organization. */
+export async function findOrgService(
+  organizationId: string,
+  serviceId: string,
+) {
+  return db.service.findFirst({
+    where: { id: serviceId, organizationId },
   });
 }

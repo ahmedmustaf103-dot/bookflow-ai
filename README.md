@@ -18,7 +18,16 @@ AI-powered booking and business management for barbers, salons, and other servic
 
 ## Production
 
-See [GO_LIVE.md](./GO_LIVE.md) for the deploy checklist (Clerk, Stripe, Resend, Twilio, Sentry, Vercel cron).
+See [GO_LIVE.md](./GO_LIVE.md) for the deploy checklist (Clerk, Stripe, Resend, Twilio, Sentry, Vercel cron, security headers, RLS).
+
+Quality gates:
+
+```bash
+npm run lint && npm test && npm run typecheck && npm run build
+npm run test:e2e                 # smoke + axe a11y
+npm run load:smoke               # needs LOAD_ORG_SLUG
+npm run lighthouse:smoke         # needs a running prod server
+```
 
 ## Setup
 

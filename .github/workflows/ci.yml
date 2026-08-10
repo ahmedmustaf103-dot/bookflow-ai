@@ -76,7 +76,7 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install chromium --with-deps
 
-      - name: Smoke tests
+      - name: Smoke + accessibility tests
         env:
           SKIP_ENV_VALIDATION: "1"
           DATABASE_URL: postgresql://user:pass@localhost:5432/bookflow
