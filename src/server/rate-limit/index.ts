@@ -29,6 +29,7 @@ function memoryLimit(
 }
 
 const upstashLimiters = new Map<string, Ratelimit>();
+let warnedMissingRedis = false;
 
 function getUpstashLimiter(name: string, limit: number, windowSec: number) {
   const cacheKey = `${name}:${limit}:${windowSec}`;
@@ -54,8 +55,8 @@ export type RateLimitResult = {
 
 /**
  * Rate-limit a key.
- * Production requires Upstash Redis (fail closed) so limits work across instances.
- * Local/dev may use in-memory fallback.
+ * Prefers Upstash Redis so limits work across instances.
+ * Without Redis, uses an in-memory fallback (per-instance; fine for single-region Hobby).
  */
 export async function rateLimit(input: {
   name: string;
@@ -75,12 +76,15 @@ export async function rateLimit(input: {
     return { success: result.success, remaining: result.remaining };
   }
 
-  if (process.env.NODE_ENV === "production") {
-    logger.error(
-      { key: fullKey, redisConfigured: isRedisConfigured() },
-      "Rate limit denied: Upstash Redis required in production",
+  if (
+    process.env.NODE_ENV === "production" &&
+    !isRedisConfigured() &&
+    !warnedMissingRedis
+  ) {
+    warnedMissingRedis = true;
+    logger.warn(
+      "Upstash Redis not configured — using in-memory rate limits (per instance)",
     );
-    return { success: false, remaining: 0 };
   }
 
   return memoryLimit(fullKey, input.limit, input.windowSec * 1000);
@@ -97,10 +101,6 @@ export async function assertRateLimit(input: {
   if (result.success) return { ok: true };
   return {
     ok: false,
-    error:
-      input.message ??
-      (process.env.NODE_ENV === "production" && !isRedisConfigured()
-        ? "Booking temporarily unavailable — try again shortly"
-        : "Too many requests — try again shortly"),
+    error: input.message ?? "Too many requests — try again shortly",
   };
 }

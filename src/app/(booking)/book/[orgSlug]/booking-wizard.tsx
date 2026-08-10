@@ -368,6 +368,10 @@ export function PublicBookingWizard({
                   />
                 ))}
               </div>
+            ) : error && slots.length === 0 ? (
+              <p className="mt-3 text-sm text-red-600" role="alert">
+                {error}
+              </p>
             ) : slots.length === 0 ? (
               <p className="mt-3 text-sm text-[var(--ink-secondary)]">
                 No open slots in the next week.
