@@ -7,7 +7,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { env } from "@/lib/env";
 
 /** Bump when adding Prisma models so next-dev global client is recreated. */
-const PRISMA_CLIENT_VERSION = 2;
+const PRISMA_CLIENT_VERSION = 3;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

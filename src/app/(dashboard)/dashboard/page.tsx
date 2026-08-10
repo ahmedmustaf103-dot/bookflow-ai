@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Stat } from "@/components/ui/stat";
 import { Surface } from "@/components/ui/surface";
 import { formatMoney } from "@/lib/client-tags";
-import { env } from "@/lib/env";
+import { publicBookingUrl } from "@/lib/booking-urls";
 import {
   deltaHint,
   getOrgAnalytics,
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
     getTodayAgenda(orgId, 5),
   ]);
 
-  const bookUrl = `${env.NEXT_PUBLIC_APP_URL}/book/${ctx.organization.slug}`;
+  const bookUrl = publicBookingUrl(ctx.organization);
   const bookPath = `/book/${ctx.organization.slug}`;
   const setupComplete =
     serviceCount > 0 && resourceCount > 0 && locationCount > 0;

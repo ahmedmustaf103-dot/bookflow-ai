@@ -37,6 +37,10 @@ yarn-error.log*
 .env.production
 !.env.example
 
+# local white-label uploads (Blob used in production)
+/public/uploads
+
+
 # vercel
 .vercel
 

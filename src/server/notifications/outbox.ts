@@ -55,12 +55,21 @@ export type BookingNotifyContext = {
   serviceName: string;
   resourceName: string;
   reviewUrl?: string | null;
+  logoUrl?: string | null;
+  brandPrimary?: string | null;
+  customDomain?: string | null;
+  customDomainStatus?: string | null;
 };
 
 function emailPayload(
   ctx: BookingNotifyContext,
   to: string,
 ): BookingEmailInput {
+  const orgUrl = {
+    slug: ctx.organizationSlug,
+    customDomain: ctx.customDomain,
+    customDomainStatus: ctx.customDomainStatus,
+  };
   return {
     to,
     organizationName: ctx.organizationName,
@@ -70,9 +79,11 @@ function emailPayload(
     startAt: ctx.startAt.toISOString(),
     timezone: ctx.timezone,
     bookingId: ctx.bookingId,
-    manageUrl: bookingManageUrl(ctx.manageToken),
-    bookUrl: publicBookingUrl(ctx.organizationSlug),
+    manageUrl: bookingManageUrl(ctx.manageToken, orgUrl),
+    bookUrl: publicBookingUrl(orgUrl),
     reviewUrl: ctx.reviewUrl ?? null,
+    logoUrl: ctx.logoUrl ?? null,
+    brandPrimary: ctx.brandPrimary ?? null,
   };
 }
 
@@ -164,6 +175,11 @@ export async function enqueueBookingReminder(input: {
   timezone: string;
   email?: string | null;
   phone?: string | null;
+  logoUrl?: string | null;
+  brandPrimary?: string | null;
+  customDomain?: string | null;
+  customDomainStatus?: string | null;
+  reviewUrl?: string | null;
 }) {
   const scheduledFor = new Date(
     input.startAt.getTime() - input.reminderHoursBefore * 60 * 60 * 1000,
@@ -185,6 +201,11 @@ export async function enqueueBookingReminder(input: {
     clientPhone: input.phone,
     serviceName: input.serviceName,
     resourceName: input.resourceName,
+    logoUrl: input.logoUrl,
+    brandPrimary: input.brandPrimary,
+    customDomain: input.customDomain,
+    customDomainStatus: input.customDomainStatus,
+    reviewUrl: input.reviewUrl,
   };
 
   if (planAllowsReminders(input.plan) && input.email) {

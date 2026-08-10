@@ -1,13 +1,52 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/onboarding(.*)",
 ]);
 
+function appHostname() {
+  try {
+    return new URL(
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    ).hostname.toLowerCase();
+  } catch {
+    return "localhost";
+  }
+}
+
+function shouldSkipHostRewrite(pathname: string) {
+  return (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/sign-") ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/book/by-host") ||
+    pathname.startsWith("/_next")
+  );
+}
+
 export default clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
     await auth.protect();
+  }
+
+  const hostHeader = req.headers.get("host")?.split(":")[0]?.toLowerCase();
+  const primary = appHostname();
+  if (
+    hostHeader &&
+    hostHeader !== primary &&
+    hostHeader !== "localhost" &&
+    !hostHeader.endsWith(".localhost") &&
+    !hostHeader.endsWith(".vercel.app") &&
+    !shouldSkipHostRewrite(req.nextUrl.pathname)
+  ) {
+    // Custom domain prep: rewrite to resolver (activates when org.customDomainStatus=ACTIVE).
+    const url = req.nextUrl.clone();
+    url.pathname = "/book/by-host";
+    url.searchParams.set("host", hostHeader);
+    return NextResponse.rewrite(url);
   }
 });
 

@@ -90,6 +90,13 @@ model User {
   @@map("users")
 }
 
+enum CustomDomainStatus {
+  NONE
+  PENDING
+  ACTIVE
+  FAILED
+}
+
 model Organization {
   id                   String           @id @default(cuid())
   name                 String
@@ -102,7 +109,7 @@ model Organization {
   /// Post-visit thank-you / check-in email
   followUpEnabled          Boolean @default(true)
   followUpHoursAfter       Int     @default(24)
-  /// Ask for a public review after a completed visit
+  /// Ask for a Google/Facebook review after a completed visit
   reviewRequestEnabled     Boolean @default(true)
   reviewRequestHoursAfter  Int     @default(72)
   reviewUrl                String?
@@ -110,6 +117,13 @@ model Organization {
   rebookingEnabled         Boolean @default(true)
   rebookingDaysAfter       Int     @default(28)
   publicBookingEnabled Boolean          @default(true)
+  /// White-label branding
+  logoUrl              String?
+  faviconUrl           String?
+  brandPrimary         String?          @default("#0F6E56")
+  /// Custom domain prep (CNAME to app host; activate when DNS is ready)
+  customDomain         String?          @unique
+  customDomainStatus   CustomDomainStatus @default(NONE)
   /// Config key: barber_salon | dental | tutors | gyms (see vertical packs)
   verticalPack         String           @default("barber_salon")
   createdAt            DateTime         @default(now())

@@ -134,6 +134,37 @@ export const updateOrgSettingsSchema = z.object({
     .transform((v) => (v === "" ? null : v)),
   rebookingEnabled: checkboxOn,
   rebookingDaysAfter: z.coerce.number().int().min(1).max(365),
+  brandPrimary: z
+    .string()
+    .trim()
+    .regex(/^#?[0-9a-fA-F]{6}$/, "Use a 6-digit hex colour"),
+  customDomain: z
+    .union([z.string(), z.undefined()])
+    .transform((v) => {
+      const raw = (v ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, "")
+        .replace(/\/.*$/, "")
+        .replace(/:\d+$/, "");
+      return raw;
+    })
+    .refine(
+      (v) =>
+        v === "" ||
+        /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(
+          v,
+        ),
+      { message: "Enter a valid domain like bookings.yourbusiness.com" },
+    ),
+});
+
+export const uploadBrandAssetSchema = z.object({
+  kind: z.enum(["logo", "favicon"]),
+});
+
+export const activateCustomDomainSchema = z.object({
+  activate: checkboxOn,
 });
 
 export const clientSummarySchema = z.object({

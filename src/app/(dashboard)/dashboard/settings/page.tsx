@@ -1,3 +1,8 @@
+import {
+  BrandAssetUploader,
+  CustomDomainActivate,
+} from "@/components/dashboard/branding-controls";
+import { BrandColorField } from "@/components/dashboard/brand-color-field";
 import { ActionForm } from "@/components/forms/action-form";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -5,7 +10,8 @@ import { Input, Select } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { Surface } from "@/components/ui/surface";
-import { env } from "@/lib/env";
+import { DEFAULT_BRAND_PRIMARY } from "@/lib/branding";
+import { appHostHostname, publicBookingUrl } from "@/lib/booking-urls";
 import { updateOrganizationSettingsAction } from "@/server/actions/ops";
 import { planAllowsReminders } from "@/server/billing/entitlements";
 import { db } from "@/server/db";
@@ -31,7 +37,8 @@ export default async function SettingsPage({
 }) {
   const ctx = await requireOrgRole("ADMIN");
   const org = ctx.organization;
-  const bookUrl = `${env.NEXT_PUBLIC_APP_URL}/book/${org.slug}`;
+  const bookUrl = publicBookingUrl(org);
+  const appHost = appHostHostname();
   const { gcal } = await searchParams;
   const gcalConfigured = isGoogleCalendarConfigured();
   // Use root db — tenantDb proxy does not expose googleCalendarConnection.
@@ -48,8 +55,28 @@ export default async function SettingsPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Settings"
-        description="Business preferences, booking page, and customer automation."
+        description="Business preferences, branding, booking page, and automation."
       />
+
+      <Surface className="max-w-lg">
+        <h2 className="text-sm font-semibold">White-label branding</h2>
+        <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
+          Logo, colours, and favicon appear on your public booking page and
+          customer emails.
+        </p>
+        <div className="mt-4 flex flex-col gap-3">
+          <BrandAssetUploader
+            kind="logo"
+            label="Logo"
+            currentUrl={org.logoUrl}
+          />
+          <BrandAssetUploader
+            kind="favicon"
+            label="Favicon"
+            currentUrl={org.faviconUrl}
+          />
+        </div>
+      </Surface>
 
       <Surface className="max-w-lg">
         <h2 className="text-sm font-semibold">Organization</h2>
@@ -62,6 +89,23 @@ export default async function SettingsPage({
           <div>
             <Label htmlFor="org-name">Business name</Label>
             <Input id="org-name" name="name" required defaultValue={org.name} />
+          </div>
+          <BrandColorField
+            defaultValue={org.brandPrimary ?? DEFAULT_BRAND_PRIMARY}
+          />
+          <div>
+            <Label htmlFor="org-custom-domain">Custom domain (optional)</Label>
+            <Input
+              id="org-custom-domain"
+              name="customDomain"
+              placeholder="bookings.yourbusiness.com"
+              defaultValue={org.customDomain ?? ""}
+            />
+            <CustomDomainActivate
+              domain={org.customDomain}
+              status={org.customDomainStatus}
+              appHost={appHost}
+            />
           </div>
           <div>
             <Label htmlFor="org-timezone">Default timezone</Label>
@@ -186,7 +230,10 @@ export default async function SettingsPage({
         <h2 className="text-sm font-semibold">Public booking URL</h2>
         <p className="mt-2 break-all text-sm text-[var(--accent)]">{bookUrl}</p>
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-          Slug: {org.slug}
+          Slug path: /book/{org.slug}
+          {org.customDomainStatus === "ACTIVE" && org.customDomain
+            ? ` · live on ${org.customDomain}`
+            : ""}
         </p>
       </Surface>
 

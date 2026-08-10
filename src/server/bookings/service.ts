@@ -55,6 +55,10 @@ function notifyContext(booking: {
     slug: string;
     plan: BookingNotifyContext["plan"];
     reviewUrl?: string | null;
+    logoUrl?: string | null;
+    brandPrimary?: string | null;
+    customDomain?: string | null;
+    customDomainStatus?: string | null;
   };
   client: {
     name: string;
@@ -83,6 +87,10 @@ function notifyContext(booking: {
     serviceName: booking.service.name,
     resourceName: booking.resource.name,
     reviewUrl: booking.organization.reviewUrl ?? null,
+    logoUrl: booking.organization.logoUrl ?? null,
+    brandPrimary: booking.organization.brandPrimary ?? null,
+    customDomain: booking.organization.customDomain ?? null,
+    customDomainStatus: booking.organization.customDomainStatus ?? null,
   };
 }
 
@@ -363,6 +371,11 @@ export async function createBooking(input: {
         timezone: booking.location.timezone,
         email: booking.client.email,
         phone: booking.client.phone,
+        logoUrl: booking.organization.logoUrl,
+        brandPrimary: booking.organization.brandPrimary,
+        customDomain: booking.organization.customDomain,
+        customDomainStatus: booking.organization.customDomainStatus,
+        reviewUrl: booking.organization.reviewUrl,
       });
     } catch (e) {
       logger.error(
@@ -659,6 +672,11 @@ export async function rescheduleBooking(input: {
         timezone: booking.location.timezone,
         email: booking.client.email,
         phone: booking.client.phone,
+        logoUrl: booking.organization.logoUrl,
+        brandPrimary: booking.organization.brandPrimary,
+        customDomain: booking.organization.customDomain,
+        customDomainStatus: booking.organization.customDomainStatus,
+        reviewUrl: booking.organization.reviewUrl,
       });
     } catch (e) {
       logger.error(
