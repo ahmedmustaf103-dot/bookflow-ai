@@ -27,9 +27,10 @@ npm run db:migrate:deploy
 1. Import the GitHub repo into Vercel.
 2. Set env vars from `.env.example` (production values).
 3. Set `NEXT_PUBLIC_APP_URL` to the production URL.
-4. Deploy — cron for `/api/cron/reminders` is already in `vercel.json` (every 15m).
-5. Set `CRON_SECRET` and ensure Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` (Vercel does this automatically when configured).
-6. After deploy, verify response headers include `Content-Security-Policy`, `X-Frame-Options: DENY`, and `Strict-Transport-Security`.
+4. Deploy — cron for `/api/cron/reminders` is in `vercel.json` (**daily at 08:00 UTC** so it works on Vercel Hobby).
+5. Set `CRON_SECRET`. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` automatically.
+6. **Reminders more often than once/day:** either upgrade to Vercel Pro and set schedule to `*/15 * * * *`, or point an external cron (cron-job.org / EasyCron) at `https://<host>/api/cron/reminders` every 15 minutes with header `Authorization: Bearer <CRON_SECRET>`.
+7. After deploy, verify response headers include `Content-Security-Policy`, `X-Frame-Options: DENY`, and `Strict-Transport-Security`.
 
 ## 4. Email (Resend)
 
