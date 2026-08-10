@@ -46,6 +46,33 @@ export const publicSlotsSchema = z.object({
   resourceId: id,
 });
 
+/** Public self-serve manage link token (cuid). Never accept booking IDs from the client. */
+export const manageTokenSchema = z
+  .string()
+  .trim()
+  .min(8, "Invalid management link")
+  .max(64, "Invalid management link")
+  .regex(/^[a-z0-9_-]+$/i, "Invalid management link");
+
+export const cancelPublicManagedBookingSchema = z.object({
+  manageToken: manageTokenSchema,
+  confirm: z
+    .union([z.literal("true"), z.literal("on"), z.literal("1"), z.boolean()])
+    .refine((v) => v === true || v === "true" || v === "on" || v === "1", {
+      message: "Please confirm cancellation",
+    }),
+  cancelReason: optionalText(500),
+});
+
+export const reschedulePublicManagedBookingSchema = z.object({
+  manageToken: manageTokenSchema,
+  startAt: z.string().trim().min(1, "Choose a new time"),
+});
+
+export const publicManageSlotsSchema = z.object({
+  manageToken: manageTokenSchema,
+});
+
 export const createOrganizationSchema = z.object({
   name: z.string().trim().min(2, "Business name is required").max(120),
   timezone: z.string().trim().min(1).max(64).default("UTC"),

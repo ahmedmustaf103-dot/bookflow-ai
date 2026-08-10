@@ -6,8 +6,10 @@ import { logger } from "@/lib/logger";
 import { processDueOutbox } from "@/server/notifications/outbox";
 
 export const runtime = "nodejs";
+/** Allow enough time to drain a batch of emails/SMS on cron flush. */
+export const maxDuration = 60;
 
-export async function GET() {
+async function authorizeCron(): Promise<NextResponse | null> {
   const headerStore = await headers();
   const authHeader = headerStore.get("authorization");
 
@@ -26,6 +28,12 @@ export async function GET() {
       { status: 503 },
     );
   }
+  return null;
+}
+
+async function runOutboxCron() {
+  const denied = await authorizeCron();
+  if (denied) return denied;
 
   try {
     const result = await processDueOutbox(100);
@@ -35,4 +43,13 @@ export async function GET() {
     logger.error({ err: error }, "Cron notification outbox failed");
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
+}
+
+/** Vercel Cron invokes GET. External schedulers may use GET or POST. */
+export async function GET() {
+  return runOutboxCron();
+}
+
+export async function POST() {
+  return runOutboxCron();
 }

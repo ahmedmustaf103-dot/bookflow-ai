@@ -1,5 +1,6 @@
 import "server-only";
 
+import { after } from "next/server";
 import {
   Prisma,
   type OrganizationPlan,
@@ -13,6 +14,7 @@ import {
   sendBookingCancellation,
   sendBookingConfirmation,
   sendBookingReminder,
+  sendBookingReschedule,
   sendFollowUpEmail,
   sendRebookingReminderEmail,
   sendReviewRequestEmail,
@@ -21,8 +23,10 @@ import {
 import {
   bookingDedupeKey,
   CANCEL_ON_BOOKING_CANCEL,
+  IMMEDIATE_OUTBOX_KINDS,
   OUTBOX_KINDS,
   reminderDedupeKey,
+  rescheduleDedupeKey,
 } from "@/server/notifications/kinds";
 import {
   normalizePhone,
@@ -33,9 +37,12 @@ import { bookingManageUrl, publicBookingUrl } from "@/lib/booking-urls";
 import { logger } from "@/lib/logger";
 import { captureException } from "@/lib/observability";
 
-const STALE_PROCESSING_MS = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 5;
-const RETRY_DELAY_MS = 15 * 60 * 1000;
+export const STALE_PROCESSING_MS = 15 * 60 * 1000;
+export const MAX_ATTEMPTS = 5;
+/** Retry after hard send failures for time-sensitive kinds. */
+export const IMMEDIATE_RETRY_DELAY_MS = 2 * 60 * 1000;
+/** Retry after hard send failures for scheduled kinds (reminders, follow-ups). */
+export const STANDARD_RETRY_DELAY_MS = 15 * 60 * 1000;
 const PROVIDER_MISSING_DELAY_MS = 6 * 60 * 60 * 1000;
 
 export type BookingNotifyContext = {
@@ -60,6 +67,56 @@ export type BookingNotifyContext = {
   customDomain?: string | null;
   customDomainStatus?: string | null;
 };
+
+export function isImmediateOutboxKind(kind: string): boolean {
+  return (IMMEDIATE_OUTBOX_KINDS as string[]).includes(kind);
+}
+
+export function retryDelayMsForKind(kind: string): number {
+  return isImmediateOutboxKind(kind)
+    ? IMMEDIATE_RETRY_DELAY_MS
+    : STANDARD_RETRY_DELAY_MS;
+}
+
+export function isStaleProcessing(
+  updatedAt: Date,
+  now = new Date(),
+  staleMs = STALE_PROCESSING_MS,
+): boolean {
+  return updatedAt.getTime() < now.getTime() - staleMs;
+}
+
+export function nextRetryAt(
+  kind: string,
+  now = new Date(),
+): Date {
+  return new Date(now.getTime() + retryDelayMsForKind(kind));
+}
+
+/**
+ * Flush due outbox rows after the current request finishes.
+ * Keeps booking transactions free of provider I/O while still delivering
+ * confirmations/cancellations/reschedules within seconds on Vercel.
+ *
+ * Safe if called outside a Next.js request (falls back to fire-and-forget).
+ */
+export function scheduleDueOutboxFlush(reason: string): void {
+  const run = async () => {
+    try {
+      const result = await processDueOutbox(50);
+      logger.info({ ...result, reason }, "Outbox flush after enqueue");
+    } catch (e) {
+      captureException(e, { action: "scheduleDueOutboxFlush", reason });
+      logger.error({ err: e, reason }, "Outbox flush failed");
+    }
+  };
+
+  try {
+    after(run);
+  } catch {
+    void run();
+  }
+}
 
 function emailPayload(
   ctx: BookingNotifyContext,
@@ -139,6 +196,7 @@ export async function enqueueBookingConfirmation(ctx: BookingNotifyContext) {
     scheduledFor: new Date(),
     payload,
   });
+  scheduleDueOutboxFlush("booking_confirmation");
 }
 
 /** Cancellation email — due immediately. */
@@ -158,6 +216,24 @@ export async function enqueueBookingCancellation(ctx: BookingNotifyContext) {
     scheduledFor: new Date(),
     payload,
   });
+  scheduleDueOutboxFlush("booking_cancellation");
+}
+
+/** Reschedule email — due immediately (new time in payload). */
+export async function enqueueBookingReschedule(ctx: BookingNotifyContext) {
+  if (!ctx.clientEmail) return;
+  const payload = emailPayload(ctx, ctx.clientEmail);
+  await enqueueRow({
+    organizationId: ctx.organizationId,
+    bookingId: ctx.bookingId,
+    channel: "EMAIL",
+    kind: OUTBOX_KINDS.BOOKING_RESCHEDULED,
+    dedupeKey: rescheduleDedupeKey(ctx.bookingId, ctx.startAt),
+    toAddress: ctx.clientEmail,
+    scheduledFor: new Date(),
+    payload,
+  });
+  scheduleDueOutboxFlush("booking_reschedule");
 }
 
 export async function enqueueBookingReminder(input: {
@@ -333,15 +409,16 @@ export async function cancelPendingAutomationForBooking(bookingId: string) {
   });
 }
 
-async function reclaimStaleProcessing() {
-  const cutoff = new Date(Date.now() - STALE_PROCESSING_MS);
-  await db.notificationOutbox.updateMany({
+async function reclaimStaleProcessing(now = new Date()) {
+  const cutoff = new Date(now.getTime() - STALE_PROCESSING_MS);
+  const result = await db.notificationOutbox.updateMany({
     where: {
       status: "PROCESSING",
       updatedAt: { lt: cutoff },
     },
     data: { status: "PENDING" },
   });
+  return result.count;
 }
 
 function normalizePayloadDate<T extends { startAt: Date | string }>(
@@ -372,6 +449,8 @@ async function dispatchOutboxItem(item: {
         return sendBookingReminder(payload);
       case OUTBOX_KINDS.BOOKING_CANCELLATION:
         return sendBookingCancellation(payload);
+      case OUTBOX_KINDS.BOOKING_RESCHEDULED:
+        return sendBookingReschedule(payload);
       case OUTBOX_KINDS.FOLLOW_UP:
         return sendFollowUpEmail(payload);
       case OUTBOX_KINDS.REVIEW_REQUEST:
@@ -396,10 +475,13 @@ async function dispatchOutboxItem(item: {
   throw new Error(`Unsupported outbox kind: ${item.kind}/${item.channel}`);
 }
 
-export async function processDueOutbox(limit = 50) {
-  await reclaimStaleProcessing();
+/**
+ * Process outbox rows with scheduledFor <= now.
+ * Claim is optimistic (PENDING → PROCESSING) so concurrent cron/flush is safe.
+ */
+export async function processDueOutbox(limit = 50, now = new Date()) {
+  const reclaimed = await reclaimStaleProcessing(now);
 
-  const now = new Date();
   const due = await db.notificationOutbox.findMany({
     where: {
       status: "PENDING",
@@ -412,13 +494,17 @@ export async function processDueOutbox(limit = 50) {
   let sent = 0;
   let failed = 0;
   let deferred = 0;
+  let skippedClaim = 0;
 
   for (const item of due) {
     const claimed = await db.notificationOutbox.updateMany({
       where: { id: item.id, status: "PENDING" },
       data: { status: "PROCESSING", attempts: { increment: 1 } },
     });
-    if (claimed.count === 0) continue;
+    if (claimed.count === 0) {
+      skippedClaim += 1;
+      continue;
+    }
 
     const attempts = item.attempts + 1;
 
@@ -435,7 +521,7 @@ export async function processDueOutbox(limit = 50) {
             scheduledFor:
               attempts >= MAX_ATTEMPTS
                 ? item.scheduledFor
-                : new Date(Date.now() + PROVIDER_MISSING_DELAY_MS),
+                : new Date(now.getTime() + PROVIDER_MISSING_DELAY_MS),
           },
         });
         if (attempts >= MAX_ATTEMPTS) failed += 1;
@@ -460,12 +546,19 @@ export async function processDueOutbox(limit = 50) {
           scheduledFor:
             attempts >= MAX_ATTEMPTS
               ? item.scheduledFor
-              : new Date(Date.now() + RETRY_DELAY_MS),
+              : nextRetryAt(item.kind, now),
         },
       });
       failed += 1;
     }
   }
 
-  return { processed: due.length, sent, failed, deferred };
+  return {
+    processed: due.length,
+    sent,
+    failed,
+    deferred,
+    skippedClaim,
+    reclaimed,
+  };
 }

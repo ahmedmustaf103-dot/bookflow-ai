@@ -2,6 +2,8 @@
 
 Ship BookFlow AI on Vercel with a managed Postgres and the integrations below.
 
+See also [docs/NOTIFICATIONS.md](./docs/NOTIFICATIONS.md) for outbox flush vs cron timing.
+
 ## 1. Database
 
 1. Create a Postgres database (Neon / Supabase / RDS).
@@ -27,10 +29,101 @@ npm run db:migrate:deploy
 1. Import the GitHub repo into Vercel.
 2. Set env vars from `.env.example` (production values).
 3. Set `NEXT_PUBLIC_APP_URL` to the production URL.
-4. Deploy — cron for `/api/cron/reminders` is in `vercel.json` (**daily at 08:00 UTC** so it works on Vercel Hobby).
-5. Set `CRON_SECRET`. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` automatically.
-6. **Reminders more often than once/day:** either upgrade to Vercel Pro and set schedule to `*/15 * * * *`, or point an external cron (cron-job.org / EasyCron) at `https://<host>/api/cron/reminders` every 15 minutes with header `Authorization: Bearer <CRON_SECRET>`.
-7. After deploy, verify response headers include `Content-Security-Policy`, `X-Frame-Options: DENY`, and `Strict-Transport-Security`.
+4. Deploy — `vercel.json` keeps a **daily** Vercel cron (`0 8 * * *`) because **Hobby only allows once-per-day crons** (more frequent expressions fail deploy). Precision on Hobby is also ±59 minutes within the hour.
+5. Set `CRON_SECRET` in the Vercel project (Production + Preview as needed). Vercel’s native daily cron sends `Authorization: Bearer <CRON_SECRET>` automatically.
+6. Configure an **external cron** for demo/pilot reminder reliability — see **§3a** below. Confirmations/cancellations/reschedules flush via Next.js `after()` without waiting for cron; reminders and post-visit emails still need a frequent flush.
+7. Optional: upgrade to Vercel Pro and change `vercel.json` to `*/5 * * * *` instead of (or in addition to) an external scheduler.
+8. After deploy, verify response headers include `Content-Security-Policy`, `X-Frame-Options: DENY`, and `Strict-Transport-Security`.
+
+## 3a. External cron (required on Hobby for reliable reminders)
+
+Vercel Hobby cannot run `/api/cron/reminders` every 5 minutes. Use an external scheduler that hits the same secured endpoint.
+
+### Endpoint
+
+| | |
+| - | - |
+| **URL** | `https://<your-vercel-host>/api/cron/reminders` |
+| **Methods** | `GET` or `POST` (both accepted) |
+| **Auth header** | `Authorization: Bearer <CRON_SECRET>` |
+| **Query secrets** | **Do not** put the secret in the URL (`?secret=` is rejected / unsupported) |
+
+`<CRON_SECRET>` must match the `CRON_SECRET` environment variable on Vercel. Generate a long random value (e.g. `openssl rand -hex 32`). Never commit it.
+
+### Recommended schedule
+
+Every **5 minutes** (e.g. cron expression `*/5 * * * *`).
+
+That keeps appointment reminders within a few minutes of `scheduledFor` and drains retries / stale `PROCESSING` reclaim regularly.
+
+### Vercel env var
+
+| Variable | Required | Notes |
+| -------- | -------- | ----- |
+| `CRON_SECRET` | **Yes** in production | Without it the route returns `503` in production. Same value for Vercel Cron and the external scheduler. |
+
+Also ensure `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (and Twilio vars if using SMS reminders) are set, or sends will defer as “provider not configured”.
+
+### Example: cron-job.org
+
+1. Create a job → URL = `https://bookflow-ai-isga.vercel.app/api/cron/reminders` (use your real host).
+2. Schedule: every 5 minutes.
+3. Request method: GET (or POST).
+4. Custom header: `Authorization` = `Bearer ` + your secret (same as Vercel `CRON_SECRET`).
+5. Enable the job after the first successful manual test (below).
+
+EasyCron, GitHub Actions `schedule`, or any HTTP cron works the same way.
+
+### Test the endpoint safely
+
+Replace the host and secret locally; do not paste real secrets into chats or commits.
+
+```bash
+# Expect 401 without auth (production)
+curl -sS -o /dev/null -w "%{http_code}\n" \
+  https://<host>/api/cron/reminders
+
+# Expect 200 with Bearer token
+curl -sS -H "Authorization: Bearer $CRON_SECRET" \
+  https://<host>/api/cron/reminders
+```
+
+Successful JSON shape (fields may be zero if nothing is due):
+
+```json
+{
+  "ok": true,
+  "processed": 0,
+  "sent": 0,
+  "failed": 0,
+  "deferred": 0,
+  "skippedClaim": 0,
+  "reclaimed": 0
+}
+```
+
+Calling the endpoint repeatedly is safe: rows are claimed with `PENDING → PROCESSING`, dedupe keys prevent duplicate enqueue, and already-`SENT` rows are not selected again.
+
+### Verify a reminder was processed
+
+1. Create a booking whose reminder is due soon (org `reminderHoursBefore` vs appointment start), or temporarily set `scheduledFor` on a `PENDING` `BOOKING_REMINDER` row to the past in Prisma Studio / SQL.
+2. Wait for the next external cron tick (or run the `curl` above).
+3. Check:
+   - Outbox row: `status = SENT`, `sentAt` set, `lastError` null
+   - Resend dashboard (or Twilio) for the message
+   - Vercel function logs for `Processed notification outbox` with `sent >= 1`
+4. Hit the endpoint again — `sent` should stay `0` for that booking (no duplicate send).
+
+### Behaviour already guaranteed by the route
+
+| Concern | Behaviour |
+| ------- | ---------- |
+| Due selection | Only `PENDING` rows with `scheduledFor <= now` |
+| Idempotent / no double send | Optimistic claim (`updateMany` where still `PENDING`); lost races → `skippedClaim` |
+| Stale jobs | `PROCESSING` older than 15 minutes reclaimed to `PENDING` each run |
+| Failures | Error → `PENDING` + backoff retry (or `FAILED` after max attempts) |
+
+More detail: [docs/NOTIFICATIONS.md](./docs/NOTIFICATIONS.md).
 
 ## 4. Email (Resend)
 

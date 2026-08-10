@@ -23,6 +23,7 @@ function shouldSkipHostRewrite(pathname: string) {
     pathname.startsWith("/sign-") ||
     pathname.startsWith("/onboarding") ||
     pathname.startsWith("/book/by-host") ||
+    pathname.startsWith("/book/manage") ||
     pathname.startsWith("/_next")
   );
 }

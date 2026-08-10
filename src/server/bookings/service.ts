@@ -21,6 +21,7 @@ import {
   enqueueBookingCancellation,
   enqueueBookingConfirmation,
   enqueueBookingReminder,
+  enqueueBookingReschedule,
   enqueuePostVisitAutomation,
   type BookingNotifyContext,
 } from "@/server/notifications/outbox";
@@ -656,6 +657,23 @@ export async function rescheduleBooking(input: {
     }
 
     await cancelRemindersForBooking(booking.id);
+    const notifyCtx = {
+      ...notifyContext({
+        ...booking,
+        startAt: input.startAt,
+        endAt,
+      }),
+      startAt: input.startAt,
+      endAt,
+    };
+    try {
+      await enqueueBookingReschedule(notifyCtx);
+    } catch (e) {
+      logger.error(
+        { err: e, bookingId: booking.id },
+        "Failed to enqueue reschedule email",
+      );
+    }
     try {
       await enqueueBookingReminder({
         organizationId: booking.organizationId,

@@ -40,7 +40,8 @@ flowchart LR
 
 Full diagram and sequence notes: [`docs/portfolio/architecture.md`](./docs/portfolio/architecture.md)  
 Database ERD: [`docs/portfolio/erd.md`](./docs/portfolio/erd.md)  
-Case study template: [`docs/portfolio/case-study.md`](./docs/portfolio/case-study.md)
+Case study template: [`docs/portfolio/case-study.md`](./docs/portfolio/case-study.md)  
+Notification timing: [`docs/NOTIFICATIONS.md`](./docs/NOTIFICATIONS.md)
 
 ## Stack
 

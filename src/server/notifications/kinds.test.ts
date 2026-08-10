@@ -3,16 +3,19 @@ import { describe, expect, it } from "vitest";
 import {
   bookingDedupeKey,
   CANCEL_ON_BOOKING_CANCEL,
+  IMMEDIATE_OUTBOX_KINDS,
   OUTBOX_KINDS,
   reminderDedupeKey,
+  rescheduleDedupeKey,
 } from "@/server/notifications/kinds";
 
 describe("outbox kinds", () => {
-  it("covers all Sprint 5 workflows", () => {
+  it("covers confirmation, cancel, reschedule, reminder, and post-visit", () => {
     expect(Object.values(OUTBOX_KINDS)).toEqual(
       expect.arrayContaining([
         "BOOKING_CONFIRMATION",
         "BOOKING_CANCELLATION",
+        "BOOKING_RESCHEDULED",
         "BOOKING_REMINDER",
         "FOLLOW_UP",
         "REVIEW_REQUEST",
@@ -38,8 +41,27 @@ describe("outbox kinds", () => {
     expect(reminderDedupeKey("b1", "SMS", start)).toContain(":SMS:");
   });
 
+  it("includes start time in reschedule dedupe so each move notifies once", () => {
+    const start = new Date("2026-08-10T16:00:00.000Z");
+    expect(rescheduleDedupeKey("b1", start)).toBe(
+      "BOOKING_RESCHEDULED:b1:EMAIL:2026-08-10T16:00:00.000Z",
+    );
+  });
+
+  it("marks confirmation/cancel/reschedule as immediate flush kinds", () => {
+    expect(IMMEDIATE_OUTBOX_KINDS).toEqual(
+      expect.arrayContaining([
+        "BOOKING_CONFIRMATION",
+        "BOOKING_CANCELLATION",
+        "BOOKING_RESCHEDULED",
+      ]),
+    );
+    expect(IMMEDIATE_OUTBOX_KINDS).not.toContain("BOOKING_REMINDER");
+  });
+
   it("cancels pending post-visit jobs with reminders on booking cancel", () => {
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("BOOKING_REMINDER");
+    expect(CANCEL_ON_BOOKING_CANCEL).toContain("BOOKING_RESCHEDULED");
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("FOLLOW_UP");
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("REVIEW_REQUEST");
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("REBOOKING_REMINDER");

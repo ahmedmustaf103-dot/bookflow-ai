@@ -204,6 +204,31 @@ export async function sendBookingCancellation(
   });
 }
 
+export async function sendBookingReschedule(
+  input: BookingEmailInput,
+): Promise<SendEmailResult> {
+  const subject = `Updated: ${input.serviceName} at ${input.organizationName}`;
+  const html = shell(
+    "Appointment rescheduled",
+    `
+      <p>Hi ${escapeHtml(input.clientName)},</p>
+      <p>Your appointment has been moved to a new time.</p>
+      ${appointmentList(input)}
+      ${manageLink(input)}
+      <p style="color:#666;font-size:12px;">Booking ID: ${escapeHtml(input.bookingId)}</p>
+    `,
+    input,
+  );
+  return deliver({
+    to: input.to,
+    subject,
+    html,
+    bookingId: input.bookingId,
+    kind: "BOOKING_RESCHEDULED",
+    organizationName: input.organizationName,
+  });
+}
+
 export async function sendFollowUpEmail(
   input: BookingEmailInput,
 ): Promise<SendEmailResult> {
