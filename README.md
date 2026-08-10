@@ -1,87 +1,103 @@
 # BookFlow AI
 
-AI-powered booking and business management for barbers, salons, and other service businesses.
+**Multi-tenant booking OS for service businesses** — public booking, ops dashboard, automation, and AI on one stack.
+
+[Live demo](https://bookflow-ai-isga.vercel.app) · [Book an appointment](https://bookflow-ai-isga.vercel.app/book/bookflow) · [Portfolio pack](./docs/portfolio/README.md) · [Go-live checklist](./GO_LIVE.md)
+
+Screenshots: capture with [`docs/portfolio/screenshots.md`](./docs/portfolio/screenshots.md), then drop them into `docs/portfolio/screenshots/`.
+
+## Why it exists
+
+Barbers and salons lose chairs to phone-tag booking and no-shows. Most tools either stop at a calendar embed or bolt on “AI” that doesn’t know real availability, tenancy, or plan limits.
+
+BookFlow AI is a production-shaped SaaS: org isolation, Stripe entitlements, reliable notification outbox, and an AI workbench metered against those plans.
+
+## Product surface
+
+| For customers | For owners |
+| ------------- | ---------- |
+| Branded `/book/[slug]` wizard | Calendar, clients, staff, services, hours |
+| Service → staff → time → details | Analytics (revenue, staff, customers) |
+| Confirmation + manage token | Automation toggles + billing |
+| Custom domain ready | AI summaries, drafts, insights, booking assistant |
+
+**Vertical packs:** barber/salon (default), dental, tutors, gyms — terminology and seed services per vertical.
+
+## Architecture (summary)
+
+```mermaid
+flowchart LR
+  Public[Public booking] --> Engine[Availability engine]
+  Dash[Dashboard] --> Engine
+  Engine --> PG[(Postgres + RLS)]
+  Dash --> Outbox[Notification outbox]
+  Outbox --> Email[Resend]
+  Outbox --> SMS[Twilio]
+  Dash --> AI[AI + metering]
+  AI --> LLM[OpenAI / Google]
+  Dash --> Stripe[Stripe plans]
+```
+
+Full diagram and sequence notes: [`docs/portfolio/architecture.md`](./docs/portfolio/architecture.md)  
+Database ERD: [`docs/portfolio/erd.md`](./docs/portfolio/erd.md)  
+Case study template: [`docs/portfolio/case-study.md`](./docs/portfolio/case-study.md)
 
 ## Stack
 
-- Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4
-- Prisma 7 · PostgreSQL · Clerk · Upstash Redis (optional) · Vercel-ready
+- **App:** Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4
+- **Data:** Prisma 7 · PostgreSQL (exclusion constraints, RLS)
+- **Auth:** Clerk
+- **Billing:** Stripe (Trial / Starter / Growth / Business)
+- **Comms:** Resend · Twilio
+- **AI:** Vercel AI SDK · OpenAI + Google providers
+- **Scale:** Upstash Redis (optional) · feature flags · Sentry · Pino
+- **Quality:** Vitest · Playwright + axe · Lighthouse / load smoke scripts
 
-## Phase 0–5 (current)
+## Portfolio assets
 
-- Phase 0: app shell, Clerk auth, env validation, logging, CI
-- Phase 1: organizations, locations, resources, services, hours, availability engine
-- Phase 2: public booking (`/book/[slug]`), appointments board, Resend email, Stripe billing
-- Phase 3: clients CRM, analytics, settings, reminder outbox + cron, plan entitlements, audit log
-- Phase 4: AI summaries, message drafts, booking assistant with tools, token metering
-- Phase 5: Postgres exclusion constraints, Redis slot cache & rate limits, feature flags, vertical packs, pooling/observability hooks
+Everything for client acquisition lives in [`docs/portfolio/`](./docs/portfolio/README.md):
 
-## Production
+- Architecture diagram · Database ERD · Case study  
+- Demo video script · Screenshot checklist · LinkedIn launch post  
 
-See [GO_LIVE.md](./GO_LIVE.md) for the deploy checklist (Clerk, Stripe, Resend, Twilio, Sentry, Vercel cron, security headers, RLS).
+Landing page is the marketing route at `/`.
 
-Quality gates:
-
-```bash
-npm run lint && npm test && npm run typecheck && npm run build
-npm run test:e2e                 # smoke + axe a11y
-npm run load:smoke               # needs LOAD_ORG_SLUG
-npm run lighthouse:smoke         # needs a running prod server
-```
-
-## Setup
-
-1. Copy env file:
+## Local setup
 
 ```bash
 cp .env.example .env.local
-```
-
-2. Fill in `DATABASE_URL` and Clerk keys from the [Clerk dashboard](https://dashboard.clerk.com).
-   For production, use a **pooled** connection string (Neon/Supabase pooler or PgBouncer) and tune `DATABASE_POOL_MAX`.
-
-3. Install and generate the Prisma client:
-
-```bash
+# Fill DATABASE_URL + Clerk keys (see .env.example)
 npm install
 npm run db:generate
-```
-
-4. Run migrations (requires a reachable Postgres):
-
-```bash
 npm run db:migrate
-```
-
-5. (Optional) Add Upstash Redis REST credentials for shared slot cache and rate limits across instances. Without them, in-memory fallbacks work for local/single-instance.
-
-6. Start the app:
-
-```bash
 npm run dev
 ```
 
-7. Point a Clerk webhook to `https://<your-host>/api/webhooks/clerk` for events:
-   - `user.created`
-   - `user.updated`
-   - `user.deleted`
+Optional: Upstash Redis for shared rate limits and slot cache across instances. Without it, in-memory fallbacks work for single-instance / Hobby.
 
-   Set `CLERK_WEBHOOK_SIGNING_SECRET` from the Clerk webhook endpoint.
+Clerk webhook → `https://<host>/api/webhooks/clerk` (`user.created` / `updated` / `deleted`) with `CLERK_WEBHOOK_SIGNING_SECRET`.
+
+Production deploy: [`GO_LIVE.md`](./GO_LIVE.md).
+
+## Quality gates
+
+```bash
+npm run lint && npm test && npm run typecheck && npm run build
+npm run test:e2e
+npm run load:smoke        # LOAD_ORG_SLUG=bookflow
+npm run lighthouse:smoke  # against a running prod server
+```
 
 ## Scripts
 
-| Script               | Purpose                   |
-| -------------------- | ------------------------- |
-| `npm run dev`        | Local development         |
-| `npm run build`      | Production build          |
-| `npm run lint`       | ESLint                    |
-| `npm run typecheck`  | TypeScript                |
-| `npm run format`     | Prettier                  |
-| `npm run db:migrate` | Create/apply migrations   |
-| `npm run db:studio`  | Prisma Studio             |
-| `npm test`           | Unit / eval tests         |
-| `npm run test:e2e`   | Playwright smoke tests    |
+| Script | Purpose |
+| ------ | ------- |
+| `npm run dev` | Local development |
+| `npm run build` | Production build |
+| `npm run lint` / `typecheck` / `format` | Quality |
+| `npm run db:migrate` / `db:studio` | Prisma |
+| `npm test` / `test:e2e` | Unit + Playwright |
 
-## Architecture
+## License / contact
 
-See the architecture canvas in Cursor for the full roadmap (folders, schema, phases).
+Private portfolio project unless otherwise noted. For pilots or freelance work, open an issue or reach out via the LinkedIn launch post in [`docs/portfolio/linkedin-launch.md`](./docs/portfolio/linkedin-launch.md).
