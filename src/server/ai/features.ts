@@ -4,7 +4,7 @@ import { formatInTimeZone } from "date-fns-tz";
 
 import { UserFacingError } from "@/lib/action-errors";
 import { formatMoney } from "@/lib/client-tags";
-import { getOrgAnalytics } from "@/server/analytics/org";
+import { getOrgAnalytics, getTopServices } from "@/server/analytics/org";
 import {
   GUARDRAILS,
   INTENT_GUIDANCE,
@@ -276,20 +276,7 @@ export async function generateInsightDigest(input: {
     select: { name: true, plan: true },
   });
   const analytics = await getOrgAnalytics(input.organizationId, days);
-
-  const topServices = await db.$queryRaw<
-    Array<{ name: string; count: number }>
-  >`
-    SELECT s.name AS name, COUNT(*)::int AS count
-    FROM bookings b
-    INNER JOIN services s ON s.id = b."serviceId"
-    WHERE b."organizationId" = ${input.organizationId}
-      AND b."startAt" >= NOW() - (${days} * INTERVAL '1 day')
-      AND b.status <> 'CANCELLED'
-    GROUP BY s.name
-    ORDER BY count DESC
-    LIMIT 5
-  `;
+  const topServices = await getTopServices(input.organizationId, days, 5);
 
   const prompt = `
 Business: ${org.name}
@@ -303,7 +290,7 @@ Metrics:
 - Cancelled: ${analytics.bookingsCancelled}
 - Upcoming confirmed/pending: ${analytics.upcoming}
 - Unique clients (all time): ${analytics.uniqueClients}
-- Estimated revenue (completed+confirmed in window): ${formatMoney(analytics.estimatedRevenueCents, "GBP")}
+- Estimated revenue (completed+confirmed in window): ${formatMoney(analytics.estimatedRevenueCents, analytics.currency)}
 Top services: ${
     topServices.map((s) => `${s.name} (${s.count})`).join(", ") || "none"
   }
