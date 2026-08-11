@@ -2,6 +2,14 @@ import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
+import {
+  previousAnalyticsPeriod,
+  resolveAnalyticsPeriod,
+  resolveMonthPeriod,
+  resolveTodayPeriod,
+  computeNoShowRate,
+  type AnalyticsPeriod,
+} from "@/server/analytics/period";
 
 export type OrgAnalytics = {
   bookingsTotal: number;
@@ -9,10 +17,12 @@ export type OrgAnalytics = {
   bookingsNoShow: number;
   bookingsCancelled: number;
   noShowRate: number;
+  /** COMPLETED list-price revenue for startAt in period */
   estimatedRevenueCents: number;
   uniqueClients: number;
   upcoming: number;
   currency: string;
+  timeZone: string;
   /** Prior window of same length for simple compare */
   previous: {
     bookingsTotal: number;
@@ -22,7 +32,7 @@ export type OrgAnalytics = {
 };
 
 export type AnalyticsDayPoint = {
-  date: string; // yyyy-MM-dd
+  date: string; // yyyy-MM-dd in org timezone
   bookings: number;
   revenueCents: number;
 };
@@ -48,11 +58,12 @@ export type CustomerInsights = {
   repeatBookers: number;
 };
 
-function windowStart(days: number, from = new Date()) {
-  const since = new Date(from);
-  since.setDate(since.getDate() - days);
-  since.setHours(0, 0, 0, 0);
-  return since;
+async function getOrgTimezone(organizationId: string): Promise<string> {
+  const org = await db.organization.findUnique({
+    where: { id: organizationId },
+    select: { timezoneDefault: true },
+  });
+  return org?.timezoneDefault || "UTC";
 }
 
 async function resolveCurrency(organizationId: string) {
@@ -64,14 +75,17 @@ async function resolveCurrency(organizationId: string) {
   return service?.currency || "GBP";
 }
 
-async function statusCounts(organizationId: string, since: Date, until?: Date) {
+async function statusCounts(
+  organizationId: string,
+  period: AnalyticsPeriod,
+) {
   const grouped = await db.booking.groupBy({
     by: ["status"],
     where: {
       organizationId,
-      createdAt: {
-        gte: since,
-        ...(until ? { lt: until } : {}),
+      startAt: {
+        gte: period.start,
+        lt: period.end,
       },
     },
     _count: { _all: true },
@@ -84,67 +98,62 @@ async function statusCounts(organizationId: string, since: Date, until?: Date) {
   const noShow = counts.NO_SHOW ?? 0;
   const cancelled = counts.CANCELLED ?? 0;
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const attendedOrMissed = completed + noShow;
-  const noShowRate =
-    attendedOrMissed === 0 ? 0 : noShow / attendedOrMissed;
-  return { completed, noShow, cancelled, total, noShowRate };
+  return {
+    completed,
+    noShow,
+    cancelled,
+    total,
+    noShowRate: computeNoShowRate(completed, noShow),
+  };
 }
 
-async function revenueCents(
+/** COMPLETED appointments only — list price, not payments collected. */
+async function completedRevenueCents(
   organizationId: string,
-  since: Date,
-  until?: Date,
+  period: AnalyticsPeriod,
 ) {
-  const rows = until
-    ? await db.$queryRaw<Array<{ cents: number }>>(Prisma.sql`
-        SELECT COALESCE(SUM(s."priceCents"), 0)::int AS cents
-        FROM bookings b
-        INNER JOIN services s ON s.id = b."serviceId"
-        WHERE b."organizationId" = ${organizationId}
-          AND b.status IN ('COMPLETED', 'CONFIRMED')
-          AND b."startAt" >= ${since}
-          AND b."startAt" < ${until}
-      `)
-    : await db.$queryRaw<Array<{ cents: number }>>(Prisma.sql`
-        SELECT COALESCE(SUM(s."priceCents"), 0)::int AS cents
-        FROM bookings b
-        INNER JOIN services s ON s.id = b."serviceId"
-        WHERE b."organizationId" = ${organizationId}
-          AND b.status IN ('COMPLETED', 'CONFIRMED')
-          AND b."startAt" >= ${since}
-      `);
+  const rows = await db.$queryRaw<Array<{ cents: number }>>(Prisma.sql`
+    SELECT COALESCE(SUM(s."priceCents"), 0)::int AS cents
+    FROM bookings b
+    INNER JOIN services s ON s.id = b."serviceId"
+    WHERE b."organizationId" = ${organizationId}
+      AND b.status = 'COMPLETED'
+      AND b."startAt" >= ${period.start}
+      AND b."startAt" < ${period.end}
+  `);
   return rows[0]?.cents ?? 0;
 }
 
 export async function getOrgAnalytics(
   organizationId: string,
   days = 30,
+  now = new Date(),
 ): Promise<OrgAnalytics> {
-  const since = windowStart(days);
-  const prevUntil = since;
-  const prevSince = windowStart(days, since);
+  const timeZone = await getOrgTimezone(organizationId);
+  const period = resolveAnalyticsPeriod(days, timeZone, now);
+  const previous = previousAnalyticsPeriod(period);
 
   const [
     current,
-    previous,
+    prior,
     uniqueClients,
     upcoming,
     estimatedRevenueCents,
     previousRevenue,
     currency,
   ] = await Promise.all([
-    statusCounts(organizationId, since),
-    statusCounts(organizationId, prevSince, prevUntil),
+    statusCounts(organizationId, period),
+    statusCounts(organizationId, previous),
     db.client.count({ where: { organizationId } }),
     db.booking.count({
       where: {
         organizationId,
         status: { in: ["PENDING", "CONFIRMED"] },
-        startAt: { gte: new Date() },
+        startAt: { gte: now },
       },
     }),
-    revenueCents(organizationId, since),
-    revenueCents(organizationId, prevSince, prevUntil),
+    completedRevenueCents(organizationId, period),
+    completedRevenueCents(organizationId, previous),
     resolveCurrency(organizationId),
   ]);
 
@@ -158,10 +167,11 @@ export async function getOrgAnalytics(
     uniqueClients,
     upcoming,
     currency,
+    timeZone,
     previous: {
-      bookingsTotal: previous.total,
+      bookingsTotal: prior.total,
       estimatedRevenueCents: previousRevenue,
-      noShowRate: previous.noShowRate,
+      noShowRate: prior.noShowRate,
     },
   };
 }
@@ -169,74 +179,74 @@ export async function getOrgAnalytics(
 export async function getBookingSeries(
   organizationId: string,
   days = 30,
+  now = new Date(),
 ): Promise<AnalyticsDayPoint[]> {
-  const since = windowStart(days);
+  const timeZone = await getOrgTimezone(organizationId);
+  const period = resolveAnalyticsPeriod(days, timeZone, now);
+
   const rows = await db.$queryRaw<
-    Array<{ day: Date; bookings: number; revenue: number }>
+    Array<{ day: string; bookings: number; revenue: number }>
   >(Prisma.sql`
     SELECT
-      date_trunc('day', b."startAt") AS day,
-      COUNT(*)::int AS bookings,
+      to_char(
+        (b."startAt" AT TIME ZONE ${timeZone}),
+        'YYYY-MM-DD'
+      ) AS day,
+      COUNT(*) FILTER (WHERE b.status <> 'CANCELLED')::int AS bookings,
       COALESCE(SUM(
         CASE
-          WHEN b.status IN ('COMPLETED', 'CONFIRMED') THEN s."priceCents"
+          WHEN b.status = 'COMPLETED' THEN s."priceCents"
           ELSE 0
         END
       ), 0)::int AS revenue
     FROM bookings b
     INNER JOIN services s ON s.id = b."serviceId"
     WHERE b."organizationId" = ${organizationId}
-      AND b."startAt" >= ${since}
-      AND b.status <> 'CANCELLED'
+      AND b."startAt" >= ${period.start}
+      AND b."startAt" < ${period.end}
     GROUP BY 1
     ORDER BY 1 ASC
   `);
 
   const byDay = new Map<string, AnalyticsDayPoint>();
   for (const row of rows) {
-    const date = row.day.toISOString().slice(0, 10);
-    byDay.set(date, {
-      date,
+    byDay.set(row.day, {
+      date: row.day,
       bookings: row.bookings,
       revenueCents: row.revenue,
     });
   }
 
-  const series: AnalyticsDayPoint[] = [];
-  for (let i = days - 1; i >= 0; i -= 1) {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    series.push(
-      byDay.get(key) ?? { date: key, bookings: 0, revenueCents: 0 },
-    );
-  }
-  return series;
+  return period.days.map(
+    (date) => byDay.get(date) ?? { date, bookings: 0, revenueCents: 0 },
+  );
 }
 
 export async function getTopServices(
   organizationId: string,
   days = 30,
   limit = 5,
+  now = new Date(),
 ): Promise<TopServiceRow[]> {
-  const since = windowStart(days);
+  const timeZone = await getOrgTimezone(organizationId);
+  const period = resolveAnalyticsPeriod(days, timeZone, now);
   return db.$queryRaw<TopServiceRow[]>(Prisma.sql`
     SELECT
       s.name AS name,
-      COUNT(*)::int AS count,
+      COUNT(*) FILTER (WHERE b.status <> 'CANCELLED')::int AS count,
       COALESCE(SUM(
         CASE
-          WHEN b.status IN ('COMPLETED', 'CONFIRMED') THEN s."priceCents"
+          WHEN b.status = 'COMPLETED' THEN s."priceCents"
           ELSE 0
         END
       ), 0)::int AS "revenueCents"
     FROM bookings b
     INNER JOIN services s ON s.id = b."serviceId"
     WHERE b."organizationId" = ${organizationId}
-      AND b."startAt" >= ${since}
-      AND b.status <> 'CANCELLED'
+      AND b."startAt" >= ${period.start}
+      AND b."startAt" < ${period.end}
     GROUP BY s.name
+    HAVING COUNT(*) FILTER (WHERE b.status <> 'CANCELLED') > 0
     ORDER BY count DESC
     LIMIT ${limit}
   `);
@@ -246,21 +256,24 @@ export async function getStaffInsights(
   organizationId: string,
   days = 30,
   limit = 6,
+  now = new Date(),
 ): Promise<StaffInsightRow[]> {
-  const since = windowStart(days);
+  const timeZone = await getOrgTimezone(organizationId);
+  const period = resolveAnalyticsPeriod(days, timeZone, now);
   return db.$queryRaw<StaffInsightRow[]>(Prisma.sql`
     SELECT
       r.id AS "resourceId",
       r.name AS name,
-      COUNT(*)::int AS bookings,
+      COUNT(*) FILTER (WHERE b.status <> 'CANCELLED')::int AS bookings,
       COUNT(*) FILTER (WHERE b.status = 'COMPLETED')::int AS completed,
       COUNT(*) FILTER (WHERE b.status = 'NO_SHOW')::int AS "noShows"
     FROM bookings b
     INNER JOIN resources r ON r.id = b."resourceId"
     WHERE b."organizationId" = ${organizationId}
-      AND b."startAt" >= ${since}
-      AND b.status <> 'CANCELLED'
+      AND b."startAt" >= ${period.start}
+      AND b."startAt" < ${period.end}
     GROUP BY r.id, r.name
+    HAVING COUNT(*) FILTER (WHERE b.status <> 'CANCELLED') > 0
     ORDER BY bookings DESC
     LIMIT ${limit}
   `);
@@ -269,20 +282,26 @@ export async function getStaffInsights(
 export async function getCustomerInsights(
   organizationId: string,
   days = 30,
+  now = new Date(),
 ): Promise<CustomerInsights> {
-  const since = windowStart(days);
+  const timeZone = await getOrgTimezone(organizationId);
+  const period = resolveAnalyticsPeriod(days, timeZone, now);
 
   const [newClients, returningRows, clientsWithUpcoming, repeatRows] =
     await Promise.all([
       db.client.count({
-        where: { organizationId, createdAt: { gte: since } },
+        where: {
+          organizationId,
+          createdAt: { gte: period.start, lt: period.end },
+        },
       }),
       db.$queryRaw<Array<{ count: number }>>(Prisma.sql`
         SELECT COUNT(*)::int AS count FROM (
           SELECT b."clientId"
           FROM bookings b
           WHERE b."organizationId" = ${organizationId}
-            AND b."startAt" >= ${since}
+            AND b."startAt" >= ${period.start}
+            AND b."startAt" < ${period.end}
             AND b.status <> 'CANCELLED'
           GROUP BY b."clientId"
           HAVING COUNT(*) >= 2
@@ -293,7 +312,7 @@ export async function getCustomerInsights(
         FROM bookings b
         WHERE b."organizationId" = ${organizationId}
           AND b.status IN ('PENDING', 'CONFIRMED')
-          AND b."startAt" >= NOW()
+          AND b."startAt" >= ${now}
       `),
       db.$queryRaw<Array<{ count: number }>>(Prisma.sql`
         SELECT COUNT(*)::int AS count FROM (
@@ -318,17 +337,16 @@ export async function getCustomerInsights(
 export async function getTodayAgenda(
   organizationId: string,
   take = 5,
+  now = new Date(),
 ) {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const timeZone = await getOrgTimezone(organizationId);
+  const today = resolveTodayPeriod(timeZone, now);
 
   return db.booking.findMany({
     where: {
       organizationId,
       status: { in: ["PENDING", "CONFIRMED"] },
-      startAt: { gte: start, lt: end },
+      startAt: { gte: today.start, lt: today.end },
     },
     orderBy: { startAt: "asc" },
     take,
@@ -337,6 +355,22 @@ export async function getTodayAgenda(
       service: { select: { name: true } },
       resource: { select: { name: true } },
       location: { select: { timezone: true } },
+    },
+  });
+}
+
+/** Plan usage: non-cancelled bookings with startAt in the current org-local month. */
+export async function getMonthBookingUsage(
+  organizationId: string,
+  now = new Date(),
+): Promise<number> {
+  const timeZone = await getOrgTimezone(organizationId);
+  const month = resolveMonthPeriod(timeZone, now);
+  return db.booking.count({
+    where: {
+      organizationId,
+      status: { not: "CANCELLED" },
+      startAt: { gte: month.start, lt: month.end },
     },
   });
 }

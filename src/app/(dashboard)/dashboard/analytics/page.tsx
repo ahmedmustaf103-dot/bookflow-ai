@@ -14,6 +14,7 @@ import {
   deltaHint,
   getBookingSeries,
   getCustomerInsights,
+  getMonthBookingUsage,
   getOrgAnalytics,
   getStaffInsights,
   getTopServices,
@@ -45,18 +46,7 @@ export default async function AnalyticsPage() {
       Promise.all([
         ctx.db.location.count({ where: { isActive: true } }),
         ctx.db.resource.count({ where: { isActive: true } }),
-        ctx.db.booking.count({
-          where: {
-            createdAt: {
-              gte: new Date(
-                new Date().getFullYear(),
-                new Date().getMonth(),
-                1,
-              ),
-            },
-            status: { not: "CANCELLED" },
-          },
-        }),
+        getMonthBookingUsage(orgId),
       ]),
     ]);
 
@@ -69,7 +59,7 @@ export default async function AnalyticsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Analytics"
-        description={`Last ${days} days · actionable view of bookings, revenue, and customers.`}
+        description={`Last ${days} days by appointment time (${analytics.timeZone.replace(/_/g, " ")}).`}
         actions={
           <ButtonLink href="/dashboard/ai" variant="secondary" size="sm">
             AI insights
@@ -105,10 +95,14 @@ export default async function AnalyticsPage() {
             analytics.estimatedRevenueCents,
             analytics.currency,
           )}
-          hint={deltaHint(
-            analytics.estimatedRevenueCents,
-            analytics.previous.estimatedRevenueCents,
-          )}
+          hint={
+            analytics.estimatedRevenueCents === 0
+              ? "Completed visits in this period"
+              : deltaHint(
+                  analytics.estimatedRevenueCents,
+                  analytics.previous.estimatedRevenueCents,
+                )
+          }
         />
         <Stat
           label="Bookings"
