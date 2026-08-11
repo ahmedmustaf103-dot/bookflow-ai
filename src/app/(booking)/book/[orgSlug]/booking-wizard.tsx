@@ -468,6 +468,19 @@ export function PublicBookingWizard({
                 <Label htmlFor="book-notes">Notes (optional)</Label>
                 <Textarea id="book-notes" name="notes" rows={2} />
               </div>
+              <label className="flex items-start gap-2.5 text-sm text-[var(--ink-secondary)]">
+                <input
+                  type="checkbox"
+                  name="marketingOptIn"
+                  value="on"
+                  className="mt-0.5"
+                />
+                <span>
+                  Email me occasional follow-ups, review requests, and rebooking
+                  reminders. Confirmations and appointment reminders are always
+                  sent.
+                </span>
+              </label>
               {error ? (
                 <p className="text-sm text-[var(--danger)]" role="alert">
                   {error}

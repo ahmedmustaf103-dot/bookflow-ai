@@ -248,6 +248,24 @@ export default async function ClientDetailPage({
                 placeholder="Preferences, allergies, conversation history…"
               />
             </div>
+            <label className="flex items-start gap-2.5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)]/40 px-3 py-2.5 text-sm">
+              <input
+                type="checkbox"
+                name="marketingOptIn"
+                value="on"
+                defaultChecked={client.marketingOptIn}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium text-[var(--ink)]">
+                  Marketing &amp; engagement emails
+                </span>
+                <span className="mt-0.5 block text-xs text-[var(--ink-tertiary)]">
+                  Follow-ups, review requests, and rebooking nudges. Appointment
+                  confirmations and reminders still send either way.
+                </span>
+              </span>
+            </label>
           </ActionForm>
         </Surface>
 

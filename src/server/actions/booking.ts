@@ -42,6 +42,7 @@ export async function createPublicBookingAction(
     phone,
     notes,
     idempotencyKey,
+    marketingOptIn,
   } = parsed.data;
 
   const ip = await getClientIp();
@@ -67,6 +68,7 @@ export async function createPublicBookingAction(
       email,
       phone: phone ?? null,
       notes: notes ?? null,
+      marketingOptIn,
     },
     source: "PUBLIC",
     idempotencyKey: idempotencyKey ?? null,

@@ -15,18 +15,26 @@ const {
   findMany,
   updateMany,
   update,
+  bookingFindFirst,
   sendConfirmation,
   sendCancellation,
   sendReminder,
   sendReschedule,
+  sendFollowUp,
+  sendReview,
+  sendRebooking,
 } = vi.hoisted(() => ({
   findMany: vi.fn(),
   updateMany: vi.fn(),
   update: vi.fn(),
+  bookingFindFirst: vi.fn(),
   sendConfirmation: vi.fn(),
   sendCancellation: vi.fn(),
   sendReminder: vi.fn(),
   sendReschedule: vi.fn(),
+  sendFollowUp: vi.fn(),
+  sendReview: vi.fn(),
+  sendRebooking: vi.fn(),
 }));
 
 vi.mock("@/server/db", () => ({
@@ -37,6 +45,10 @@ vi.mock("@/server/db", () => ({
       update,
       create: vi.fn(),
     },
+    booking: {
+      findFirst: bookingFindFirst,
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -45,9 +57,9 @@ vi.mock("@/server/notifications/email", () => ({
   sendBookingCancellation: sendCancellation,
   sendBookingReminder: sendReminder,
   sendBookingReschedule: sendReschedule,
-  sendFollowUpEmail: vi.fn(),
-  sendReviewRequestEmail: vi.fn(),
-  sendRebookingReminderEmail: vi.fn(),
+  sendFollowUpEmail: sendFollowUp,
+  sendReviewRequestEmail: sendReview,
+  sendRebookingReminderEmail: sendRebooking,
 }));
 
 vi.mock("@/server/notifications/sms", () => ({
@@ -316,6 +328,154 @@ describe("processDueOutbox", () => {
 
     const result = await processDueOutbox(50, now);
     expect(sendReschedule).toHaveBeenCalled();
+    expect(result.sent).toBe(1);
+  });
+
+  it("sends follow-up when client is opted in", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      {
+        id: "o1",
+        kind: OUTBOX_KINDS.FOLLOW_UP,
+        channel: "EMAIL",
+        organizationId: "org1",
+        bookingId: "b1",
+        attempts: 0,
+        scheduledFor: now,
+        payload: { startAt: now.toISOString() },
+      },
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    bookingFindFirst.mockResolvedValue({
+      client: { marketingOptIn: true },
+    });
+    sendFollowUp.mockResolvedValue({ skipped: false });
+
+    const result = await processDueOutbox(50, now);
+    expect(sendFollowUp).toHaveBeenCalled();
+    expect(result.sent).toBe(1);
+    expect(result.suppressedMarketing).toBe(0);
+  });
+
+  it("cancels queued follow-up when client opted out (no retry)", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      {
+        id: "o1",
+        kind: OUTBOX_KINDS.FOLLOW_UP,
+        channel: "EMAIL",
+        organizationId: "org1",
+        bookingId: "b1",
+        attempts: 1,
+        scheduledFor: now,
+        payload: { startAt: now.toISOString() },
+      },
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    bookingFindFirst.mockResolvedValue({
+      client: { marketingOptIn: false },
+    });
+
+    const result = await processDueOutbox(50, now);
+    expect(sendFollowUp).not.toHaveBeenCalled();
+    expect(result.suppressedMarketing).toBe(1);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "o1" },
+      data: {
+        status: "CANCELLED",
+        lastError: "Cancelled: marketing opt-out",
+      },
+    });
+  });
+
+  it("cancels queued review and rebooking when opted out", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      {
+        id: "o-review",
+        kind: OUTBOX_KINDS.REVIEW_REQUEST,
+        channel: "EMAIL",
+        organizationId: "org1",
+        bookingId: "b1",
+        attempts: 0,
+        scheduledFor: now,
+        payload: { startAt: now.toISOString() },
+      },
+      {
+        id: "o-rebook",
+        kind: OUTBOX_KINDS.REBOOKING_REMINDER,
+        channel: "EMAIL",
+        organizationId: "org1",
+        bookingId: "b1",
+        attempts: 0,
+        scheduledFor: now,
+        payload: { startAt: now.toISOString() },
+      },
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 }) // reclaim
+      .mockResolvedValue({ count: 1 }); // claims
+    bookingFindFirst.mockResolvedValue({
+      client: { marketingOptIn: false },
+    });
+
+    const result = await processDueOutbox(50, now);
+    expect(sendReview).not.toHaveBeenCalled();
+    expect(sendRebooking).not.toHaveBeenCalled();
+    expect(result.suppressedMarketing).toBe(2);
+  });
+
+  it("still sends confirmation when marketingOptIn is false", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      {
+        id: "o1",
+        kind: OUTBOX_KINDS.BOOKING_CONFIRMATION,
+        channel: "EMAIL",
+        organizationId: "org1",
+        bookingId: "b1",
+        attempts: 0,
+        scheduledFor: now,
+        payload: { startAt: now.toISOString() },
+      },
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendConfirmation.mockResolvedValue({ skipped: false });
+
+    const result = await processDueOutbox(50, now);
+    expect(bookingFindFirst).not.toHaveBeenCalled();
+    expect(sendConfirmation).toHaveBeenCalled();
+    expect(result.sent).toBe(1);
+  });
+
+  it("still sends reminder when marketingOptIn is false", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      {
+        id: "o1",
+        kind: OUTBOX_KINDS.BOOKING_REMINDER,
+        channel: "EMAIL",
+        organizationId: "org1",
+        bookingId: "b1",
+        attempts: 0,
+        scheduledFor: now,
+        payload: { startAt: now.toISOString() },
+      },
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendReminder.mockResolvedValue({ skipped: false });
+
+    const result = await processDueOutbox(50, now);
+    expect(bookingFindFirst).not.toHaveBeenCalled();
+    expect(sendReminder).toHaveBeenCalled();
     expect(result.sent).toBe(1);
   });
 });

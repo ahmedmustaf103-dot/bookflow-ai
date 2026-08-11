@@ -11,6 +11,7 @@ import { writeAuditLog } from "@/server/billing/entitlements";
 import { storeBrandAsset } from "@/server/branding/assets";
 import { db } from "@/server/db";
 import { tenantDb } from "@/server/db/tenant";
+import { cancelPendingMarketingForClient } from "@/server/notifications/outbox";
 import { getActiveOrganization } from "@/server/tenant/context";
 import {
   activateCustomDomainSchema,
@@ -31,7 +32,15 @@ export async function updateClientAction(
   const parsed = parseForm(updateClientSchema, formData);
   if (!parsed.ok) return err(parsed.error);
 
-  const { clientId, name, email, phone, notes, tags: tagsRaw } = parsed.data;
+  const {
+    clientId,
+    name,
+    email,
+    phone,
+    notes,
+    tags: tagsRaw,
+    marketingOptIn,
+  } = parsed.data;
   const tags = parseTags(tagsRaw);
 
   try {
@@ -49,8 +58,16 @@ export async function updateClientAction(
         phone: phone || null,
         notes: notes || null,
         tags,
+        marketingOptIn,
       },
     });
+
+    if (existing.marketingOptIn && !marketingOptIn) {
+      await cancelPendingMarketingForClient({
+        organizationId: ctx.organization.id,
+        clientId,
+      });
+    }
 
     await writeAuditLog({
       organizationId: ctx.organization.id,
@@ -58,6 +75,7 @@ export async function updateClientAction(
       action: "client.updated",
       entityType: "client",
       entityId: clientId,
+      metadata: { marketingOptIn },
     });
 
     revalidatePath("/dashboard/clients");
@@ -287,6 +305,7 @@ export async function createManualClientAction(
         phone: parsed.data.phone || null,
         notes: parsed.data.notes || null,
         tags: parseTags(parsed.data.tags),
+        marketingOptIn: parsed.data.marketingOptIn,
       },
     });
 

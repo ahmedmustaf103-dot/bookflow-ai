@@ -382,6 +382,18 @@ export default async function ClientsPage({
               placeholder="Preferences, allergies, how they found you…"
             />
           </div>
+          <label className="flex items-start gap-2.5 text-sm text-[var(--ink-secondary)]">
+            <input
+              type="checkbox"
+              name="marketingOptIn"
+              value="on"
+              className="mt-0.5"
+            />
+            <span>
+              Allow marketing &amp; engagement emails (follow-ups, review asks,
+              rebooking). Confirmations and reminders always send.
+            </span>
+          </label>
         </ActionForm>
       </Surface>
     </div>

@@ -11,6 +11,27 @@ export const OUTBOX_KINDS = {
 
 export type OutboxKind = (typeof OUTBOX_KINDS)[keyof typeof OUTBOX_KINDS];
 
+/**
+ * Transactional / operational — required to run the appointment.
+ * Sent regardless of Client.marketingOptIn.
+ */
+export const TRANSACTIONAL_OUTBOX_KINDS: OutboxKind[] = [
+  OUTBOX_KINDS.BOOKING_CONFIRMATION,
+  OUTBOX_KINDS.BOOKING_CANCELLATION,
+  OUTBOX_KINDS.BOOKING_RESCHEDULED,
+  OUTBOX_KINDS.BOOKING_REMINDER,
+];
+
+/**
+ * Marketing / engagement — tips, reviews, win-back.
+ * Requires Client.marketingOptIn === true at enqueue and at send time.
+ */
+export const MARKETING_OUTBOX_KINDS: OutboxKind[] = [
+  OUTBOX_KINDS.FOLLOW_UP,
+  OUTBOX_KINDS.REVIEW_REQUEST,
+  OUTBOX_KINDS.REBOOKING_REMINDER,
+];
+
 /** Cancel these when a booking is cancelled. */
 export const CANCEL_ON_BOOKING_CANCEL: OutboxKind[] = [
   OUTBOX_KINDS.BOOKING_REMINDER,
@@ -26,6 +47,22 @@ export const IMMEDIATE_OUTBOX_KINDS: OutboxKind[] = [
   OUTBOX_KINDS.BOOKING_CANCELLATION,
   OUTBOX_KINDS.BOOKING_RESCHEDULED,
 ];
+
+export function isMarketingOutboxKind(kind: string): boolean {
+  return (MARKETING_OUTBOX_KINDS as string[]).includes(kind);
+}
+
+export function isTransactionalOutboxKind(kind: string): boolean {
+  return (TRANSACTIONAL_OUTBOX_KINDS as string[]).includes(kind);
+}
+
+/**
+ * Whether a marketing message may be enqueued/sent.
+ * Transactional kinds always return true (callers should not use this for them).
+ */
+export function allowsMarketingSend(marketingOptIn: boolean | null | undefined) {
+  return marketingOptIn === true;
+}
 
 export function reminderDedupeKey(
   bookingId: string,

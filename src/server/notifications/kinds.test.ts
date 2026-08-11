@@ -4,6 +4,7 @@ import {
   bookingDedupeKey,
   CANCEL_ON_BOOKING_CANCEL,
   IMMEDIATE_OUTBOX_KINDS,
+  MARKETING_OUTBOX_KINDS,
   OUTBOX_KINDS,
   reminderDedupeKey,
   rescheduleDedupeKey,
@@ -57,6 +58,14 @@ describe("outbox kinds", () => {
       ]),
     );
     expect(IMMEDIATE_OUTBOX_KINDS).not.toContain("BOOKING_REMINDER");
+  });
+
+  it("lists marketing kinds that require opt-in", () => {
+    expect(MARKETING_OUTBOX_KINDS).toEqual([
+      "FOLLOW_UP",
+      "REVIEW_REQUEST",
+      "REBOOKING_REMINDER",
+    ]);
   });
 
   it("cancels pending post-visit jobs with reminders on booking cancel", () => {

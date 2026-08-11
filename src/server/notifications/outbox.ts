@@ -24,7 +24,10 @@ import {
   bookingDedupeKey,
   CANCEL_ON_BOOKING_CANCEL,
   IMMEDIATE_OUTBOX_KINDS,
+  MARKETING_OUTBOX_KINDS,
   OUTBOX_KINDS,
+  allowsMarketingSend,
+  isMarketingOutboxKind,
   reminderDedupeKey,
   rescheduleDedupeKey,
 } from "@/server/notifications/kinds";
@@ -322,7 +325,7 @@ export async function enqueueBookingReminder(input: {
   }
 }
 
-/** Post-visit: follow-up, review request, rebooking nudge. */
+/** Post-visit: follow-up, review request, rebooking nudge (marketing). */
 export async function enqueuePostVisitAutomation(input: {
   ctx: BookingNotifyContext;
   followUpEnabled: boolean;
@@ -334,6 +337,15 @@ export async function enqueuePostVisitAutomation(input: {
 }) {
   const { ctx } = input;
   if (!ctx.clientEmail) return;
+
+  // Central consent gate — do not enqueue marketing rows when opted out.
+  if (!allowsMarketingSend(ctx.marketingOptIn)) {
+    logger.info(
+      { bookingId: ctx.bookingId, organizationId: ctx.organizationId },
+      "Skipped post-visit marketing enqueue (marketingOptIn=false)",
+    );
+    return;
+  }
 
   const payload = emailPayload(ctx, ctx.clientEmail);
   // Schedule from visit end (or now if marked complete early).
@@ -407,6 +419,74 @@ export async function cancelPendingAutomationForBooking(bookingId: string) {
     },
     data: { status: "CANCELLED" },
   });
+}
+
+/**
+ * Cancel undelivered marketing/engagement outbox rows for a client
+ * (e.g. after marketingOptIn is turned off).
+ */
+export async function cancelPendingMarketingForClient(input: {
+  organizationId: string;
+  clientId: string;
+}): Promise<number> {
+  const bookings = await db.booking.findMany({
+    where: {
+      organizationId: input.organizationId,
+      clientId: input.clientId,
+    },
+    select: { id: true },
+  });
+  if (bookings.length === 0) return 0;
+
+  const result = await db.notificationOutbox.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      bookingId: { in: bookings.map((b) => b.id) },
+      kind: { in: [...MARKETING_OUTBOX_KINDS] },
+      status: { in: ["PENDING", "PROCESSING"] },
+    },
+    data: {
+      status: "CANCELLED",
+      lastError: "Cancelled: marketing opt-out",
+    },
+  });
+  return result.count;
+}
+
+/**
+ * Live consent check at send time so opt-out after enqueue still blocks delivery.
+ * Returns true if the item was cancelled and must not be sent/retried.
+ */
+export async function suppressMarketingIfOptedOut(item: {
+  id: string;
+  kind: string;
+  organizationId: string;
+  bookingId: string | null;
+}): Promise<boolean> {
+  if (!isMarketingOutboxKind(item.kind)) return false;
+
+  let optedIn = false;
+  if (item.bookingId) {
+    const booking = await db.booking.findFirst({
+      where: {
+        id: item.bookingId,
+        organizationId: item.organizationId,
+      },
+      select: { client: { select: { marketingOptIn: true } } },
+    });
+    optedIn = allowsMarketingSend(booking?.client.marketingOptIn);
+  }
+
+  if (optedIn) return false;
+
+  await db.notificationOutbox.update({
+    where: { id: item.id },
+    data: {
+      status: "CANCELLED",
+      lastError: "Cancelled: marketing opt-out",
+    },
+  });
+  return true;
 }
 
 async function reclaimStaleProcessing(now = new Date()) {
@@ -495,6 +575,7 @@ export async function processDueOutbox(limit = 50, now = new Date()) {
   let failed = 0;
   let deferred = 0;
   let skippedClaim = 0;
+  let suppressedMarketing = 0;
 
   for (const item of due) {
     const claimed = await db.notificationOutbox.updateMany({
@@ -509,6 +590,12 @@ export async function processDueOutbox(limit = 50, now = new Date()) {
     const attempts = item.attempts + 1;
 
     try {
+      // Re-check consent on every attempt so retries cannot bypass opt-out.
+      if (await suppressMarketingIfOptedOut(item)) {
+        suppressedMarketing += 1;
+        continue;
+      }
+
       const result = await dispatchOutboxItem(item);
 
       if (result.skipped) {
@@ -560,5 +647,6 @@ export async function processDueOutbox(limit = 50, now = new Date()) {
     deferred,
     skippedClaim,
     reclaimed,
+    suppressedMarketing,
   };
 }

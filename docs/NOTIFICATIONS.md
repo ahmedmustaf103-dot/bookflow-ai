@@ -47,3 +47,23 @@ Examples: [cron-job.org](https://cron-job.org) (free), EasyCron, GitHub Actions 
 Alternatively upgrade to **Vercel Pro** and change the schedule to `*/5 * * * *`.
 
 Until an external (or Pro) cron is configured, **reminders and post-visit automations are not reliable for client use**, even though confirm/cancel/reschedule emails flush promptly.
+
+## Transactional vs marketing consent
+
+| Kind | Class | `marketingOptIn` required? |
+| ---- | ----- | -------------------------- |
+| `BOOKING_CONFIRMATION` | Transactional | No |
+| `BOOKING_CANCELLATION` | Transactional | No |
+| `BOOKING_RESCHEDULED` | Transactional | No |
+| `BOOKING_REMINDER` (email/SMS) | Transactional | No |
+| `FOLLOW_UP` | Marketing | **Yes** |
+| `REVIEW_REQUEST` | Marketing | **Yes** |
+| `REBOOKING_REMINDER` | Marketing | **Yes** |
+
+Enforcement:
+
+1. **Enqueue** — `enqueuePostVisitAutomation` skips all marketing rows when `ctx.marketingOptIn` is not `true`.
+2. **Send / retry** — `processDueOutbox` re-loads the client’s live `marketingOptIn` before dispatching marketing kinds; if opted out, the row is `CANCELLED` (not retried).
+3. **Staff opt-out** — updating a client with marketing unchecked cancels pending/processing marketing outbox rows for that client.
+
+This is an engineering control, not legal advice.

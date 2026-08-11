@@ -139,6 +139,8 @@ export async function createBooking(input: {
     email?: string | null;
     phone?: string | null;
     notes?: string | null;
+    /** Engagement emails (follow-up / review / rebooking). Default false. */
+    marketingOptIn?: boolean | null;
   };
   source: BookingSource;
   idempotencyKey?: string | null;
@@ -276,6 +278,7 @@ export async function createBooking(input: {
               email: input.client.email?.trim() || null,
               phone: input.client.phone?.trim() || null,
               notes: input.client.notes?.trim() || null,
+              marketingOptIn: Boolean(input.client.marketingOptIn),
             },
           });
         } catch (createErr) {
@@ -302,7 +305,16 @@ export async function createBooking(input: {
           data: {
             name: input.client.name.trim(),
             phone: input.client.phone?.trim() || client.phone,
+            ...(input.client.marketingOptIn != null
+              ? { marketingOptIn: Boolean(input.client.marketingOptIn) }
+              : {}),
           },
+        });
+      } else if (input.client.marketingOptIn) {
+        // Public flow may opt in only (never silently opt existing clients out).
+        client = await tx.client.update({
+          where: { id: client.id },
+          data: { marketingOptIn: true },
         });
       }
 

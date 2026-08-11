@@ -13,6 +13,10 @@ function optionalText(max: number) {
     .pipe(z.string().max(max).optional());
 }
 
+const checkboxOn = z
+  .union([z.literal("on"), z.literal(""), z.undefined()])
+  .transform((v) => v === "on");
+
 export const publicBookingSchema = z.object({
   organizationId: id,
   serviceId: id,
@@ -23,6 +27,7 @@ export const publicBookingSchema = z.object({
   phone: optionalText(32),
   notes: optionalText(2000),
   idempotencyKey: optionalText(128),
+  marketingOptIn: checkboxOn,
 });
 
 export const transitionBookingSchema = z.object({
@@ -117,6 +122,7 @@ export const updateClientSchema = z.object({
   tags: z
     .union([z.string(), z.undefined()])
     .transform((v) => (v ?? "").trim().slice(0, 500)),
+  marketingOptIn: checkboxOn,
 });
 
 export const createManualClientSchema = z.object({
@@ -136,11 +142,8 @@ export const createManualClientSchema = z.object({
   tags: z
     .union([z.string(), z.undefined()])
     .transform((v) => (v ?? "").trim().slice(0, 500)),
+  marketingOptIn: checkboxOn,
 });
-
-const checkboxOn = z
-  .union([z.literal("on"), z.literal(""), z.undefined()])
-  .transform((v) => v === "on");
 
 export const updateOrgSettingsSchema = z.object({
   name: z.string().trim().min(2, "Business name is required").max(120),
