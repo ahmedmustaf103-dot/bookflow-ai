@@ -8,10 +8,23 @@ import { brandCssVars } from "@/lib/branding";
 import { manageTokenSchema } from "@/server/actions/schemas";
 import { getPublicManagedBooking } from "@/server/bookings/manage";
 
-export const metadata: Metadata = {
-  title: "Manage appointment",
-  robots: { index: false, follow: false },
-};
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ manageToken: string }>;
+}): Promise<Metadata> {
+  const { manageToken: rawToken } = await params;
+  const parsed = manageTokenSchema.safeParse(rawToken);
+  if (!parsed.success) notFound();
+  const result = await getPublicManagedBooking(parsed.data);
+  if (!result.ok) notFound();
+  return {
+    title: "Manage appointment",
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function ManageBookingPage({
   params,

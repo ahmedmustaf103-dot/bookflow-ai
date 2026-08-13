@@ -2,6 +2,8 @@
 
 import { ClerkProvider } from "@clerk/nextjs";
 
+import { clerkPublishableKeyIsPlaceholder } from "@/lib/clerk-placeholders";
+
 const appearance = {
   variables: {
     colorPrimary: "#0f6e56",
@@ -18,5 +20,8 @@ const appearance = {
 } as const;
 
 export function AppClerkProvider({ children }: { children: React.ReactNode }) {
+  if (clerkPublishableKeyIsPlaceholder()) {
+    return children;
+  }
   return <ClerkProvider appearance={appearance}>{children}</ClerkProvider>;
 }

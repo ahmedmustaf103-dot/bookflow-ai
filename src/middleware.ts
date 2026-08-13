@@ -1,5 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+
+import { clerkKeysArePlaceholders } from "@/lib/clerk-placeholders";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
@@ -28,17 +30,14 @@ function shouldSkipHostRewrite(pathname: string) {
   );
 }
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect();
-  }
-
+function applyCustomDomainRewrite(req: NextRequest) {
   const hostHeader = req.headers.get("host")?.split(":")[0]?.toLowerCase();
   const primary = appHostname();
   if (
     hostHeader &&
     hostHeader !== primary &&
     hostHeader !== "localhost" &&
+    hostHeader !== "127.0.0.1" &&
     !hostHeader.endsWith(".localhost") &&
     !hostHeader.endsWith(".vercel.app") &&
     !shouldSkipHostRewrite(req.nextUrl.pathname)
@@ -49,7 +48,29 @@ export default clerkMiddleware(async (auth, req) => {
     url.searchParams.set("host", hostHeader);
     return NextResponse.rewrite(url);
   }
-});
+  return undefined;
+}
+
+function isolatedTestMiddleware(req: NextRequest) {
+  if (isProtectedRoute(req)) {
+    const signIn = new URL("/sign-in", req.url);
+    signIn.searchParams.set(
+      "redirect_url",
+      `${req.nextUrl.pathname}${req.nextUrl.search}`,
+    );
+    return NextResponse.redirect(signIn);
+  }
+  return applyCustomDomainRewrite(req) ?? NextResponse.next();
+}
+
+export default clerkKeysArePlaceholders()
+  ? isolatedTestMiddleware
+  : clerkMiddleware(async (auth, req) => {
+      if (isProtectedRoute(req)) {
+        await auth.protect();
+      }
+      return applyCustomDomainRewrite(req);
+    });
 
 export const config = {
   matcher: [

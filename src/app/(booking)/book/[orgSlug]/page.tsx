@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { PublicBookingExperience } from "../public-booking-experience";
 import { db } from "@/server/db";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({
   params,
 }: {
@@ -19,7 +21,7 @@ export async function generateMetadata({
       logoUrl: true,
     },
   });
-  if (!org) return { title: "Book online", robots: { index: false } };
+  if (!org) notFound();
   if (!org.publicBookingEnabled) {
     return {
       title: org.name,

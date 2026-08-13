@@ -14,12 +14,12 @@ BookFlow AI is a production-shaped SaaS: org isolation, Stripe entitlements, rel
 
 ## Product surface
 
-| For customers | For owners |
-| ------------- | ---------- |
-| Branded `/book/[slug]` wizard | Calendar, clients, staff, services, hours |
-| Service → staff → time → details | Analytics (revenue, staff, customers) |
-| Confirmation + manage token | Automation toggles + billing |
-| Custom domain ready | AI summaries, drafts, insights, booking assistant |
+| For customers                    | For owners                                        |
+| -------------------------------- | ------------------------------------------------- |
+| Branded `/book/[slug]` wizard    | Calendar, clients, staff, services, hours         |
+| Service → staff → time → details | Analytics (revenue, staff, customers)             |
+| Confirmation + manage token      | Automation toggles + billing                      |
+| Custom domain ready              | AI summaries, drafts, insights, booking assistant |
 
 **Vertical packs:** barber/salon (default), dental, tutors, gyms — terminology and seed services per vertical.
 
@@ -59,8 +59,8 @@ Analytics metrics: [`docs/ANALYTICS.md`](./docs/ANALYTICS.md)
 
 Everything for client acquisition lives in [`docs/portfolio/`](./docs/portfolio/README.md):
 
-- Architecture diagram · Database ERD · Case study  
-- Demo video script · Screenshot checklist · LinkedIn launch post  
+- Architecture diagram · Database ERD · Case study
+- Demo video script · Screenshot checklist · LinkedIn launch post
 
 Landing page is the marketing route at `/`.
 
@@ -85,6 +85,7 @@ Production deploy: [`GO_LIVE.md`](./GO_LIVE.md).
 
 ```bash
 npm run lint && npm test && npm run typecheck && npm run build
+npm run test:integration
 npm run test:e2e
 npm run load:smoke        # LOAD_ORG_SLUG=bookflow
 npm run lighthouse:smoke  # against a running prod server
@@ -92,13 +93,13 @@ npm run lighthouse:smoke  # against a running prod server
 
 ## Scripts
 
-| Script | Purpose |
-| ------ | ------- |
-| `npm run dev` | Local development |
-| `npm run build` | Production build |
-| `npm run lint` / `typecheck` / `format` | Quality |
-| `npm run db:migrate` / `db:studio` | Prisma |
-| `npm test` / `test:e2e` | Unit + Playwright |
+| Script                                       | Purpose                                     |
+| -------------------------------------------- | ------------------------------------------- |
+| `npm run dev`                                | Local development                           |
+| `npm run build`                              | Production build                            |
+| `npm run lint` / `typecheck` / `format`      | Quality                                     |
+| `npm run db:migrate` / `db:studio`           | Prisma                                      |
+| `npm test` / `test:integration` / `test:e2e` | Unit + isolated DB integration + Playwright |
 
 ## License / contact
 

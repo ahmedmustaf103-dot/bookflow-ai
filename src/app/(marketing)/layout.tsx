@@ -4,12 +4,68 @@ import { Syne } from "next/font/google";
 
 import { AppClerkProvider } from "@/components/providers/clerk-provider";
 import { ButtonLink } from "@/components/ui/button";
+import { clerkPublishableKeyIsPlaceholder } from "@/lib/clerk-placeholders";
 
 const syne = Syne({
   subsets: ["latin"],
   weight: ["600", "700", "800"],
   variable: "--font-marketing-display",
 });
+
+function MarketingAuthActions() {
+  if (clerkPublishableKeyIsPlaceholder()) {
+    return (
+      <>
+        <ButtonLink
+          href="/sign-in"
+          variant="ghost"
+          className="text-white/90 hover:bg-white/10 hover:text-white"
+        >
+          Sign in
+        </ButtonLink>
+        <ButtonLink
+          href="/sign-up"
+          variant="secondary"
+          className="border-0 bg-white text-[var(--accent)] hover:bg-white/90"
+        >
+          Start free
+        </ButtonLink>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Show when="signed-out">
+        <SignInButton mode="modal">
+          <button
+            type="button"
+            className="rounded-md px-3 py-2 text-sm text-white/90 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          >
+            Sign in
+          </button>
+        </SignInButton>
+        <ButtonLink
+          href="/sign-up"
+          variant="secondary"
+          className="border-0 bg-white text-[var(--accent)] hover:bg-white/90"
+        >
+          Start free
+        </ButtonLink>
+      </Show>
+      <Show when="signed-in">
+        <ButtonLink
+          href="/dashboard"
+          variant="secondary"
+          className="border-0 bg-white text-[var(--accent)] hover:bg-white/90"
+        >
+          Dashboard
+        </ButtonLink>
+        <UserButton />
+      </Show>
+    </>
+  );
+}
 
 export default function MarketingLayout({
   children,
@@ -40,33 +96,7 @@ export default function MarketingLayout({
               >
                 How it works
               </a>
-              <Show when="signed-out">
-                <SignInButton mode="modal">
-                  <button
-                    type="button"
-                    className="rounded-md px-3 py-2 text-sm text-white/90 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-                  >
-                    Sign in
-                  </button>
-                </SignInButton>
-                <ButtonLink
-                  href="/sign-up"
-                  variant="secondary"
-                  className="border-0 bg-white text-[var(--accent)] hover:bg-white/90"
-                >
-                  Start free
-                </ButtonLink>
-              </Show>
-              <Show when="signed-in">
-                <ButtonLink
-                  href="/dashboard"
-                  variant="secondary"
-                  className="border-0 bg-white text-[var(--accent)] hover:bg-white/90"
-                >
-                  Dashboard
-                </ButtonLink>
-                <UserButton />
-              </Show>
+              <MarketingAuthActions />
             </nav>
           </div>
         </header>

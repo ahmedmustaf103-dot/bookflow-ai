@@ -15,6 +15,7 @@ function optionalText(max: number) {
 
 const checkboxOn = z
   .union([z.literal("on"), z.literal(""), z.undefined()])
+  .optional()
   .transform((v) => v === "on");
 
 export const publicBookingSchema = z.object({

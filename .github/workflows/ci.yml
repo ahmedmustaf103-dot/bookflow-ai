@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   pull_request:
 
+env:
+  BOOKFLOW_TEST_DATABASE_URL: postgresql://bookflow:bookflow@localhost:5432/bookflow_test
+
 jobs:
   quality:
     name: Lint · Test · Typecheck · Build
@@ -46,10 +49,23 @@ jobs:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
         run: npm run build
 
-  e2e:
-    name: Playwright smoke
+  integration:
+    name: DB integration
     runs-on: ubuntu-latest
-    needs: quality
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bookflow
+          POSTGRES_PASSWORD: bookflow
+          POSTGRES_DB: bookflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bookflow -d bookflow_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -64,23 +80,66 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Build
+      - name: Integration tests
         env:
+          DATABASE_URL: postgresql://bookflow:bookflow@localhost:5432/bookflow_test
+          BOOKFLOW_TEST_DATABASE_URL: postgresql://bookflow:bookflow@localhost:5432/bookflow_test
           SKIP_ENV_VALIDATION: "1"
-          DATABASE_URL: postgresql://user:pass@localhost:5432/bookflow
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci
-          CLERK_SECRET_KEY: sk_test_ci
-          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
-        run: npm run build
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_e2e_placeholder
+          CLERK_SECRET_KEY: sk_test_e2e_placeholder
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+        run: npm run test:integration
+
+  e2e:
+    name: Playwright
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bookflow
+          POSTGRES_PASSWORD: bookflow
+          POSTGRES_DB: bookflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bookflow -d bookflow_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build E2E server
+        env:
+          BOOKFLOW_TEST_DATABASE_URL: postgresql://bookflow:bookflow@localhost:5432/bookflow_test
+        run: npm run test:e2e:build
 
       - name: Install Playwright Chromium
         run: npx playwright install chromium --with-deps
 
-      - name: Smoke + accessibility tests
+      - name: Playwright (isolated test org)
         env:
+          DATABASE_URL: postgresql://bookflow:bookflow@localhost:5432/bookflow_test
+          BOOKFLOW_TEST_DATABASE_URL: postgresql://bookflow:bookflow@localhost:5432/bookflow_test
           SKIP_ENV_VALIDATION: "1"
-          DATABASE_URL: postgresql://user:pass@localhost:5432/bookflow
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci
-          CLERK_SECRET_KEY: sk_test_ci
-          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_e2e_placeholder
+          CLERK_SECRET_KEY: sk_test_e2e_placeholder
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+          NEXT_DIST_DIR: .next-e2e
+          E2E_SKIP_BUILD: "1"
+          E2E_PORT: "3100"
+          FEATURE_FLAGS: '{"rate_limit":false,"slot_cache":false}'
         run: npm run test:e2e
