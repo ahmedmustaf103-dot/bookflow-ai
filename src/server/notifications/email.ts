@@ -119,7 +119,8 @@ async function deliver(input: {
 
   const { data, error } = await resend.emails.send({
     from,
-    to: input.to,
+    // Resend's test-mode allowlist is case-sensitive; Gmail users often type a capital letter.
+    to: input.to.trim().toLowerCase(),
     subject: input.subject,
     html: input.html,
     headers: {

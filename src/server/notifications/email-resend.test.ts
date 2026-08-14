@@ -181,6 +181,40 @@ describe("Resend { error } without throw", () => {
     });
   });
 
+  it("lowercases the recipient so Resend test-mode allowlist matches", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      confirmationItem({
+        payload: {
+          to: "Ahmedmustaf103@gmail.com",
+          organizationName: "Shop",
+          clientName: "Alex",
+          serviceName: "Cut",
+          resourceName: "Sam",
+          startAt: now.toISOString(),
+          timezone: "UTC",
+          bookingId: "b1",
+          manageUrl: "https://x/book/manage/t",
+          bookUrl: "https://x/book/shop",
+        },
+      }),
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendMock.mockResolvedValue({
+      data: { id: "email_123" },
+      error: null,
+    });
+
+    const result = await processDueOutbox(50, now);
+
+    expect(result.sent).toBe(1);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "ahmedmustaf103@gmail.com" }),
+    );
+  });
+
   it("marks SENT when Resend returns an email id and no error", async () => {
     const now = new Date("2026-08-10T12:00:00.000Z");
     findMany.mockResolvedValue([confirmationItem()]);
