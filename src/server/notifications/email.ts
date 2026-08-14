@@ -117,7 +117,7 @@ async function deliver(input: {
     ? env.RESEND_FROM_EMAIL.replace(/^[^<]*/, `${input.organizationName} `)
     : `${input.organizationName} <${env.RESEND_FROM_EMAIL}>`;
 
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from,
     to: input.to,
     subject: input.subject,
@@ -126,6 +126,13 @@ async function deliver(input: {
       "X-Entity-Ref-ID": `${input.kind}:${input.bookingId}`,
     },
   });
+
+  if (error) {
+    throw new Error(error.message || "Resend send failed");
+  }
+  if (!data?.id) {
+    throw new Error("Resend send returned no email id");
+  }
 
   return { skipped: false };
 }
