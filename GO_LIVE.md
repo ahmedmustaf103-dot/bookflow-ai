@@ -130,6 +130,14 @@ More detail: [docs/NOTIFICATIONS.md](./docs/NOTIFICATIONS.md).
 1. Verify a sending domain (or use Resend onboarding domain for tests).
 2. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
 
+`onboarding@resend.dev` can only deliver to the Resend account owner. To email clients, verify a domain you control in [Resend Domains](https://resend.com/domains), add the DKIM / SPF / MX records at the registrar, wait until status is **Verified**, then set Production:
+
+`RESEND_FROM_EMAIL=BookFlow AI <hello@your-verified-domain>`
+
+Redeploy after changing that value. Host fields at Namecheap are `resend._domainkey` and `send` (not `send.yourdomain.com`). MX Record appears after Mail Settings → Custom MX.
+
+Also set Production `NEXT_PUBLIC_APP_URL` to the real Vercel URL (not `https://YOUR-PROJECT.vercel.app`) so manage-appointment links in emails work.
+
 ## 5. Billing (Stripe)
 
 1. Create Starter / Growth / Business prices.
@@ -148,8 +156,17 @@ Set `OPENAI_API_KEY` and/or `GOOGLE_GENERATIVE_AI_API_KEY`, plus `AI_PROVIDER`.
 | Upstash Redis (shared slot cache + rate limits) | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
 | Twilio SMS reminders (Growth/Business) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` |
 | Vercel Blob (logo/favicon uploads in prod) | `BLOB_READ_WRITE_TOKEN` |
+| Google Calendar sync | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET` |
 
 Trigger a test error after deploy and confirm it appears in Sentry.
+
+### Google Calendar
+
+Create a **Web application** OAuth client. Authorized redirect URI:
+
+`https://<your-vercel-host>/api/integrations/google-calendar/callback`
+
+Enable the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) on that project, add scope `https://www.googleapis.com/auth/calendar.events` on the OAuth consent screen, then Dashboard → Settings → Connect Google Calendar and allow calendar access. Connecting does not import old bookings; only new / reschedule / cancel after a successful connect are pushed.
 
 ## 8. Smoke check after deploy
 
