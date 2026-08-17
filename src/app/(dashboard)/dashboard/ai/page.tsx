@@ -20,7 +20,7 @@ export default async function AiPage({
 
   const [clients, usage, recentRuns] = await Promise.all([
     ctx.db.client.findMany({
-      select: { id: true, name: true },
+      select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
       take: 100,
     }),
@@ -50,7 +50,7 @@ export default async function AiPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="AI"
-        description="Time-saving assists for staff: client briefs, message drafts, insights, and booking recommendations. AI never books or sends without you."
+        description="Time-saving assists for staff: client briefs, message drafts, insights, and booking recommendations. AI never books or sends until you confirm."
       />
 
       <AiWorkbench

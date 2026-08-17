@@ -219,6 +219,11 @@ export const bookingAssistantSchema = z.object({
   message: z.string().trim().min(3, "Ask a question about booking").max(4000),
 });
 
+export const sendAiDraftSchema = z.object({
+  clientId: id,
+  message: z.string().trim().min(8, "Draft is empty").max(8000),
+});
+
 export const confirmAiBookingSchema = z.object({
   serviceId: id,
   resourceId: id,

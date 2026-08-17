@@ -14,6 +14,9 @@ import {
 } from "@/server/ai/features";
 import { getConfiguredProvider } from "@/server/ai/provider";
 import { createBooking } from "@/server/bookings/service";
+import { sendStaffDraftEmail } from "@/server/notifications/email";
+import { parseAiDraftMessage } from "@/lib/ai-draft";
+import { db } from "@/server/db";
 import { writeAuditLog } from "@/server/billing/entitlements";
 import { getActiveOrganization } from "@/server/tenant/context";
 import { assertRateLimit } from "@/server/rate-limit";
@@ -23,6 +26,7 @@ import {
   confirmAiBookingSchema,
   messageDraftSchema,
   parseForm,
+  sendAiDraftSchema,
 } from "@/server/actions/schemas";
 
 async function assertAiRateLimit(
@@ -247,5 +251,76 @@ export async function confirmAiBookingProposalAction(
     return result;
   } catch (e) {
     return err(toSafeActionError(e, "Could not confirm booking"));
+  }
+}
+
+/** Staff sends an edited AI draft to the selected client. */
+export async function sendAiDraftAction(
+  formData: FormData,
+): Promise<ActionResult<{ skipped: boolean }>> {
+  try {
+    const ctx = await getActiveOrganization();
+    if (!ctx.organization) return err("No organization selected");
+    await requireMembership(ctx.organization.id, "STAFF");
+
+    const limited = await assertRateLimit({
+      name: "ai_draft_send",
+      key: `${ctx.organization.id}:${ctx.user.id}`,
+      limit: 20,
+      windowSec: 60,
+    });
+    if (!limited.ok) return err(limited.error);
+
+    const parsed = parseForm(sendAiDraftSchema, formData);
+    if (!parsed.ok) return err(parsed.error);
+
+    const client = await db.client.findFirst({
+      where: { id: parsed.data.clientId, organizationId: ctx.organization.id },
+      select: { id: true, name: true, email: true },
+    });
+    if (!client) return err("Client not found");
+    if (!client.email) {
+      return err("This client has no email on file");
+    }
+
+    let bodyText = parsed.data.message;
+    if (ctx.organization.reviewUrl) {
+      bodyText = bodyText.replaceAll(
+        "[REVIEW_LINK]",
+        ctx.organization.reviewUrl,
+      );
+    }
+
+    const { subject, body } = parseAiDraftMessage(bodyText);
+    if (!subject || !body) {
+      return err("Add a subject and message before sending");
+    }
+
+    const result = await sendStaffDraftEmail({
+      to: client.email,
+      subject,
+      bodyText: body,
+      organizationName: ctx.organization.name,
+      clientName: client.name,
+      logoUrl: ctx.organization.logoUrl,
+      brandPrimary: ctx.organization.brandPrimary,
+    });
+
+    if (result.skipped) {
+      return err("Email is not configured (missing RESEND_API_KEY)");
+    }
+
+    await writeAuditLog({
+      organizationId: ctx.organization.id,
+      actorId: ctx.user.id,
+      action: "ai.draft_sent",
+      entityType: "client",
+      entityId: client.id,
+      metadata: { to: client.email, subject },
+    });
+
+    return ok({ skipped: false });
+  } catch (e) {
+    return err(toSafeActionError(e, "Could not send message"));
   }
 }

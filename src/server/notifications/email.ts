@@ -4,6 +4,8 @@ import { Resend } from "resend";
 import { formatInTimeZone } from "date-fns-tz";
 
 import { normalizeBrandPrimary } from "@/lib/branding";
+import { draftBodyToHtml } from "@/lib/ai-draft";
+import { UserFacingError } from "@/lib/action-errors";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
@@ -129,10 +131,10 @@ async function deliver(input: {
   });
 
   if (error) {
-    throw new Error(error.message || "Resend send failed");
+    throw new UserFacingError(error.message || "Resend send failed");
   }
   if (!data?.id) {
-    throw new Error("Resend send returned no email id");
+    throw new UserFacingError("Resend send returned no email id");
   }
 
   return { skipped: false };
@@ -309,6 +311,42 @@ export async function sendRebookingReminderEmail(
     html,
     bookingId: input.bookingId,
     kind: "REBOOKING_REMINDER",
+    organizationName: input.organizationName,
+  });
+}
+
+/** Staff-confirmed one-off email from an edited AI draft. */
+export async function sendStaffDraftEmail(input: {
+  to: string;
+  subject: string;
+  bodyText: string;
+  organizationName: string;
+  clientName: string;
+  logoUrl?: string | null;
+  brandPrimary?: string | null;
+}): Promise<SendEmailResult> {
+  const html = shell(
+    input.subject,
+    draftBodyToHtml(input.bodyText),
+    {
+      to: input.to,
+      organizationName: input.organizationName,
+      clientName: input.clientName,
+      serviceName: "",
+      resourceName: "",
+      startAt: new Date(),
+      timezone: "UTC",
+      bookingId: "staff-draft",
+      logoUrl: input.logoUrl,
+      brandPrimary: input.brandPrimary,
+    },
+  );
+  return deliver({
+    to: input.to,
+    subject: input.subject,
+    html,
+    bookingId: "staff-draft",
+    kind: "STAFF_DRAFT",
     organizationName: input.organizationName,
   });
 }

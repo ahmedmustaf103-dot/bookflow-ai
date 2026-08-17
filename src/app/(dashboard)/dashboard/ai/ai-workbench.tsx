@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,10 @@ import {
   confirmAiBookingProposalAction,
   insightDigestAction,
   messageDraftAction,
+  sendAiDraftAction,
 } from "@/server/actions/ai";
 
-type ClientOption = { id: string; name: string };
+type ClientOption = { id: string; name: string; email: string | null };
 
 type AiRunPreview = {
   id: string;
@@ -73,6 +75,7 @@ export function AiWorkbench({
   const [outputKind, setOutputKind] = useState<string>("Output");
   const [proposal, setProposal] = useState<AiBookingProposal | null>(null);
   const [confirmPending, startConfirm] = useTransition();
+  const [sendPending, startSend] = useTransition();
 
   const defaultClientId = useMemo(() => {
     if (initialClientId && clients.some((c) => c.id === initialClientId)) {
@@ -80,6 +83,8 @@ export function AiWorkbench({
     }
     return clients[0]?.id ?? "";
   }, [clients, initialClientId]);
+
+  const [draftClientId, setDraftClientId] = useState(defaultClientId);
 
   const defaultIntent = [
     "reminder",
@@ -156,9 +161,9 @@ export function AiWorkbench({
                 Plan: <span className="font-medium">{planLabel}</span>
               </p>
               <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-                Tokens this month: {tokensUsed.toLocaleString()}
+                Tokens this month: {tokensUsed.toLocaleString("en-GB")}
                 {tokensLimit != null
-                  ? ` / ${tokensLimit.toLocaleString()}`
+                  ? ` / ${tokensLimit.toLocaleString("en-GB")}`
                   : " / ∞"}
               </p>
             </div>
@@ -210,13 +215,15 @@ export function AiWorkbench({
         <Surface className="p-4">
           <h2 className="text-sm font-semibold">Message draft</h2>
           <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-            Follow-ups, reminders, review asks — nothing sends automatically.
+            Follow-ups, reminders, review asks. Edit the draft, then send if you
+            like it.
           </p>
           <form
             className="mt-4 flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
+              setDraftClientId(String(fd.get("clientId") ?? ""));
               runFeature("draft", "Message draft", () =>
                 messageDraftAction(fd),
               );
@@ -238,16 +245,17 @@ export function AiWorkbench({
               </Select>
             </div>
             <div>
-              <Label htmlFor="draft-client">Client (optional)</Label>
+              <Label htmlFor="draft-client">Client</Label>
               <Select
                 id="draft-client"
                 name="clientId"
                 defaultValue={defaultClientId}
+                onChange={(e) => setDraftClientId(e.target.value)}
               >
-                <option value="">No specific client</option>
+                <option value="">Choose a client to send to</option>
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {c.email ? `${c.name} · ${c.email}` : `${c.name} (no email)`}
                   </option>
                 ))}
               </Select>
@@ -382,6 +390,44 @@ export function AiWorkbench({
             />
           )}
 
+          {outputKind === "Message draft" && output.trim() ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={sendPending || pending}
+                onClick={() => {
+                  if (!draftClientId) {
+                    toast("Pick a client before sending", "error");
+                    return;
+                  }
+                  const selected = clients.find((c) => c.id === draftClientId);
+                  if (!selected?.email) {
+                    toast("That client has no email on file", "error");
+                    return;
+                  }
+                  const fd = new FormData();
+                  fd.set("clientId", draftClientId);
+                  fd.set("message", output);
+                  startSend(async () => {
+                    const result = await sendAiDraftAction(fd);
+                    if (!result.ok) {
+                      toast(result.error, "error");
+                      return;
+                    }
+                    toast(`Sent to ${selected.email}`, "success");
+                  });
+                }}
+              >
+                {sendPending ? "Sending…" : "Send to client"}
+              </Button>
+              <p className="text-xs text-[var(--ink-tertiary)]">
+                Sends the edited text above. Nothing goes out until you press
+                this.
+              </p>
+            </div>
+          ) : null}
+
           {proposal ? (
             <div className="mt-4 rounded-[var(--radius-panel)] border border-[var(--accent)]/40 bg-[var(--accent-soft)]/40 p-3">
               <p className="text-xs font-semibold tracking-wide text-[var(--accent)] uppercase">
@@ -457,8 +503,8 @@ export function AiWorkbench({
                       {featureLabel(run.feature)}
                     </p>
                     <p className="text-[11px] tabular-nums text-[var(--ink-tertiary)]">
-                      {new Date(run.createdAt).toLocaleString()} ·{" "}
-                      {run.tokens.toLocaleString()} tok
+                      {format(new Date(run.createdAt), "dd/MM/yyyy, HH:mm:ss")} ·{" "}
+                      {run.tokens.toLocaleString("en-GB")} tok
                     </p>
                   </div>
                   <p className="mt-1 line-clamp-3 text-xs text-[var(--ink-secondary)]">
