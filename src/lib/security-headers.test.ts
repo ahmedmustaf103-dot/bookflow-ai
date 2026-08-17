@@ -14,11 +14,13 @@ describe("security headers", () => {
     expect(map["Strict-Transport-Security"]).toContain("max-age=");
   });
 
-  it("builds a CSP that allows Clerk and Stripe", () => {
+  it("builds a CSP that allows Clerk, Stripe, and sign-up CAPTCHA", () => {
     const csp = buildContentSecurityPolicy({ isDev: false });
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("https://js.stripe.com");
     expect(csp).toContain("https://*.clerk.com");
+    expect(csp).toContain("https://*.protect.clerk.com");
+    expect(csp).toContain("https://challenges.cloudflare.com");
     expect(csp).toContain("object-src 'none'");
   });
 
