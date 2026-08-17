@@ -4,6 +4,8 @@ import {
   TEST_MANAGE_TOKEN,
   TEST_ORG_NAME,
   TEST_ORG_SLUG,
+  TEST_OWNER_CLERK_ID,
+  TEST_OWNER_EMAIL,
   TEST_SERVICE_DURATION_MIN,
   TEST_SERVICE_NAME,
   TEST_STAFF_NAME,
@@ -19,6 +21,7 @@ export type TestSeed = {
   serviceId: string;
   manageToken: string;
   bookingId: string;
+  ownerEmail: string;
 };
 
 export async function resetAndSeedTestOrg(): Promise<TestSeed> {
@@ -51,6 +54,25 @@ export async function resetAndSeedTestOrg(): Promise<TestSeed> {
   });
 
   const locationId = org.locations[0]!.id;
+
+  const owner = await db.user.upsert({
+    where: { clerkUserId: TEST_OWNER_CLERK_ID },
+    update: { email: TEST_OWNER_EMAIL },
+    create: {
+      clerkUserId: TEST_OWNER_CLERK_ID,
+      email: TEST_OWNER_EMAIL,
+      firstName: "Seed",
+      lastName: "Owner",
+    },
+  });
+  await db.membership.create({
+    data: {
+      organizationId: org.id,
+      userId: owner.id,
+      role: "OWNER",
+      status: "ACTIVE",
+    },
+  });
 
   const resource = await db.resource.create({
     data: {
@@ -121,6 +143,7 @@ export async function resetAndSeedTestOrg(): Promise<TestSeed> {
     serviceId: service.id,
     manageToken: booking.manageToken,
     bookingId: booking.id,
+    ownerEmail: TEST_OWNER_EMAIL,
   };
 }
 

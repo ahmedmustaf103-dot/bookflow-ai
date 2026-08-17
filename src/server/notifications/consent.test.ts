@@ -10,10 +10,11 @@ import {
 } from "@/server/notifications/kinds";
 
 describe("notification classification", () => {
-  it("marks confirm/cancel/reschedule/reminder as transactional", () => {
+  it("marks confirm/owner/cancel/reschedule/reminder as transactional", () => {
     expect(TRANSACTIONAL_OUTBOX_KINDS).toEqual(
       expect.arrayContaining([
         OUTBOX_KINDS.BOOKING_CONFIRMATION,
+        OUTBOX_KINDS.BOOKING_CREATED,
         OUTBOX_KINDS.BOOKING_CANCELLATION,
         OUTBOX_KINDS.BOOKING_RESCHEDULED,
         OUTBOX_KINDS.BOOKING_REMINDER,
@@ -75,7 +76,9 @@ describe("marketing consent gate", () => {
     expect(isTransactionalOutboxKind(OUTBOX_KINDS.BOOKING_REMINDER)).toBe(true);
     // Transactional path does not consult allowsMarketingSend
     expect(isMarketingOutboxKind(OUTBOX_KINDS.BOOKING_CONFIRMATION)).toBe(false);
+    expect(isMarketingOutboxKind(OUTBOX_KINDS.BOOKING_CREATED)).toBe(false);
     expect(isMarketingOutboxKind(OUTBOX_KINDS.BOOKING_REMINDER)).toBe(false);
+    expect(isTransactionalOutboxKind(OUTBOX_KINDS.BOOKING_CREATED)).toBe(true);
   });
 
   it("queued marketing is suppressed after opt-out (send-time rule)", () => {

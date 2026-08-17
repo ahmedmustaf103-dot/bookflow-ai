@@ -6,6 +6,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { normalizeBrandPrimary } from "@/lib/branding";
 import { draftBodyToHtml } from "@/lib/ai-draft";
 import { UserFacingError } from "@/lib/action-errors";
+import { formatMoney } from "@/lib/client-tags";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
@@ -24,6 +25,9 @@ export type BookingEmailInput = {
   reviewUrl?: string | null;
   logoUrl?: string | null;
   brandPrimary?: string | null;
+  priceCents?: number | null;
+  currency?: string | null;
+  dashboardUrl?: string | null;
 };
 
 export type SendEmailResult = { skipped: boolean };
@@ -235,6 +239,66 @@ export async function sendBookingReschedule(
     html,
     bookingId: input.bookingId,
     kind: "BOOKING_RESCHEDULED",
+    organizationName: input.organizationName,
+  });
+}
+
+function dashboardLink(input: BookingEmailInput) {
+  if (!input.dashboardUrl) return "";
+  const brand = normalizeBrandPrimary(input.brandPrimary);
+  return ctaLink(input.dashboardUrl, "Open dashboard", brand);
+}
+
+export async function sendOwnerNewBookingEmail(
+  input: BookingEmailInput,
+): Promise<SendEmailResult> {
+  const dateLabel = formatInTimeZone(
+    asDate(input.startAt),
+    input.timezone,
+    "EEEE, d MMMM yyyy",
+  );
+  const timeLabel = formatInTimeZone(
+    asDate(input.startAt),
+    input.timezone,
+    "HH:mm",
+  );
+  const zoneLabel = formatInTimeZone(
+    asDate(input.startAt),
+    input.timezone,
+    "zzz",
+  );
+  const price =
+    input.priceCents != null
+      ? formatMoney(input.priceCents, input.currency ?? "GBP")
+      : null;
+  const subject = `New booking: ${input.serviceName} at ${input.organizationName}`;
+  const html = shell(
+    "New appointment",
+    `
+      <p>A customer just booked at ${escapeHtml(input.organizationName)}.</p>
+      <ul style="padding-left: 18px;">
+        <li><strong>Customer:</strong> ${escapeHtml(input.clientName)}</li>
+        <li><strong>Service:</strong> ${escapeHtml(input.serviceName)}</li>
+        ${
+          input.resourceName
+            ? `<li><strong>Staff:</strong> ${escapeHtml(input.resourceName)}</li>`
+            : ""
+        }
+        <li><strong>Date:</strong> ${escapeHtml(dateLabel)}</li>
+        <li><strong>Time:</strong> ${escapeHtml(timeLabel)}</li>
+        <li><strong>Timezone:</strong> ${escapeHtml(input.timezone)} (${escapeHtml(zoneLabel)})</li>
+        ${price ? `<li><strong>Price:</strong> ${escapeHtml(price)}</li>` : ""}
+      </ul>
+      ${dashboardLink(input)}
+    `,
+    input,
+  );
+  return deliver({
+    to: input.to,
+    subject,
+    html,
+    bookingId: input.bookingId,
+    kind: "BOOKING_CREATED",
     organizationName: input.organizationName,
   });
 }

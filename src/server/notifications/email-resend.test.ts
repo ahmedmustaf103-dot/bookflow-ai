@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/booking-urls", () => ({
   bookingManageUrl: () => "https://app.test/book/manage/t",
   publicBookingUrl: () => "https://app.test/book/shop",
+  dashboardAppointmentsUrl: () => "https://app.test/dashboard/appointments",
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -233,6 +234,56 @@ describe("Resend { error } without throw", () => {
     expect(update).toHaveBeenCalledWith({
       where: { id: "o1" },
       data: expect.objectContaining({ status: "SENT", lastError: null }),
+    });
+  });
+
+  it("retries BOOKING_CREATED with the same Resend { error } outbox behaviour", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      confirmationItem({
+        id: "o-owner",
+        kind: OUTBOX_KINDS.BOOKING_CREATED,
+        payload: {
+          to: "owner@shop.test",
+          organizationName: "Shop",
+          clientName: "Alex",
+          serviceName: "Cut",
+          resourceName: "Sam",
+          startAt: now.toISOString(),
+          timezone: "UTC",
+          bookingId: "b1",
+          priceCents: 3500,
+          currency: "GBP",
+          dashboardUrl: "https://app.test/dashboard/appointments",
+        },
+      }),
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendMock.mockResolvedValue({
+      data: null,
+      error: { name: "application_error", message: RESEND_API_ERROR },
+    });
+
+    const result = await processDueOutbox(50, now);
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "owner@shop.test",
+        subject: expect.stringContaining("New booking"),
+      }),
+    );
+    expect(result.failed).toBe(1);
+    expect(result.sent).toBe(0);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "o-owner" },
+      data: {
+        status: "PENDING",
+        lastError: RESEND_API_ERROR,
+        scheduledFor: nextRetryAt(OUTBOX_KINDS.BOOKING_CREATED, now),
+      },
     });
   });
 });

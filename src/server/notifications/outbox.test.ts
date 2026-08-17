@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/booking-urls", () => ({
   bookingManageUrl: () => "https://app.test/book/manage/t",
   publicBookingUrl: () => "https://app.test/book/shop",
+  dashboardAppointmentsUrl: () => "https://app.test/dashboard/appointments",
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -23,6 +24,7 @@ const {
   sendFollowUp,
   sendReview,
   sendRebooking,
+  sendOwnerNew,
 } = vi.hoisted(() => ({
   findMany: vi.fn(),
   updateMany: vi.fn(),
@@ -35,6 +37,7 @@ const {
   sendFollowUp: vi.fn(),
   sendReview: vi.fn(),
   sendRebooking: vi.fn(),
+  sendOwnerNew: vi.fn(),
 }));
 
 vi.mock("@/server/db", () => ({
@@ -60,6 +63,7 @@ vi.mock("@/server/notifications/email", () => ({
   sendFollowUpEmail: sendFollowUp,
   sendReviewRequestEmail: sendReview,
   sendRebookingReminderEmail: sendRebooking,
+  sendOwnerNewBookingEmail: sendOwnerNew,
 }));
 
 vi.mock("@/server/notifications/sms", () => ({
@@ -93,6 +97,7 @@ import { OUTBOX_KINDS } from "@/server/notifications/kinds";
 describe("outbox timing helpers", () => {
   it("treats confirmation/cancellation/reschedule as immediate", () => {
     expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_CONFIRMATION)).toBe(true);
+    expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_CREATED)).toBe(true);
     expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_CANCELLATION)).toBe(true);
     expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_RESCHEDULED)).toBe(true);
     expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_REMINDER)).toBe(false);
@@ -328,6 +333,97 @@ describe("processDueOutbox", () => {
 
     const result = await processDueOutbox(50, now);
     expect(sendReschedule).toHaveBeenCalled();
+    expect(result.sent).toBe(1);
+  });
+
+  it("dispatches owner new-booking emails", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      {
+        id: "o-owner",
+        kind: OUTBOX_KINDS.BOOKING_CREATED,
+        channel: "EMAIL",
+        organizationId: "org1",
+        bookingId: "b1",
+        attempts: 0,
+        scheduledFor: now,
+        payload: {
+          to: "owner@shop.test",
+          organizationName: "Shop",
+          clientName: "Alex",
+          serviceName: "Cut",
+          resourceName: "Sam",
+          startAt: now.toISOString(),
+          timezone: "UTC",
+          bookingId: "b1",
+          priceCents: 3500,
+          currency: "GBP",
+          dashboardUrl: "https://app.test/dashboard/appointments",
+        },
+      },
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendOwnerNew.mockResolvedValue({ skipped: false });
+
+    const result = await processDueOutbox(50, now);
+    expect(bookingFindFirst).not.toHaveBeenCalled();
+    expect(sendOwnerNew).toHaveBeenCalledTimes(1);
+    expect(result.sent).toBe(1);
+  });
+
+  it("retries owner new-booking when Resend throws, then FAILED at max attempts", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      {
+        id: "o-owner",
+        kind: OUTBOX_KINDS.BOOKING_CREATED,
+        channel: "EMAIL",
+        attempts: 0,
+        scheduledFor: now,
+        payload: { startAt: now.toISOString() },
+      },
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendOwnerNew.mockRejectedValue(new Error("Resend down"));
+
+    const result = await processDueOutbox(50, now);
+    expect(result.failed).toBe(1);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "o-owner" },
+      data: {
+        status: "PENDING",
+        lastError: "Resend down",
+        scheduledFor: nextRetryAt(OUTBOX_KINDS.BOOKING_CREATED, now),
+      },
+    });
+  });
+
+  it("still sends owner new-booking when marketingOptIn is false", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      {
+        id: "o-owner",
+        kind: OUTBOX_KINDS.BOOKING_CREATED,
+        channel: "EMAIL",
+        organizationId: "org1",
+        bookingId: "b1",
+        attempts: 0,
+        scheduledFor: now,
+        payload: { startAt: now.toISOString(), to: "owner@shop.test" },
+      },
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendOwnerNew.mockResolvedValue({ skipped: false });
+
+    const result = await processDueOutbox(50, now);
+    expect(bookingFindFirst).not.toHaveBeenCalled();
+    expect(sendOwnerNew).toHaveBeenCalled();
     expect(result.sent).toBe(1);
   });
 

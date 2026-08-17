@@ -22,6 +22,7 @@ import {
   enqueueBookingConfirmation,
   enqueueBookingReminder,
   enqueueBookingReschedule,
+  enqueueOwnerNewBooking,
   enqueuePostVisitAutomation,
   type BookingNotifyContext,
 } from "@/server/notifications/outbox";
@@ -67,7 +68,7 @@ function notifyContext(booking: {
     phone: string | null;
     marketingOptIn?: boolean;
   };
-  service: { name: string };
+  service: { name: string; priceCents?: number; currency?: string };
   resource: { name: string };
   location: { timezone: string };
 }): BookingNotifyContext {
@@ -87,6 +88,8 @@ function notifyContext(booking: {
     marketingOptIn: booking.client.marketingOptIn ?? false,
     serviceName: booking.service.name,
     resourceName: booking.resource.name,
+    priceCents: booking.service.priceCents ?? null,
+    currency: booking.service.currency ?? null,
     reviewUrl: booking.organization.reviewUrl ?? null,
     logoUrl: booking.organization.logoUrl ?? null,
     brandPrimary: booking.organization.brandPrimary ?? null,
@@ -358,6 +361,15 @@ export async function createBooking(input: {
     }
 
     const ctx = notifyContext(booking);
+
+    try {
+      await enqueueOwnerNewBooking(ctx);
+    } catch (e) {
+      logger.error(
+        { err: e, bookingId: booking.id },
+        "Failed to enqueue owner new-booking email",
+      );
+    }
 
     try {
       await enqueueBookingConfirmation(ctx);

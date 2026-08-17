@@ -6,15 +6,18 @@ import {
   IMMEDIATE_OUTBOX_KINDS,
   MARKETING_OUTBOX_KINDS,
   OUTBOX_KINDS,
+  ownerNotifyDedupeKey,
   reminderDedupeKey,
   rescheduleDedupeKey,
+  uniqueOwnerNotifyEmails,
 } from "@/server/notifications/kinds";
 
 describe("outbox kinds", () => {
-  it("covers confirmation, cancel, reschedule, reminder, and post-visit", () => {
+  it("covers confirmation, owner notify, cancel, reschedule, reminder, and post-visit", () => {
     expect(Object.values(OUTBOX_KINDS)).toEqual(
       expect.arrayContaining([
         "BOOKING_CONFIRMATION",
+        "BOOKING_CREATED",
         "BOOKING_CANCELLATION",
         "BOOKING_RESCHEDULED",
         "BOOKING_REMINDER",
@@ -31,6 +34,9 @@ describe("outbox kinds", () => {
     ).toBe("BOOKING_CONFIRMATION:b1:EMAIL");
     expect(bookingDedupeKey(OUTBOX_KINDS.FOLLOW_UP, "b1")).toBe(
       "FOLLOW_UP:b1:EMAIL",
+    );
+    expect(ownerNotifyDedupeKey("b1", "Owner@Shop.test")).toBe(
+      "BOOKING_CREATED:b1:EMAIL:owner@shop.test",
     );
   });
 
@@ -49,10 +55,11 @@ describe("outbox kinds", () => {
     );
   });
 
-  it("marks confirmation/cancel/reschedule as immediate flush kinds", () => {
+  it("marks confirmation/owner/cancel/reschedule as immediate flush kinds", () => {
     expect(IMMEDIATE_OUTBOX_KINDS).toEqual(
       expect.arrayContaining([
         "BOOKING_CONFIRMATION",
+        "BOOKING_CREATED",
         "BOOKING_CANCELLATION",
         "BOOKING_RESCHEDULED",
       ]),
@@ -75,5 +82,18 @@ describe("outbox kinds", () => {
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("REVIEW_REQUEST");
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("REBOOKING_REMINDER");
     expect(CANCEL_ON_BOOKING_CANCEL).not.toContain("BOOKING_CONFIRMATION");
+    expect(CANCEL_ON_BOOKING_CANCEL).not.toContain("BOOKING_CREATED");
+  });
+
+  it("dedupes owner notify emails case-insensitively", () => {
+    expect(
+      uniqueOwnerNotifyEmails([
+        "Owner@Shop.test",
+        " owner@shop.test ",
+        "admin@shop.test",
+        null,
+        "",
+      ]),
+    ).toEqual(["owner@shop.test", "admin@shop.test"]);
   });
 });

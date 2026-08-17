@@ -1,6 +1,7 @@
 /** Outbox message kinds used by the automation layer. */
 export const OUTBOX_KINDS = {
   BOOKING_CONFIRMATION: "BOOKING_CONFIRMATION",
+  BOOKING_CREATED: "BOOKING_CREATED",
   BOOKING_CANCELLATION: "BOOKING_CANCELLATION",
   BOOKING_RESCHEDULED: "BOOKING_RESCHEDULED",
   BOOKING_REMINDER: "BOOKING_REMINDER",
@@ -17,10 +18,14 @@ export type OutboxKind = (typeof OUTBOX_KINDS)[keyof typeof OUTBOX_KINDS];
  */
 export const TRANSACTIONAL_OUTBOX_KINDS: OutboxKind[] = [
   OUTBOX_KINDS.BOOKING_CONFIRMATION,
+  OUTBOX_KINDS.BOOKING_CREATED,
   OUTBOX_KINDS.BOOKING_CANCELLATION,
   OUTBOX_KINDS.BOOKING_RESCHEDULED,
   OUTBOX_KINDS.BOOKING_REMINDER,
 ];
+
+/** Active memberships that receive operational shop emails (matches canManage). */
+export const OWNER_NOTIFY_ROLES = ["OWNER", "ADMIN"] as const;
 
 /**
  * Marketing / engagement — tips, reviews, win-back.
@@ -44,6 +49,7 @@ export const CANCEL_ON_BOOKING_CANCEL: OutboxKind[] = [
 /** Kinds that should flush promptly after enqueue (scheduledFor ≈ now). */
 export const IMMEDIATE_OUTBOX_KINDS: OutboxKind[] = [
   OUTBOX_KINDS.BOOKING_CONFIRMATION,
+  OUTBOX_KINDS.BOOKING_CREATED,
   OUTBOX_KINDS.BOOKING_CANCELLATION,
   OUTBOX_KINDS.BOOKING_RESCHEDULED,
 ];
@@ -83,4 +89,23 @@ export function bookingDedupeKey(
   channel: "EMAIL" | "SMS" = "EMAIL",
 ) {
   return `${kind}:${bookingId}:${channel}`;
+}
+
+/** One owner/admin email per booking — include recipient so retries stay idempotent. */
+export function ownerNotifyDedupeKey(bookingId: string, email: string) {
+  return `${OUTBOX_KINDS.BOOKING_CREATED}:${bookingId}:EMAIL:${email.trim().toLowerCase()}`;
+}
+
+export function uniqueOwnerNotifyEmails(
+  emails: Array<string | null | undefined>,
+) {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of emails) {
+    const email = raw?.trim().toLowerCase();
+    if (!email || seen.has(email)) continue;
+    seen.add(email);
+    out.push(email);
+  }
+  return out;
 }

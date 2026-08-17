@@ -16,6 +16,7 @@ import {
   sendBookingReminder,
   sendBookingReschedule,
   sendFollowUpEmail,
+  sendOwnerNewBookingEmail,
   sendRebookingReminderEmail,
   sendReviewRequestEmail,
   type BookingEmailInput,
@@ -26,17 +27,24 @@ import {
   IMMEDIATE_OUTBOX_KINDS,
   MARKETING_OUTBOX_KINDS,
   OUTBOX_KINDS,
+  OWNER_NOTIFY_ROLES,
   allowsMarketingSend,
   isMarketingOutboxKind,
+  ownerNotifyDedupeKey,
   reminderDedupeKey,
   rescheduleDedupeKey,
+  uniqueOwnerNotifyEmails,
 } from "@/server/notifications/kinds";
 import {
   normalizePhone,
   sendBookingReminderSms,
   type BookingSmsInput,
 } from "@/server/notifications/sms";
-import { bookingManageUrl, publicBookingUrl } from "@/lib/booking-urls";
+import {
+  bookingManageUrl,
+  dashboardAppointmentsUrl,
+  publicBookingUrl,
+} from "@/lib/booking-urls";
 import { logger } from "@/lib/logger";
 import { captureException } from "@/lib/observability";
 
@@ -64,6 +72,8 @@ export type BookingNotifyContext = {
   marketingOptIn?: boolean;
   serviceName: string;
   resourceName: string;
+  priceCents?: number | null;
+  currency?: string | null;
   reviewUrl?: string | null;
   logoUrl?: string | null;
   brandPrimary?: string | null;
@@ -144,6 +154,9 @@ function emailPayload(
     reviewUrl: ctx.reviewUrl ?? null,
     logoUrl: ctx.logoUrl ?? null,
     brandPrimary: ctx.brandPrimary ?? null,
+    priceCents: ctx.priceCents ?? null,
+    currency: ctx.currency ?? null,
+    dashboardUrl: dashboardAppointmentsUrl(),
   };
 }
 
@@ -200,6 +213,43 @@ export async function enqueueBookingConfirmation(ctx: BookingNotifyContext) {
     payload,
   });
   scheduleDueOutboxFlush("booking_confirmation");
+}
+
+/** Shop owner/admin email — transactional, due immediately. */
+export async function enqueueOwnerNewBooking(ctx: BookingNotifyContext) {
+  const memberships = await db.membership.findMany({
+    where: {
+      organizationId: ctx.organizationId,
+      status: "ACTIVE",
+      role: { in: [...OWNER_NOTIFY_ROLES] },
+    },
+    select: { user: { select: { email: true } } },
+  });
+  const recipients = uniqueOwnerNotifyEmails(
+    memberships.map((m) => m.user.email),
+  );
+  if (recipients.length === 0) {
+    logger.info(
+      { bookingId: ctx.bookingId, organizationId: ctx.organizationId },
+      "Skipped owner new-booking email — no OWNER/ADMIN email",
+    );
+    return;
+  }
+
+  for (const to of recipients) {
+    const payload = emailPayload(ctx, to);
+    await enqueueRow({
+      organizationId: ctx.organizationId,
+      bookingId: ctx.bookingId,
+      channel: "EMAIL",
+      kind: OUTBOX_KINDS.BOOKING_CREATED,
+      dedupeKey: ownerNotifyDedupeKey(ctx.bookingId, to),
+      toAddress: to,
+      scheduledFor: new Date(),
+      payload,
+    });
+  }
+  scheduleDueOutboxFlush("booking_created_owner");
 }
 
 /** Cancellation email — due immediately. */
@@ -525,6 +575,8 @@ async function dispatchOutboxItem(item: {
     switch (item.kind) {
       case OUTBOX_KINDS.BOOKING_CONFIRMATION:
         return sendBookingConfirmation(payload);
+      case OUTBOX_KINDS.BOOKING_CREATED:
+        return sendOwnerNewBookingEmail(payload);
       case OUTBOX_KINDS.BOOKING_REMINDER:
         return sendBookingReminder(payload);
       case OUTBOX_KINDS.BOOKING_CANCELLATION:

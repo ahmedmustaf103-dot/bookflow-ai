@@ -33,6 +33,11 @@ export function publicBookingUrl(org: string | OrgForBookingUrl) {
   return `${appOrigin()}/book/${org.slug}`;
 }
 
+/** Staff dashboard calendar — used in owner/admin booking emails. */
+export function dashboardAppointmentsUrl() {
+  return `${appOrigin()}/dashboard/appointments`;
+}
+
 export function appHostHostname() {
   try {
     return new URL(env.NEXT_PUBLIC_APP_URL).hostname.toLowerCase();

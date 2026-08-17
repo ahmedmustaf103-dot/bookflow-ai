@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { OUTBOX_KINDS } from "@/server/notifications/kinds";
+import { enqueueOwnerNewBooking } from "@/server/notifications/outbox";
 import { createBooking, transitionBooking } from "@/server/bookings/service";
 import { getSlotsForServiceResource } from "@/server/availability/slots";
 import { disconnectTestPrisma, getTestPrisma } from "@/test/prisma";
@@ -210,7 +211,7 @@ describe("outbox + automation (DB)", () => {
     await disconnectTestPrisma();
   });
 
-  it("enqueues confirmation and reminder when a booking is created", async () => {
+  it("enqueues confirmation, reminder, and owner notify when a booking is created", async () => {
     const slots = await getSlotsForServiceResource({
       organizationId: seed.organizationId,
       serviceId: seed.serviceId,
@@ -225,6 +226,7 @@ describe("outbox + automation (DB)", () => {
     );
     expect(start).toBeTruthy();
 
+    const clientEmail = `notify+${Date.now()}@example.test`;
     const created = await createBooking({
       organizationId: seed.organizationId,
       serviceId: seed.serviceId,
@@ -232,7 +234,7 @@ describe("outbox + automation (DB)", () => {
       startAt: start!.start,
       client: {
         name: "Notify Me",
-        email: `notify+${Date.now()}@example.test`,
+        email: clientEmail,
         marketingOptIn: false,
       },
       source: "PUBLIC",
@@ -247,14 +249,24 @@ describe("outbox + automation (DB)", () => {
     const kinds = rows.map((r) => r.kind);
     expect(kinds).toContain(OUTBOX_KINDS.BOOKING_CONFIRMATION);
     expect(kinds).toContain(OUTBOX_KINDS.BOOKING_REMINDER);
+    expect(kinds).toContain(OUTBOX_KINDS.BOOKING_CREATED);
     expect(kinds).not.toContain(OUTBOX_KINDS.FOLLOW_UP);
 
     const confirmation = rows.find(
       (r) => r.kind === OUTBOX_KINDS.BOOKING_CONFIRMATION,
     );
     const reminder = rows.find((r) => r.kind === OUTBOX_KINDS.BOOKING_REMINDER);
+    const ownerRow = rows.find((r) => r.kind === OUTBOX_KINDS.BOOKING_CREATED);
     expect(confirmation).toBeTruthy();
     expect(reminder).toBeTruthy();
+    expect(ownerRow).toBeTruthy();
+    expect(ownerRow!.toAddress).toBe(seed.ownerEmail);
+    expect(ownerRow!.toAddress).not.toBe(clientEmail);
+    expect(ownerRow!.dedupeKey).toBe(
+      `BOOKING_CREATED:${created.data.bookingId}:EMAIL:${seed.ownerEmail}`,
+    );
+    expect(ownerRow!.status).toBe("PENDING");
+    expect(confirmation!.toAddress).toBe(clientEmail);
     expect(reminder!.status).toBe("PENDING");
     const expectedReminderAt =
       start!.start.getTime() - reminderHours * 60 * 60 * 1000;
@@ -384,9 +396,82 @@ describe("outbox + automation (DB)", () => {
     const transactional = await db.notificationOutbox.findMany({
       where: {
         bookingId: created.data.bookingId,
-        kind: OUTBOX_KINDS.BOOKING_CONFIRMATION,
+        kind: {
+          in: [
+            OUTBOX_KINDS.BOOKING_CONFIRMATION,
+            OUTBOX_KINDS.BOOKING_CREATED,
+          ],
+        },
       },
     });
-    expect(transactional.length).toBeGreaterThan(0);
+    expect(
+      transactional.some((r) => r.kind === OUTBOX_KINDS.BOOKING_CONFIRMATION),
+    ).toBe(true);
+    const ownerRow = transactional.find(
+      (r) => r.kind === OUTBOX_KINDS.BOOKING_CREATED,
+    );
+    expect(ownerRow).toBeTruthy();
+    expect(ownerRow!.toAddress).toBe(seed.ownerEmail);
+  });
+
+  it("does not enqueue a second owner notify for the same booking", async () => {
+    const slots = await getSlotsForServiceResource({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+    });
+    const created = await createBooking({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      startAt: slots[0]!.start,
+      client: {
+        name: "Dedupe Me",
+        email: `dedupe+${Date.now()}@example.test`,
+        marketingOptIn: false,
+      },
+      source: "PUBLIC",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const db = getTestPrisma();
+    const booking = await db.booking.findFirstOrThrow({
+      where: { id: created.data.bookingId },
+      include: {
+        organization: true,
+        client: true,
+        service: true,
+        resource: true,
+        location: true,
+      },
+    });
+
+    await enqueueOwnerNewBooking({
+      organizationId: booking.organizationId,
+      organizationName: booking.organization.name,
+      organizationSlug: booking.organization.slug,
+      plan: booking.organization.plan,
+      bookingId: booking.id,
+      manageToken: booking.manageToken,
+      startAt: booking.startAt,
+      endAt: booking.endAt,
+      timezone: booking.location.timezone,
+      clientName: booking.client.name,
+      clientEmail: booking.client.email,
+      marketingOptIn: booking.client.marketingOptIn,
+      serviceName: booking.service.name,
+      resourceName: booking.resource.name,
+      priceCents: booking.service.priceCents,
+      currency: booking.service.currency,
+    });
+
+    const ownerRows = await db.notificationOutbox.findMany({
+      where: {
+        bookingId: created.data.bookingId,
+        kind: OUTBOX_KINDS.BOOKING_CREATED,
+      },
+    });
+    expect(ownerRows).toHaveLength(1);
   });
 });
