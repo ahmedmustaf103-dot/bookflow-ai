@@ -34,11 +34,11 @@ export async function resetAndSeedTestOrg(): Promise<TestSeed> {
       timezoneDefault: TEST_TIMEZONE,
       publicBookingEnabled: true,
       followUpEnabled: true,
-      followUpHoursAfter: 24,
+      followUpHoursAfter: 2,
       reviewRequestEnabled: true,
       reviewRequestHoursAfter: 72,
       rebookingEnabled: true,
-      rebookingDaysAfter: 28,
+      rebookingDaysAfter: 14,
       reviewUrl: "https://example.test/review",
       locations: {
         create: {

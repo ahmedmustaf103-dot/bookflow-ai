@@ -108,14 +108,14 @@ model Organization {
   reminderHoursBefore  Int              @default(24)
   /// Post-visit thank-you / check-in email
   followUpEnabled          Boolean @default(true)
-  followUpHoursAfter       Int     @default(24)
+  followUpHoursAfter       Int     @default(2)
   /// Ask for a Google/Facebook review after a completed visit
   reviewRequestEnabled     Boolean @default(true)
   reviewRequestHoursAfter  Int     @default(72)
   reviewUrl                String?
   /// Nudge clients to book again after a completed visit
   rebookingEnabled         Boolean @default(true)
-  rebookingDaysAfter       Int     @default(28)
+  rebookingDaysAfter       Int     @default(14)
   publicBookingEnabled Boolean          @default(true)
   /// White-label branding
   logoUrl              String?
