@@ -129,7 +129,8 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink
                 href="/sign-up"
-                className="h-11 border-0 bg-white px-5 text-[var(--accent)] hover:bg-white/90"
+                variant="secondary"
+                className="h-11 border-0 bg-white px-5 !text-zinc-900 hover:bg-zinc-100 hover:!text-zinc-900"
               >
                 Start free
               </ButtonLink>
@@ -229,7 +230,8 @@ export default function HomePage() {
           <div className="flex flex-wrap gap-3">
             <ButtonLink
               href="/book/bookflow"
-              className="h-11 border-0 bg-white px-5 text-[var(--ink)] hover:bg-white/90"
+              variant="secondary"
+              className="h-11 border-0 bg-white px-5 !text-zinc-900 hover:bg-zinc-100 hover:!text-zinc-900"
             >
               Open demo booking
             </ButtonLink>
