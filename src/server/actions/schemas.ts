@@ -3,14 +3,12 @@ import { z } from "zod";
 const id = z.string().trim().min(1).max(64);
 
 function optionalText(max: number) {
-  return z
-    .union([z.string(), z.undefined()])
-    .transform((v) => {
-      if (v == null) return undefined;
-      const t = v.trim();
-      return t === "" ? undefined : t;
-    })
-    .pipe(z.string().max(max).optional());
+  return z.preprocess((v) => {
+    if (v == null || v === "") return undefined;
+    if (typeof v !== "string") return v;
+    const t = v.trim();
+    return t === "" ? undefined : t;
+  }, z.string().max(max).optional());
 }
 
 const checkboxOn = z
@@ -252,9 +250,11 @@ export function parseForm<T extends z.ZodType>(
   }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const path = issue?.path?.length ? `${issue.path.join(".")}: ` : "";
     return {
       ok: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
+      error: `${path}${issue?.message ?? "Invalid input"}`.trim(),
     };
   }
   return { ok: true, data: parsed.data };

@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { formatInTimeZone } from "date-fns-tz";
 
 import { SetupChecklist } from "@/components/dashboard/setup-checklist";
 import { OverviewCopyLink } from "@/components/dashboard/overview-copy-link";
+import { DashboardFloor } from "@/components/dashboard/dashboard-floor";
 import { ButtonLink } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Stat } from "@/components/ui/stat";
 import { Surface } from "@/components/ui/surface";
@@ -13,7 +12,7 @@ import { publicBookingUrl } from "@/lib/booking-urls";
 import {
   deltaHint,
   getOrgAnalytics,
-  getTodayAgenda,
+  getDashboardFloor,
 } from "@/server/analytics/org";
 import { requireOrgOrRedirect } from "@/server/tenant/context";
 
@@ -27,14 +26,14 @@ export default async function DashboardPage() {
     serviceCount,
     bookingTotal,
     analytics7,
-    today,
+    floor,
   ] = await Promise.all([
     ctx.db.location.count({ where: { isActive: true } }),
     ctx.db.resource.count({ where: { isActive: true } }),
     ctx.db.service.count({ where: { isActive: true } }),
     ctx.db.booking.count(),
     getOrgAnalytics(orgId, 7),
-    getTodayAgenda(orgId, 5),
+    getDashboardFloor(orgId),
   ]);
 
   const bookUrl = publicBookingUrl(ctx.organization);
@@ -52,7 +51,7 @@ export default async function DashboardPage() {
             <ButtonLink href="/dashboard/analytics" size="sm" variant="secondary">
               Analytics
             </ButtonLink>
-            <ButtonLink href="/dashboard/appointments" size="sm">
+            <ButtonLink href="/dashboard/appointments" size="sm" variant="secondary">
               Calendar
             </ButtonLink>
           </>
@@ -165,99 +164,13 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <Surface>
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-semibold">Today</h2>
-              <p className="mt-0.5 text-xs text-[var(--ink-tertiary)]">
-                Next appointments on the schedule
-              </p>
-            </div>
-            <Link
-              href="/dashboard/appointments"
-              className="text-xs font-medium text-[var(--accent)] hover:underline"
-            >
-              Open calendar
-            </Link>
-          </div>
-          {today.length === 0 ? (
-            <EmptyState
-              className="py-8"
-              title="Nothing scheduled today"
-              description="Share your booking link or block time on the calendar."
-              action={
-                <ButtonLink href={bookPath} size="sm" variant="secondary">
-                  Booking page
-                </ButtonLink>
-              }
-            />
-          ) : (
-            <ul className="divide-y divide-[var(--border)]">
-              {today.map((b) => (
-                <li
-                  key={b.id}
-                  className="flex items-start justify-between gap-3 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--ink)]">
-                      {b.client.name}
-                    </p>
-                    <p className="truncate text-xs text-[var(--ink-tertiary)]">
-                      {b.service.name} · {b.resource.name}
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-sm tabular-nums text-[var(--ink-secondary)]">
-                    {formatInTimeZone(
-                      b.startAt,
-                      b.location.timezone,
-                      "HH:mm",
-                    )}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Surface>
-
-        <Surface>
-          <h2 className="text-sm font-semibold">Quick links</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <Link
-                href="/dashboard/analytics"
-                className="text-[var(--accent)] hover:underline"
-              >
-                Revenue & customer insights →
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dashboard/clients"
-                className="text-[var(--accent)] hover:underline"
-              >
-                Client CRM →
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dashboard/ai"
-                className="text-[var(--accent)] hover:underline"
-              >
-                AI briefing →
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dashboard/settings"
-                className="text-[var(--accent)] hover:underline"
-              >
-                Automation settings →
-              </Link>
-            </li>
-          </ul>
-        </Surface>
-      </div>
+      <DashboardFloor
+        current={floor.current}
+        upcoming={floor.upcoming}
+        recentlyCompleted={floor.recentlyCompleted}
+        timeZone={floor.timeZone}
+        bookPath={bookPath}
+      />
     </div>
   );
 }

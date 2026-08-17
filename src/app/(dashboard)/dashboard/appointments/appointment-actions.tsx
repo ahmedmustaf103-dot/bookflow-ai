@@ -45,7 +45,13 @@ export function AppointmentActions({
             key={action.to}
             type="button"
             size="sm"
-            variant={action.to === "CANCELLED" ? "danger" : "secondary"}
+            variant={
+              action.to === "CANCELLED"
+                ? "danger"
+                : action.to === "COMPLETED"
+                  ? "primary"
+                  : "secondary"
+            }
             disabled={pending}
             aria-busy={pending}
             onClick={() => {

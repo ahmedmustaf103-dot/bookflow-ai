@@ -10,6 +10,7 @@ import {
   computeNoShowRate,
   type AnalyticsPeriod,
 } from "@/server/analytics/period";
+import { splitFloorBookings } from "@/server/analytics/floor";
 
 export type OrgAnalytics = {
   bookingsTotal: number;
@@ -334,6 +335,13 @@ export async function getCustomerInsights(
   };
 }
 
+const floorInclude = {
+  client: { select: { name: true } },
+  service: { select: { name: true } },
+  resource: { select: { name: true } },
+  location: { select: { timezone: true } },
+} as const;
+
 export async function getTodayAgenda(
   organizationId: string,
   take = 5,
@@ -350,13 +358,41 @@ export async function getTodayAgenda(
     },
     orderBy: { startAt: "asc" },
     take,
-    include: {
-      client: { select: { name: true } },
-      service: { select: { name: true } },
-      resource: { select: { name: true } },
-      location: { select: { timezone: true } },
-    },
+    include: floorInclude,
   });
+}
+
+export async function getDashboardFloor(
+  organizationId: string,
+  now = new Date(),
+) {
+  const timeZone = await getOrgTimezone(organizationId);
+  const today = resolveTodayPeriod(timeZone, now);
+
+  const [open, recentlyCompleted] = await Promise.all([
+    db.booking.findMany({
+      where: {
+        organizationId,
+        status: { in: ["PENDING", "CONFIRMED"] },
+        startAt: { gte: today.start, lt: today.end },
+      },
+      orderBy: { startAt: "asc" },
+      include: floorInclude,
+    }),
+    db.booking.findMany({
+      where: {
+        organizationId,
+        status: "COMPLETED",
+        startAt: { gte: today.start, lt: today.end },
+      },
+      orderBy: { startAt: "desc" },
+      take: 5,
+      include: floorInclude,
+    }),
+  ]);
+
+  const { current, upcoming } = splitFloorBookings(open, now);
+  return { current, upcoming, recentlyCompleted, timeZone };
 }
 
 /** Plan usage: non-cancelled bookings with startAt in the current org-local month. */
