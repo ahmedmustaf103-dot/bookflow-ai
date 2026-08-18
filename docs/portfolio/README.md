@@ -15,3 +15,15 @@ Assets that help you get clients after the product is finished.
 
 **Live demo:** https://bookflow-ai-isga.vercel.app  
 **Public booking:** https://bookflow-ai-isga.vercel.app/book/bookflow
+
+## Live demo shop (Mustaf Barbers)
+
+The `/book/bookflow` org is the one to show on calls and in the video.
+
+- Shop name: **Mustaf Barbers** (slug stays `bookflow`)
+- Location: East London
+- Services: Haircut £35 · Beard trim £15 · Cut & style £55
+- Staff: Mustaf Ahmed, Adam Khan (Mon–Sat)
+- Diary has upcoming appointments so dashboard Current / Upcoming / Calendar look busy
+
+Do not use the gym org (`pgym`) in the pitch. One barber demo is enough.
