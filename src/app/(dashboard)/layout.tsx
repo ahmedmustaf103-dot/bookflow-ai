@@ -105,9 +105,20 @@ export default async function DashboardLayout({
         .map(({ href, label, group }) => ({ href, label, group }))
     : [];
 
+  const orgs = ctx.memberships.map((membership) => ({
+    id: membership.organizationId,
+    name: membership.organization.name,
+    slug: membership.organization.slug,
+  }));
+
   return (
     <AppClerkProvider>
-      <DashboardShell orgName={ctx.organization?.name} nav={nav}>
+      <DashboardShell
+        orgName={ctx.organization?.name}
+        currentOrgId={ctx.organization?.id ?? null}
+        orgs={orgs}
+        nav={nav}
+      >
         {children}
       </DashboardShell>
     </AppClerkProvider>

@@ -1,3 +1,7 @@
+/**
+ * E2E/integration fixture only (`e2e-test-shop`).
+ * Presentation data lives in `demo-seed.ts` (`bookflow-demo`).
+ */
 import {
   TEST_BUFFER_AFTER_MIN,
   TEST_LOCATION_NAME,

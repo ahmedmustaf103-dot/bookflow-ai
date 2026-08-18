@@ -6,6 +6,11 @@ import { useEffect, useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 
 import { CommandPalette } from "@/components/dashboard/command-palette";
+import {
+  EnsureDemoShop,
+  OrgSwitcher,
+  type DashboardOrgOption,
+} from "@/components/dashboard/org-switcher";
 import { Kbd } from "@/components/ui/kbd";
 import { ToastEventBridge, ToastProvider } from "@/components/ui/toast";
 
@@ -73,10 +78,14 @@ function NavLinks({
 
 export function DashboardShell({
   orgName,
+  currentOrgId,
+  orgs = [],
   nav,
   children,
 }: {
   orgName?: string | null;
+  currentOrgId?: string | null;
+  orgs?: DashboardOrgOption[];
   nav: NavItem[];
   children: React.ReactNode;
 }) {
@@ -88,10 +97,15 @@ export function DashboardShell({
   }, [pathname]);
 
   const flatNav = nav.map(({ href, label }) => ({ href, label }));
+  const demoOrgId = orgs.find((org) => org.slug === "bookflow-demo")?.id ?? null;
 
   return (
     <ToastProvider>
     <ToastEventBridge />
+    <EnsureDemoShop
+      demoOrgId={demoOrgId}
+      currentOrgId={currentOrgId ?? null}
+    />
     <div className="flex min-h-screen bg-[var(--bg)]">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] md:flex">
@@ -103,7 +117,9 @@ export function DashboardShell({
             BookFlow AI
           </Link>
         </div>
-        {orgName ? (
+        {orgs.length > 0 ? (
+          <OrgSwitcher orgs={orgs} currentOrgId={currentOrgId ?? null} />
+        ) : orgName ? (
           <p className="truncate border-b border-[var(--border)] px-4 py-2.5 text-xs text-[var(--ink-tertiary)]">
             {orgName}
           </p>
@@ -157,6 +173,9 @@ export function DashboardShell({
             id="mobile-nav"
             className="border-b border-[var(--border)] bg-[var(--surface)] md:hidden"
           >
+            {orgs.length > 1 ? (
+              <OrgSwitcher orgs={orgs} currentOrgId={currentOrgId ?? null} />
+            ) : null}
             <NavLinks
               items={nav}
               pathname={pathname}
