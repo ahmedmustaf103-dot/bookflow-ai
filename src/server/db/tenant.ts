@@ -107,10 +107,7 @@ export async function findOrgBooking(
 }
 
 /** Load a client by id only if it belongs to the organization. */
-export async function findOrgClient(
-  organizationId: string,
-  clientId: string,
-) {
+export async function findOrgClient(organizationId: string, clientId: string) {
   return db.client.findFirst({
     where: { id: clientId, organizationId },
   });
@@ -123,5 +120,15 @@ export async function findOrgService(
 ) {
   return db.service.findFirst({
     where: { id: serviceId, organizationId },
+  });
+}
+
+/** Load a resource by id only if it belongs to the organization. */
+export async function findOrgResource(
+  organizationId: string,
+  resourceId: string,
+) {
+  return db.resource.findFirst({
+    where: { id: resourceId, organizationId },
   });
 }

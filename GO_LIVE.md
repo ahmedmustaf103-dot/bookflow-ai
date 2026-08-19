@@ -2,7 +2,7 @@
 
 Ship BookFlow AI on Vercel with a managed Postgres and the integrations below.
 
-See also [docs/NOTIFICATIONS.md](./docs/NOTIFICATIONS.md) for outbox flush vs cron timing.
+See also [docs/NOTIFICATIONS.md](./docs/NOTIFICATIONS.md) for outbox flush vs cron timing, and [docs/OPERATOR.md](./docs/OPERATOR.md) for the shop-owner runbook (env vars, 5-minute cron, how to prove a reminder sent).
 
 ## 1. Database
 
@@ -41,11 +41,11 @@ Vercel Hobby cannot run `/api/cron/reminders` every 5 minutes. Use an external s
 
 ### Endpoint
 
-| | |
-| - | - |
-| **URL** | `https://<your-vercel-host>/api/cron/reminders` |
-| **Methods** | `GET` or `POST` (both accepted) |
-| **Auth header** | `Authorization: Bearer <CRON_SECRET>` |
+|                   |                                                                             |
+| ----------------- | --------------------------------------------------------------------------- |
+| **URL**           | `https://<your-vercel-host>/api/cron/reminders`                             |
+| **Methods**       | `GET` or `POST` (both accepted)                                             |
+| **Auth header**   | `Authorization: Bearer <CRON_SECRET>`                                       |
 | **Query secrets** | **Do not** put the secret in the URL (`?secret=` is rejected / unsupported) |
 
 `<CRON_SECRET>` must match the `CRON_SECRET` environment variable on Vercel. Generate a long random value (e.g. `openssl rand -hex 32`). Never commit it.
@@ -58,8 +58,8 @@ That keeps appointment reminders within a few minutes of `scheduledFor` and drai
 
 ### Vercel env var
 
-| Variable | Required | Notes |
-| -------- | -------- | ----- |
+| Variable      | Required              | Notes                                                                                                    |
+| ------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
 | `CRON_SECRET` | **Yes** in production | Without it the route returns `503` in production. Same value for Vercel Cron and the external scheduler. |
 
 Also ensure `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (and Twilio vars if using SMS reminders) are set, or sends will defer as “provider not configured”.
@@ -116,12 +116,12 @@ Calling the endpoint repeatedly is safe: rows are claimed with `PENDING → PROC
 
 ### Behaviour already guaranteed by the route
 
-| Concern | Behaviour |
-| ------- | ---------- |
-| Due selection | Only `PENDING` rows with `scheduledFor <= now` |
+| Concern                     | Behaviour                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| Due selection               | Only `PENDING` rows with `scheduledFor <= now`                                     |
 | Idempotent / no double send | Optimistic claim (`updateMany` where still `PENDING`); lost races → `skippedClaim` |
-| Stale jobs | `PROCESSING` older than 15 minutes reclaimed to `PENDING` each run |
-| Failures | Error → `PENDING` + backoff retry (or `FAILED` after max attempts) |
+| Stale jobs                  | `PROCESSING` older than 15 minutes reclaimed to `PENDING` each run                 |
+| Failures                    | Error → `PENDING` + backoff retry (or `FAILED` after max attempts)                 |
 
 More detail: [docs/NOTIFICATIONS.md](./docs/NOTIFICATIONS.md).
 
@@ -150,13 +150,13 @@ Set `OPENAI_API_KEY` and/or `GOOGLE_GENERATIVE_AI_API_KEY`, plus `AI_PROVIDER`.
 
 ## 7. Observability & scale
 
-| Integration | Vars |
-| ----------- | ---- |
-| **Sentry (required for prod ops)** | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` |
-| Upstash Redis (shared slot cache + rate limits) | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
-| Twilio SMS reminders (Growth/Business) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` |
-| Vercel Blob (logo/favicon uploads in prod) | `BLOB_READ_WRITE_TOKEN` |
-| Google Calendar sync | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET` |
+| Integration                                     | Vars                                                            |
+| ----------------------------------------------- | --------------------------------------------------------------- |
+| **Sentry (required for prod ops)**              | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`                          |
+| Upstash Redis (shared slot cache + rate limits) | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`            |
+| Twilio SMS reminders (Growth/Business)          | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` |
+| Vercel Blob (logo/favicon uploads in prod)      | `BLOB_READ_WRITE_TOKEN`                                         |
+| Google Calendar sync                            | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`    |
 
 Trigger a test error after deploy and confirm it appears in Sentry.
 

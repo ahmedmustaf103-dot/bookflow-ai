@@ -12,12 +12,12 @@ After a booking **confirmation**, **cancellation**, or **reschedule** is enqueue
 
 ## What still needs a frequent cron
 
-| Kind | Why |
-| ---- | --- |
-| `BOOKING_REMINDER` (email/SMS) | `scheduledFor` is hours before `startAt` |
-| `FOLLOW_UP` / `REVIEW_REQUEST` / `REBOOKING_REMINDER` | Scheduled after completion |
-| Retries after provider failure | Backoff until next flush |
-| Stale `PROCESSING` reclaim | Workers that died mid-send |
+| Kind                                                  | Why                                      |
+| ----------------------------------------------------- | ---------------------------------------- |
+| `BOOKING_REMINDER` (email/SMS)                        | `scheduledFor` is hours before `startAt` |
+| `FOLLOW_UP` / `REVIEW_REQUEST` / `REBOOKING_REMINDER` | Scheduled after completion               |
+| Retries after provider failure                        | Backoff until next flush                 |
+| Stale `PROCESSING` reclaim                            | Workers that died mid-send               |
 
 ## Vercel Hobby limitation (current deploy)
 
@@ -48,17 +48,19 @@ Alternatively upgrade to **Vercel Pro** and change the schedule to `*/5 * * * *`
 
 Until an external (or Pro) cron is configured, **reminders and post-visit automations are not reliable for client use**, even though confirm/cancel/reschedule emails flush promptly.
 
+Operator checklist (env vars, curl tests, FAILED rows): [OPERATOR.md](./OPERATOR.md).
+
 ## Transactional vs marketing consent
 
-| Kind | Class | `marketingOptIn` required? |
-| ---- | ----- | -------------------------- |
-| `BOOKING_CONFIRMATION` | Transactional | No |
-| `BOOKING_CANCELLATION` | Transactional | No |
-| `BOOKING_RESCHEDULED` | Transactional | No |
-| `BOOKING_REMINDER` (email/SMS) | Transactional | No |
-| `FOLLOW_UP` | Marketing | **Yes** |
-| `REVIEW_REQUEST` | Marketing | **Yes** |
-| `REBOOKING_REMINDER` | Marketing | **Yes** |
+| Kind                           | Class         | `marketingOptIn` required? |
+| ------------------------------ | ------------- | -------------------------- |
+| `BOOKING_CONFIRMATION`         | Transactional | No                         |
+| `BOOKING_CANCELLATION`         | Transactional | No                         |
+| `BOOKING_RESCHEDULED`          | Transactional | No                         |
+| `BOOKING_REMINDER` (email/SMS) | Transactional | No                         |
+| `FOLLOW_UP`                    | Marketing     | **Yes**                    |
+| `REVIEW_REQUEST`               | Marketing     | **Yes**                    |
+| `REBOOKING_REMINDER`           | Marketing     | **Yes**                    |
 
 Enforcement:
 

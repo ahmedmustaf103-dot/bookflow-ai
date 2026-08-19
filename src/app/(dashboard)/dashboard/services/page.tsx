@@ -5,15 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { Surface } from "@/components/ui/surface";
+import { formatMoney } from "@/lib/client-tags";
 import { createServiceAction } from "@/server/actions/tenant";
 import { requireOrgRole } from "@/server/tenant/context";
-
-function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(cents / 100);
-}
 
 export default async function ServicesPage() {
   const ctx = await requireOrgRole("ADMIN");
@@ -21,10 +15,9 @@ export default async function ServicesPage() {
   const [services, resources] = await Promise.all([
     ctx.db.service.findMany({
       include: { resources: { include: { resource: true } } },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
     }),
     ctx.db.resource.findMany({
-      where: { isActive: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -53,11 +46,23 @@ export default async function ServicesPage() {
               <li key={s.id} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium">{s.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium">{s.name}</p>
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium tracking-wide uppercase ${
+                          s.isActive
+                            ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                            : "bg-[var(--muted)] text-[var(--ink-secondary)]"
+                        }`}
+                      >
+                        {s.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
                     <p className="text-xs text-[var(--ink-tertiary)]">
                       {s.durationMin} min
-                      {s.bufferAfter ? ` · +${s.bufferAfter}m buffer` : ""} ·{" "}
-                      {formatMoney(s.priceCents, s.currency)}
+                      {s.bufferAfter
+                        ? ` · +${s.bufferAfter}m buffer`
+                        : ""} · {formatMoney(s.priceCents, s.currency)}
                     </p>
                     <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
                       {s.resources.length > 0
@@ -65,6 +70,13 @@ export default async function ServicesPage() {
                         : "No resources assigned"}
                     </p>
                   </div>
+                  <ButtonLink
+                    href={`/dashboard/services/${s.id}`}
+                    size="sm"
+                    variant="secondary"
+                  >
+                    Edit
+                  </ButtonLink>
                 </div>
               </li>
             ))}

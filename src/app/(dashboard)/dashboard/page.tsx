@@ -48,10 +48,21 @@ export default async function DashboardPage() {
         description={`Welcome${ctx.user.firstName ? `, ${ctx.user.firstName}` : ""}. Plan ${ctx.organization.plan}.`}
         actions={
           <>
-            <ButtonLink href="/dashboard/analytics" size="sm" variant="secondary">
+            <ButtonLink href="/dashboard/appointments/new" size="sm">
+              New appointment
+            </ButtonLink>
+            <ButtonLink
+              href="/dashboard/analytics"
+              size="sm"
+              variant="secondary"
+            >
               Analytics
             </ButtonLink>
-            <ButtonLink href="/dashboard/appointments" size="sm" variant="secondary">
+            <ButtonLink
+              href="/dashboard/appointments"
+              size="sm"
+              variant="secondary"
+            >
               Calendar
             </ButtonLink>
           </>

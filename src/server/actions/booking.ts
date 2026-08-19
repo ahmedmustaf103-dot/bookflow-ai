@@ -2,24 +2,30 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { formatInTimeZone } from "date-fns-tz";
 
-import { err, type ActionResult } from "@/lib/result";
+import { toSafeActionError } from "@/lib/action-errors";
+import { env } from "@/lib/env";
+import { getClientIp } from "@/lib/request-ip";
+import { err, ok, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
+import { getSlotsForServiceResource } from "@/server/availability/slots";
 import {
   createBillingPortalSession,
   createCheckoutSession,
 } from "@/server/billing/checkout";
-import { env } from "@/lib/env";
-import { getClientIp } from "@/lib/request-ip";
 import {
   createBooking,
   rescheduleBooking,
   transitionBooking,
 } from "@/server/bookings/service";
+import { db } from "@/server/db";
 import { assertRateLimit } from "@/server/rate-limit";
 import { getActiveOrganization } from "@/server/tenant/context";
 import {
   checkoutSchema,
+  dashboardBookingSchema,
+  dashboardSlotsSchema,
   parseForm,
   publicBookingSchema,
   rescheduleBookingSchema,
@@ -73,6 +79,129 @@ export async function createPublicBookingAction(
     source: "PUBLIC",
     idempotencyKey: idempotencyKey ?? null,
   });
+}
+
+export async function createDashboardBookingAction(
+  formData: FormData,
+): Promise<ActionResult<{ bookingId: string }>> {
+  const ctx = await getActiveOrganization();
+  if (!ctx.organization || !ctx.membership) {
+    return err("No organization selected");
+  }
+  await requireMembership(ctx.organization.id, "STAFF");
+
+  const limited = await assertRateLimit({
+    name: "dashboard_booking",
+    key: `${ctx.organization.id}:${ctx.user.id}`,
+    limit: 40,
+    windowSec: 60,
+    message: "Too many bookings — please wait a minute",
+  });
+  if (!limited.ok) return err(limited.error);
+
+  const parsed = parseForm(dashboardBookingSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
+
+  const startAt = new Date(parsed.data.startAt);
+  if (Number.isNaN(startAt.getTime())) return err("Invalid start time");
+
+  let name = parsed.data.name;
+  let email = parsed.data.email || null;
+  let phone = parsed.data.phone ?? null;
+  let marketingOptIn = parsed.data.marketingOptIn;
+
+  if (parsed.data.clientId) {
+    const existing = await db.client.findFirst({
+      where: {
+        id: parsed.data.clientId,
+        organizationId: ctx.organization.id,
+      },
+    });
+    if (!existing) return err("Client not found");
+    name = existing.name;
+    email = existing.email;
+    phone = parsed.data.phone ?? existing.phone;
+    if (!parsed.data.marketingOptIn) {
+      marketingOptIn = existing.marketingOptIn;
+    }
+  }
+
+  const result = await createBooking({
+    organizationId: ctx.organization.id,
+    serviceId: parsed.data.serviceId,
+    resourceId: parsed.data.resourceId,
+    startAt,
+    client: {
+      name,
+      email,
+      phone,
+      notes: parsed.data.notes ?? null,
+      marketingOptIn,
+    },
+    source: "DASHBOARD",
+    actorId: ctx.user.id,
+    idempotencyKey: `dash:${ctx.organization.id}:${parsed.data.resourceId}:${startAt.toISOString()}:${ctx.user.id}`,
+  });
+
+  if (result.ok) {
+    revalidatePath("/dashboard/appointments");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/clients");
+  }
+  return result;
+}
+
+export async function fetchDashboardSlotsAction(input: {
+  serviceId: string;
+  resourceId: string;
+  day: string;
+}): Promise<ActionResult<Array<{ startIso: string; label: string }>>> {
+  const ctx = await getActiveOrganization();
+  if (!ctx.organization) return err("No organization selected");
+  await requireMembership(ctx.organization.id, "STAFF");
+
+  const parsed = dashboardSlotsSchema.safeParse(input);
+  if (!parsed.success) {
+    return err(parsed.error.issues[0]?.message ?? "Invalid input");
+  }
+
+  const limited = await assertRateLimit({
+    name: "dashboard_slots",
+    key: `${ctx.organization.id}:${ctx.user.id}`,
+    limit: 60,
+    windowSec: 60,
+  });
+  if (!limited.ok) return err(limited.error);
+
+  const resource = await db.resource.findFirst({
+    where: {
+      id: parsed.data.resourceId,
+      organizationId: ctx.organization.id,
+      isActive: true,
+    },
+    include: { location: true },
+  });
+  if (!resource) return err("Staff member not found");
+
+  try {
+    const slots = await getSlotsForServiceResource({
+      organizationId: ctx.organization.id,
+      serviceId: parsed.data.serviceId,
+      resourceId: parsed.data.resourceId,
+      fromDate: parsed.data.day,
+      toDate: parsed.data.day,
+      requireLink: true,
+    });
+    const tz = resource.location.timezone;
+    return ok(
+      slots.slice(0, 48).map((s) => ({
+        startIso: s.start.toISOString(),
+        label: formatInTimeZone(s.start, tz, "HH:mm"),
+      })),
+    );
+  } catch (e) {
+    return err(toSafeActionError(e, "Unable to load times"));
+  }
 }
 
 export async function transitionBookingAction(

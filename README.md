@@ -42,6 +42,7 @@ Full diagram and sequence notes: [`docs/portfolio/architecture.md`](./docs/portf
 Database ERD: [`docs/portfolio/erd.md`](./docs/portfolio/erd.md)  
 Case study template: [`docs/portfolio/case-study.md`](./docs/portfolio/case-study.md)  
 Notification timing: [`docs/NOTIFICATIONS.md`](./docs/NOTIFICATIONS.md)  
+Operator runbook (cron, Resend, reminders): [`docs/OPERATOR.md`](./docs/OPERATOR.md)  
 Analytics metrics: [`docs/ANALYTICS.md`](./docs/ANALYTICS.md)
 
 ## Stack

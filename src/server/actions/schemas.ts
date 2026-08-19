@@ -98,9 +98,66 @@ export const createResourceSchema = z.object({
 
 export const createServiceSchema = z.object({
   name: z.string().trim().min(1, "Service name is required").max(120),
-  durationMin: z.coerce.number().int().min(5).max(24 * 60),
+  durationMin: z.coerce
+    .number()
+    .int()
+    .min(5)
+    .max(24 * 60),
   price: z.coerce.number().min(0).max(1_000_000).default(0),
   bufferAfter: z.coerce.number().int().min(0).max(240).default(0),
+});
+
+export const updateServiceSchema = z.object({
+  serviceId: id,
+  name: z.string().trim().min(1, "Service name is required").max(120),
+  description: z
+    .string()
+    .optional()
+    .transform((v) => {
+      const t = (v ?? "").trim().slice(0, 2000);
+      return t === "" ? null : t;
+    }),
+  durationMin: z.coerce
+    .number()
+    .int()
+    .min(5)
+    .max(24 * 60),
+  price: z.coerce.number().min(0).max(1_000_000),
+  bufferBefore: z.coerce.number().int().min(0).max(240).optional().default(0),
+  bufferAfter: z.coerce.number().int().min(0).max(240).optional().default(0),
+  isActive: checkboxOn,
+});
+
+export const updateResourceSchema = z.object({
+  resourceId: id,
+  name: z.string().trim().min(1, "Staff name is required").max(120),
+  isActive: checkboxOn,
+});
+
+export const dashboardBookingSchema = z.object({
+  clientId: optionalText(64),
+  name: z.string().trim().min(2, "Client name is required").max(120),
+  email: z
+    .union([z.string(), z.undefined()])
+    .transform((v) => (v ?? "").trim())
+    .refine((v) => v === "" || z.string().email().safeParse(v).success, {
+      message: "Invalid email",
+    }),
+  phone: optionalText(32),
+  notes: optionalText(2000),
+  marketingOptIn: checkboxOn,
+  serviceId: id,
+  resourceId: id,
+  startAt: z.string().trim().min(1, "Choose a time"),
+});
+
+export const dashboardSlotsSchema = z.object({
+  serviceId: id,
+  resourceId: id,
+  day: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date"),
 });
 
 export const updateClientSchema = z.object({
@@ -156,10 +213,9 @@ export const updateOrgSettingsSchema = z.object({
   reviewUrl: z
     .union([z.string(), z.undefined()])
     .transform((v) => (v ?? "").trim())
-    .refine(
-      (v) => v === "" || z.string().url().safeParse(v).success,
-      { message: "Review URL must be a valid URL" },
-    )
+    .refine((v) => v === "" || z.string().url().safeParse(v).success, {
+      message: "Review URL must be a valid URL",
+    })
     .transform((v) => (v === "" ? null : v)),
   rebookingEnabled: checkboxOn,
   rebookingDaysAfter: z.coerce.number().int().min(1).max(365),

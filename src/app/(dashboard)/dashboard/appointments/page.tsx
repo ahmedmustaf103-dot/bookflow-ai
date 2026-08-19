@@ -1,10 +1,13 @@
-import { addDays, endOfMonth, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
+import {
+  addDays,
+  endOfMonth,
+  endOfWeek,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
-import {
-  CalendarBoard,
-  type CalendarBooking,
-} from "./calendar-board";
+import { CalendarBoard, type CalendarBooking } from "./calendar-board";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireOrgRole } from "@/server/tenant/context";
@@ -62,8 +65,7 @@ export default async function AppointmentsPage({
   const ctx = await requireOrgRole("STAFF");
   const params = await searchParams;
   const tz = ctx.organization.timezoneDefault;
-  const day =
-    params.day ?? formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
+  const day = params.day ?? formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
   const view: View =
     params.view === "week" || params.view === "month" ? params.view : "day";
   const resourceId = params.resourceId?.trim() || undefined;
@@ -112,13 +114,18 @@ export default async function AppointmentsPage({
         title="Calendar"
         description="Day, week, and month views — drag bookings to reschedule. Filter by staff."
         actions={
-          <ButtonLink
-            href={`/book/${ctx.organization.slug}`}
-            variant="secondary"
-            size="sm"
-          >
-            Booking page
-          </ButtonLink>
+          <>
+            <ButtonLink href="/dashboard/appointments/new" size="sm">
+              New appointment
+            </ButtonLink>
+            <ButtonLink
+              href={`/book/${ctx.organization.slug}`}
+              variant="secondary"
+              size="sm"
+            >
+              Booking page
+            </ButtonLink>
+          </>
         }
       />
 

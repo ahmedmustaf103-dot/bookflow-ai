@@ -24,7 +24,10 @@ import {
   createResourceSchema,
   createServiceSchema,
   parseForm,
+  updateResourceSchema,
+  updateServiceSchema,
 } from "@/server/actions/schemas";
+import { updateResource, updateService } from "@/server/catalog/catalog";
 
 export async function createOrganizationAction(formData: FormData) {
   const parsed = parseForm(createOrganizationSchema, formData);
@@ -66,8 +69,7 @@ export async function createLocationAction(
       data: {
         organizationId: ctx.organization.id,
         name: parsed.data.name,
-        timezone:
-          parsed.data.timezone || ctx.organization.timezoneDefault,
+        timezone: parsed.data.timezone || ctx.organization.timezoneDefault,
       },
     });
 
@@ -184,6 +186,78 @@ export async function createServiceAction(
   } catch (e) {
     return err(toSafeActionError(e, "Unable to create service"));
   }
+}
+
+export async function updateServiceAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const ctx = await getActiveOrganization();
+  if (!ctx.organization) return err("No organization selected");
+  await requireMembership(ctx.organization.id, "ADMIN");
+
+  const parsed = parseForm(updateServiceSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
+
+  const resourceIds = formData
+    .getAll("resourceIds")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 50);
+
+  const result = await updateService({
+    organizationId: ctx.organization.id,
+    serviceId: parsed.data.serviceId,
+    name: parsed.data.name,
+    description: parsed.data.description,
+    durationMin: parsed.data.durationMin,
+    priceCents: Math.round(parsed.data.price * 100),
+    bufferBefore: parsed.data.bufferBefore,
+    bufferAfter: parsed.data.bufferAfter,
+    isActive: parsed.data.isActive,
+    resourceIds,
+    actorId: ctx.user.id,
+  });
+
+  if (result.ok) {
+    revalidatePath("/dashboard/services");
+    revalidatePath(`/dashboard/services/${parsed.data.serviceId}`);
+    revalidatePath("/dashboard/staff");
+  }
+  return result;
+}
+
+export async function updateResourceAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const ctx = await getActiveOrganization();
+  if (!ctx.organization) return err("No organization selected");
+  await requireMembership(ctx.organization.id, "ADMIN");
+
+  const parsed = parseForm(updateResourceSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
+
+  const serviceIds = formData
+    .getAll("serviceIds")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 50);
+
+  const result = await updateResource({
+    organizationId: ctx.organization.id,
+    resourceId: parsed.data.resourceId,
+    name: parsed.data.name,
+    isActive: parsed.data.isActive,
+    serviceIds,
+    actorId: ctx.user.id,
+  });
+
+  if (result.ok) {
+    revalidatePath("/dashboard/staff");
+    revalidatePath(`/dashboard/staff/${parsed.data.resourceId}`);
+    revalidatePath("/dashboard/services");
+    revalidatePath("/dashboard/availability");
+  }
+  return result;
 }
 
 export async function updateAvailabilityRulesAction(

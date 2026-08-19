@@ -34,13 +34,12 @@ export default async function AvailabilityPage({
   const params = await searchParams;
 
   const resources = await ctx.db.resource.findMany({
-    where: { isActive: true },
     include: {
       location: true,
       rules: true,
       services: { include: { service: true } },
     },
-    orderBy: { name: "asc" },
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
   });
 
   const resource =
@@ -100,6 +99,7 @@ export default async function AvailabilityPage({
                 }`}
               >
                 {r.name}
+                {!r.isActive ? " (inactive)" : ""}
               </a>
             ))}
           </div>
@@ -148,7 +148,9 @@ export default async function AvailabilityPage({
           ) : null}
 
           <div>
-            <h2 className="text-sm font-semibold">Slot preview (next 7 days)</h2>
+            <h2 className="text-sm font-semibold">
+              Slot preview (next 7 days)
+            </h2>
             <div className="mt-3 inline-flex flex-wrap gap-1 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-0.5">
               {services.map((s) => (
                 <a
@@ -166,7 +168,9 @@ export default async function AvailabilityPage({
             </div>
 
             {previewError ? (
-              <p className="mt-4 text-sm text-[var(--danger)]">{previewError}</p>
+              <p className="mt-4 text-sm text-[var(--danger)]">
+                {previewError}
+              </p>
             ) : null}
 
             {service && resource ? (

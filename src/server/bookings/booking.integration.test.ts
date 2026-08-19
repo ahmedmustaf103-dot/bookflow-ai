@@ -63,6 +63,131 @@ describe("booking reliability (DB)", () => {
     expect(rows.some((b) => b.service.name === "Haircut")).toBe(true);
   });
 
+  it("creates a dashboard-source booking that appears on the calendar and client history", async () => {
+    const slots = await openSlots();
+    const start = slots.find((s) => s.start.getUTCHours() >= 12);
+    expect(start).toBeTruthy();
+
+    const email = `walkin+${Date.now()}@example.test`;
+    const created = await createBooking({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      startAt: start!.start,
+      client: {
+        name: "Walk In",
+        email,
+        notes: "Phone booking",
+      },
+      source: "DASHBOARD",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const db = getTestPrisma();
+    const booking = await db.booking.findFirst({
+      where: {
+        id: created.data.bookingId,
+        organizationId: seed.organizationId,
+      },
+      include: { client: true },
+    });
+    expect(booking?.source).toBe("DASHBOARD");
+    expect(booking?.status).toBe("CONFIRMED");
+    expect(booking?.client.email).toBe(email);
+
+    const history = await db.booking.findMany({
+      where: {
+        organizationId: seed.organizationId,
+        clientId: booking!.clientId,
+      },
+    });
+    expect(history.some((b) => b.id === booking!.id)).toBe(true);
+
+    const kinds = (
+      await db.notificationOutbox.findMany({
+        where: { bookingId: booking!.id },
+      })
+    ).map((r) => r.kind);
+    expect(kinds).toContain(OUTBOX_KINDS.BOOKING_CONFIRMATION);
+    expect(kinds).toContain(OUTBOX_KINDS.BOOKING_CREATED);
+  });
+
+  it("rejects a dashboard double-book of the same slot", async () => {
+    const slots = await openSlots();
+    const start = slots.find((s) => s.start.getUTCHours() >= 13);
+    expect(start).toBeTruthy();
+
+    const first = await createBooking({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      startAt: start!.start,
+      client: { name: "Dash A", email: `da+${Date.now()}@example.test` },
+      source: "DASHBOARD",
+    });
+    expect(first.ok).toBe(true);
+
+    const second = await createBooking({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      startAt: start!.start,
+      client: { name: "Dash B", email: `db+${Date.now()}@example.test` },
+      source: "DASHBOARD",
+    });
+    expect(second.ok).toBe(false);
+    if (!second.ok) {
+      expect(second.error).toMatch(
+        /just booked|no longer available|taken|conflict/i,
+      );
+    }
+  });
+
+  it("applies buffer rules to dashboard bookings", async () => {
+    const startAt = new Date();
+    startAt.setUTCDate(startAt.getUTCDate() + 5);
+    startAt.setUTCHours(9, 0, 0, 0);
+    const blocked = new Date(startAt.getTime() + 30 * 60_000);
+    const afterBuffer = new Date(startAt.getTime() + 60 * 60_000);
+
+    const first = await createBooking({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      startAt,
+      client: { name: "Dash Buffer", email: `dbuf+${Date.now()}@example.test` },
+      source: "DASHBOARD",
+    });
+    expect(first.ok).toBe(true);
+
+    const adjacent = await createBooking({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      startAt: blocked,
+      client: {
+        name: "Dash Adjacent",
+        email: `dadj+${Date.now()}@example.test`,
+      },
+      source: "DASHBOARD",
+    });
+    expect(adjacent.ok).toBe(false);
+
+    const later = await createBooking({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      startAt: afterBuffer,
+      client: {
+        name: "Dash After buffer",
+        email: `dlater+${Date.now()}@example.test`,
+      },
+      source: "DASHBOARD",
+    });
+    expect(later.ok).toBe(true);
+  });
+
   it("rejects a double-book of the same slot", async () => {
     const slots = await openSlots();
     const start = slots[0];
@@ -94,7 +219,9 @@ describe("booking reliability (DB)", () => {
     expect(oks).toHaveLength(1);
     expect(fails).toHaveLength(1);
     if (!fails[0]!.ok) {
-      expect(fails[0].error).toMatch(/no longer available|taken|conflict/i);
+      expect(fails[0].error).toMatch(
+        /just booked|no longer available|taken|conflict/i,
+      );
     }
   });
 
@@ -265,7 +392,14 @@ describe("outbox + automation (DB)", () => {
     expect(ownerRow!.dedupeKey).toBe(
       `BOOKING_CREATED:${created.data.bookingId}:EMAIL:${seed.ownerEmail}`,
     );
-    expect(ownerRow!.status).toBe("PENDING");
+    // Confirmation + owner notify are due immediately and flushed via after().
+    // Tests have no email provider, so the row may already be claimed.
+    expect(["PENDING", "PROCESSING", "SENT", "FAILED"]).toContain(
+      ownerRow!.status,
+    );
+    expect(["PENDING", "PROCESSING", "SENT", "FAILED"]).toContain(
+      confirmation!.status,
+    );
     expect(confirmation!.toAddress).toBe(clientEmail);
     expect(reminder!.status).toBe("PENDING");
     const expectedReminderAt =
@@ -397,10 +531,7 @@ describe("outbox + automation (DB)", () => {
       where: {
         bookingId: created.data.bookingId,
         kind: {
-          in: [
-            OUTBOX_KINDS.BOOKING_CONFIRMATION,
-            OUTBOX_KINDS.BOOKING_CREATED,
-          ],
+          in: [OUTBOX_KINDS.BOOKING_CONFIRMATION, OUTBOX_KINDS.BOOKING_CREATED],
         },
       },
     });

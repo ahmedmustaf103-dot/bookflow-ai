@@ -14,7 +14,7 @@ export default async function StaffPage() {
   const [resources, locations] = await Promise.all([
     ctx.db.resource.findMany({
       include: { location: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
     }),
     ctx.db.location.findMany({
       where: { isActive: true },
@@ -48,11 +48,29 @@ export default async function StaffPage() {
                 className="flex items-center justify-between gap-4 px-4 py-3"
               >
                 <div>
-                  <p className="text-sm font-medium">{r.name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium">{r.name}</p>
+                    <span
+                      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium tracking-wide uppercase ${
+                        r.isActive
+                          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                          : "bg-[var(--muted)] text-[var(--ink-secondary)]"
+                      }`}
+                    >
+                      {r.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
                   <p className="text-xs text-[var(--ink-tertiary)]">
                     {r.type} · {r.location.name}
                   </p>
                 </div>
+                <ButtonLink
+                  href={`/dashboard/staff/${r.id}`}
+                  size="sm"
+                  variant="secondary"
+                >
+                  Edit
+                </ButtonLink>
               </li>
             ))}
           </ul>
