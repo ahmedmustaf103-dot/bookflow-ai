@@ -35,6 +35,31 @@ function foldLine(line: string): string {
   return chunks.join("\r\n ");
 }
 
+export function buildConfirmationIcs(input: {
+  bookingId: string;
+  organizationName: string;
+  serviceName: string;
+  resourceName: string;
+  startAt: Date;
+  endAt: Date;
+  manageUrl?: string | null;
+  location?: string | null;
+}): string {
+  return buildBookingIcs({
+    uid: `${input.bookingId}@bookflow.ai`,
+    title: `${input.serviceName} at ${input.organizationName}`,
+    description: [
+      `With ${input.resourceName}`,
+      input.manageUrl ? `Manage: ${input.manageUrl}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    location: input.location ?? input.organizationName,
+    startAt: input.startAt,
+    endAt: input.endAt,
+  });
+}
+
 export function buildBookingIcs(input: BookingIcsInput): string {
   const now = toIcsUtc(new Date());
   const lines = [

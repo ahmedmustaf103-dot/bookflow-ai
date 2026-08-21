@@ -14,6 +14,7 @@ import {
   getOrgAnalytics,
   getDashboardFloor,
 } from "@/server/analytics/org";
+import { getPilotSetupStatus } from "@/server/onboarding/setup-status";
 import { requireOrgOrRedirect } from "@/server/tenant/context";
 
 export default async function DashboardPage() {
@@ -24,16 +25,21 @@ export default async function DashboardPage() {
     locationCount,
     resourceCount,
     serviceCount,
-    bookingTotal,
     analytics7,
     floor,
+    setup,
   ] = await Promise.all([
     ctx.db.location.count({ where: { isActive: true } }),
     ctx.db.resource.count({ where: { isActive: true } }),
     ctx.db.service.count({ where: { isActive: true } }),
-    ctx.db.booking.count(),
     getOrgAnalytics(orgId, 7),
     getDashboardFloor(orgId),
+    getPilotSetupStatus({
+      organizationId: orgId,
+      name: ctx.organization.name,
+      logoUrl: ctx.organization.logoUrl,
+      reminderHoursBefore: ctx.organization.reminderHoursBefore,
+    }),
   ]);
 
   const bookUrl = publicBookingUrl(ctx.organization);
@@ -71,9 +77,7 @@ export default async function DashboardPage() {
 
       <SetupChecklist
         orgId={ctx.organization.id}
-        hasServices={serviceCount > 0}
-        hasResources={resourceCount > 0}
-        hasBookings={bookingTotal > 0}
+        items={setup.items}
         bookPath={bookPath}
       />
 

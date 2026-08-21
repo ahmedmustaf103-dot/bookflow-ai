@@ -1,6 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 
 import { ActionForm } from "@/components/forms/action-form";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
@@ -83,7 +84,12 @@ export default async function AvailabilityPage({
       {resources.length === 0 ? (
         <EmptyState
           title="No staff resources"
-          description="Add a staff resource first."
+          description="Add a staff member first, then set their weekly hours here."
+          action={
+            <ButtonLink href="/dashboard/staff" size="sm" variant="primary">
+              Add staff
+            </ButtonLink>
+          }
         />
       ) : (
         <>

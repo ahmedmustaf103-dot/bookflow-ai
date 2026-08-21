@@ -26,13 +26,13 @@ export default async function ServicesPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Services"
-        description="Sellable offerings with duration, price, and assigned resources."
+        description="Sellable offerings with duration, price, and assigned staff. Inactive services stay on this list and do not appear on the public booking page."
       />
 
       {services.length === 0 ? (
         <EmptyState
           title="No services yet"
-          description="Add your first cut or treatment so customers can book."
+          description="Add at least one active service so the public booking page has something to sell. Inactive services stay on this list and keep old appointments."
           action={
             <ButtonLink href="#add-service" variant="primary" size="sm">
               Add service
@@ -43,7 +43,10 @@ export default async function ServicesPage() {
         <Surface padding="none" className="overflow-hidden">
           <ul className="divide-y divide-[var(--border)]">
             {services.map((s) => (
-              <li key={s.id} className="px-4 py-3">
+              <li
+                key={s.id}
+                className={`px-4 py-3 ${s.isActive ? "" : "opacity-70"}`}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">

@@ -88,6 +88,12 @@ export default async function DashboardLayout({
             min: "ADMIN" as const,
           },
           {
+            href: "/dashboard/settings/team",
+            label: "Team",
+            group: "setup" as const,
+            min: "ADMIN" as const,
+          },
+          {
             href: "/dashboard/billing",
             label: "Billing",
             group: "setup" as const,

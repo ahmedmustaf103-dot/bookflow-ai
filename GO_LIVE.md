@@ -2,7 +2,7 @@
 
 Ship BookFlow AI on Vercel with a managed Postgres and the integrations below.
 
-See also [docs/NOTIFICATIONS.md](./docs/NOTIFICATIONS.md) for outbox flush vs cron timing, and [docs/OPERATOR.md](./docs/OPERATOR.md) for the shop-owner runbook (env vars, 5-minute cron, how to prove a reminder sent).
+See also [docs/NOTIFICATIONS.md](./docs/NOTIFICATIONS.md) for outbox flush vs cron timing, [docs/OPERATOR.md](./docs/OPERATOR.md) for cron/Resend proof, and [docs/PILOT.md](./docs/PILOT.md) to onboard a real shop.
 
 ## 1. Database
 

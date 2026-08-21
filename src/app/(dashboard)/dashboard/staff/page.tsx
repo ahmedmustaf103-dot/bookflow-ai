@@ -26,13 +26,13 @@ export default async function StaffPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Staff & resources"
-        description="Bookable capacity units — chairs, rooms, or people."
+        description="Bookable people and chairs. Inactive staff stay listed here with past appointments, and they are hidden from public booking."
       />
 
       {resources.length === 0 ? (
         <EmptyState
           title="No staff or resources yet"
-          description="Add your first bookable resource to start taking appointments."
+          description="Add the people or chairs customers can book. Inactive staff stay on this list and keep existing appointments, but they will not appear on the public page."
           action={
             <ButtonLink href="#add-resource" variant="primary" size="sm">
               Add resource
@@ -45,7 +45,9 @@ export default async function StaffPage() {
             {resources.map((r) => (
               <li
                 key={r.id}
-                className="flex items-center justify-between gap-4 px-4 py-3"
+                className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                  r.isActive ? "" : "opacity-70"
+                }`}
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">

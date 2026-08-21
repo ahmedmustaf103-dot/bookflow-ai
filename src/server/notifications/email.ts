@@ -8,6 +8,7 @@ import { draftBodyToHtml } from "@/lib/ai-draft";
 import { UserFacingError } from "@/lib/action-errors";
 import { formatMoney } from "@/lib/client-tags";
 import { env } from "@/lib/env";
+import { buildConfirmationIcs } from "@/lib/ics";
 import { logger } from "@/lib/logger";
 
 export type BookingEmailInput = {
@@ -28,6 +29,8 @@ export type BookingEmailInput = {
   priceCents?: number | null;
   currency?: string | null;
   dashboardUrl?: string | null;
+  endAt?: Date | string | null;
+  calendarIcsUrl?: string | null;
 };
 
 export type SendEmailResult = { skipped: boolean };
@@ -105,9 +108,10 @@ async function deliver(input: {
   to: string;
   subject: string;
   html: string;
-  bookingId: string;
+  bookingId?: string;
   kind: string;
   organizationName: string;
+  attachments?: Array<{ filename: string; content: Buffer }>;
 }): Promise<SendEmailResult> {
   const resend = getResend();
   if (!resend) {
@@ -130,8 +134,11 @@ async function deliver(input: {
     subject: input.subject,
     html: input.html,
     headers: {
-      "X-Entity-Ref-ID": `${input.kind}:${input.bookingId}`,
+      "X-Entity-Ref-ID": `${input.kind}:${input.bookingId ?? "none"}`,
     },
+    ...(input.attachments && input.attachments.length > 0
+      ? { attachments: input.attachments }
+      : {}),
   });
 
   if (error) {
@@ -142,6 +149,43 @@ async function deliver(input: {
   }
 
   return { skipped: false };
+}
+
+function confirmationIcsAttachment(input: BookingEmailInput) {
+  const startAt = asDate(input.startAt);
+  const endAt = input.endAt ? asDate(input.endAt) : null;
+  if (!endAt || Number.isNaN(endAt.getTime()) || Number.isNaN(startAt.getTime())) {
+    return undefined;
+  }
+  try {
+    const ics = buildConfirmationIcs({
+      bookingId: input.bookingId,
+      organizationName: input.organizationName,
+      serviceName: input.serviceName,
+      resourceName: input.resourceName,
+      startAt,
+      endAt,
+      manageUrl: input.manageUrl,
+    });
+    return [
+      {
+        filename: "appointment.ics",
+        content: Buffer.from(ics, "utf8"),
+      },
+    ];
+  } catch (e) {
+    logger.warn(
+      { err: e, bookingId: input.bookingId },
+      "ICS attachment skipped — sending confirmation without it",
+    );
+    return undefined;
+  }
+}
+
+function addToCalendarLink(input: BookingEmailInput) {
+  if (!input.calendarIcsUrl && !input.manageUrl) return "";
+  const href = input.calendarIcsUrl ?? `${input.manageUrl}/calendar`;
+  return `<p style="margin:12px 0 0;font-size:13px;"><a href="${escapeHtml(href)}">Add to calendar</a></p>`;
 }
 
 export async function sendBookingConfirmation(
@@ -155,6 +199,7 @@ export async function sendBookingConfirmation(
       <p>Your appointment is confirmed.</p>
       ${appointmentList(input)}
       ${manageLink(input)}
+      ${addToCalendarLink(input)}
       <p style="color:#666;font-size:12px;">Booking ID: ${escapeHtml(input.bookingId)}</p>
     `,
     input,
@@ -166,7 +211,51 @@ export async function sendBookingConfirmation(
     bookingId: input.bookingId,
     kind: "BOOKING_CONFIRMATION",
     organizationName: input.organizationName,
+    attachments: confirmationIcsAttachment(input),
   });
+}
+
+export async function sendTeamInviteEmail(input: {
+  to: string;
+  organizationName: string;
+  role: string;
+  acceptUrl: string;
+}): Promise<SendEmailResult> {
+  const subject = `You're invited to ${input.organizationName} on BookFlow`;
+  const html = shell(
+    "Join the team",
+    `
+      <p>You've been invited to ${escapeHtml(input.organizationName)} as ${escapeHtml(input.role.toLowerCase())}.</p>
+      <p>Sign in (or create an account) with this email, then open the invite link:</p>
+      ${ctaLink(input.acceptUrl, "Accept invite", normalizeBrandPrimary(null))}
+      <p style="color:#666;font-size:12px;">This link expires in 14 days.</p>
+    `,
+    {
+      to: input.to,
+      organizationName: input.organizationName,
+      clientName: "",
+      serviceName: "",
+      resourceName: "",
+      startAt: new Date(),
+      timezone: "UTC",
+      bookingId: "invite",
+    },
+  );
+  try {
+    return await deliver({
+      to: input.to,
+      subject,
+      html,
+      kind: "TEAM_INVITE",
+      organizationName: input.organizationName,
+    });
+  } catch (e) {
+    logger.warn(
+      { err: e, to: input.to },
+      "Team invite email failed — invite still created",
+    );
+    return { skipped: true };
+  }
 }
 
 export async function sendBookingReminder(

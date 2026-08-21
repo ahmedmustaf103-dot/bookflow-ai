@@ -112,6 +112,10 @@ Follow-up, review, and rebooking **do not send** unless `clients.marketingOptIn`
 3. Use **New appointment** on the calendar for walk-ins / phone bookings (`source = DASHBOARD`).
 4. Deactivate a service or staff member instead of deleting — history stays.
 5. Share `/book/<slug>`. Inactive services/staff do not appear there.
+6. Invite extra dashboard users from Settings → Team (Clerk sign-in; org-scoped invite).
+7. Confirmation emails include an ICS attachment plus Add to calendar. Google Calendar is optional one-way push.
+
+Shop onboarding sequence: [PILOT.md](./PILOT.md). Google proof: [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md).
 
 ## What this runbook does not verify
 

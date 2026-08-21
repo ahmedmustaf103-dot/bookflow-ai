@@ -44,6 +44,8 @@ export default async function BillingPage({
     },
   ] as const;
 
+  const canBill = ctx.membership.role === "OWNER";
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -54,6 +56,15 @@ export default async function BillingPage({
             : " · No Stripe subscription"
         }`}
       />
+
+      {ctx.membership.role !== "OWNER" ? (
+        <Surface>
+          <p className="text-sm text-[var(--ink-secondary)]">
+            Only the business owner can change the paid plan. You can still view
+            the current plan here.
+          </p>
+        </Surface>
+      ) : null}
 
       {params.success ? (
         <Surface className="border-[var(--accent)] bg-[var(--accent-soft)]">
@@ -85,13 +96,17 @@ export default async function BillingPage({
                 <p className="mt-2 flex-1 text-sm text-[var(--ink-tertiary)]">
                   {p.blurb}
                 </p>
-                {p.priceId ? (
+                {p.priceId && canBill ? (
                   <form action={startCheckoutAction} className="mt-4">
                     <input type="hidden" name="plan" value={p.plan} />
                     <Button type="submit" className="w-full">
                       Subscribe
                     </Button>
                   </form>
+                ) : p.priceId ? (
+                  <p className="mt-4 text-xs text-[var(--ink-tertiary)]">
+                    Ask the owner to subscribe
+                  </p>
                 ) : (
                   <p className="mt-4 text-xs text-[var(--ink-tertiary)]">
                     Price ID not configured
@@ -101,7 +116,7 @@ export default async function BillingPage({
             ))}
           </div>
 
-          {ctx.organization.stripeCustomerId ? (
+          {canBill && ctx.organization.stripeCustomerId ? (
             <form action={openBillingPortalAction}>
               <Button type="submit" variant="secondary">
                 Open customer portal

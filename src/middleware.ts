@@ -6,6 +6,7 @@ import { clerkKeysArePlaceholders } from "@/lib/clerk-placeholders";
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/onboarding(.*)",
+  "/invite(.*)",
 ]);
 
 function appHostname() {

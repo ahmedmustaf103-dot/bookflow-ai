@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/booking-urls", () => ({
   bookingManageUrl: () => "https://app.test/book/manage/t",
+  bookingCalendarIcsUrl: () => "https://app.test/book/manage/t/calendar",
   publicBookingUrl: () => "https://app.test/book/shop",
   dashboardAppointmentsUrl: () => "https://app.test/dashboard/appointments",
 }));

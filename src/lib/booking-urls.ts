@@ -38,6 +38,14 @@ export function dashboardAppointmentsUrl() {
   return `${appOrigin()}/dashboard/appointments`;
 }
 
+/** Downloadable ICS for a public manage token. */
+export function bookingCalendarIcsUrl(
+  manageToken: string,
+  org?: OrgForBookingUrl | null,
+) {
+  return `${bookingManageUrl(manageToken, org)}/calendar`;
+}
+
 export function appHostHostname() {
   try {
     return new URL(env.NEXT_PUBLIC_APP_URL).hostname.toLowerCase();

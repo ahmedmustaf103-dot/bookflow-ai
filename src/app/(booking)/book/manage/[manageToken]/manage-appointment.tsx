@@ -193,6 +193,17 @@ export function ManageAppointmentClient({
               Cancel appointment
             </Button>
           ) : null}
+          {booking.status !== "CANCELLED" ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                window.location.href = `/book/manage/${manageToken}/calendar`;
+              }}
+            >
+              Add to calendar
+            </Button>
+          ) : null}
           {!booking.canCancel && !booking.canReschedule ? (
             <p className="text-sm text-[var(--ink-secondary)]">
               This appointment can no longer be changed online. Contact{" "}

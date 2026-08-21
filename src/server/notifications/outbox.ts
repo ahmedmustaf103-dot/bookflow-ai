@@ -42,6 +42,7 @@ import {
 } from "@/server/notifications/sms";
 import {
   bookingManageUrl,
+  bookingCalendarIcsUrl,
   dashboardAppointmentsUrl,
   publicBookingUrl,
 } from "@/lib/booking-urls";
@@ -151,12 +152,14 @@ function emailPayload(
     bookingId: ctx.bookingId,
     manageUrl: bookingManageUrl(ctx.manageToken, orgUrl),
     bookUrl: publicBookingUrl(orgUrl),
+    calendarIcsUrl: bookingCalendarIcsUrl(ctx.manageToken, orgUrl),
     reviewUrl: ctx.reviewUrl ?? null,
     logoUrl: ctx.logoUrl ?? null,
     brandPrimary: ctx.brandPrimary ?? null,
     priceCents: ctx.priceCents ?? null,
     currency: ctx.currency ?? null,
     dashboardUrl: dashboardAppointmentsUrl(),
+    endAt: ctx.endAt.toISOString(),
   };
 }
 
@@ -551,7 +554,7 @@ async function reclaimStaleProcessing(now = new Date()) {
   return result.count;
 }
 
-function normalizePayloadDate<T extends { startAt: Date | string }>(
+function normalizePayloadDate<T extends { startAt: Date | string; endAt?: Date | string | null }>(
   payload: T,
 ): T {
   return {
@@ -560,6 +563,11 @@ function normalizePayloadDate<T extends { startAt: Date | string }>(
       payload.startAt instanceof Date
         ? payload.startAt
         : new Date(payload.startAt),
+    endAt: payload.endAt
+      ? payload.endAt instanceof Date
+        ? payload.endAt
+        : new Date(payload.endAt)
+      : payload.endAt,
   };
 }
 

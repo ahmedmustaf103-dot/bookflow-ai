@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import type { ActionResult } from "@/lib/result";
 
 type Props = {
-  action: (formData: FormData) => Promise<ActionResult<{ id: string } | void>>;
+  action: (formData: FormData) => Promise<ActionResult<unknown>>;
   children: React.ReactNode;
   className?: string;
   submitLabel?: string;

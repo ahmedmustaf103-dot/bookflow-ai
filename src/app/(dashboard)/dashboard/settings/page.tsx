@@ -55,7 +55,12 @@ export default async function SettingsPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Settings"
-        description="Business preferences, branding, booking page, and automation."
+        description="Business preferences, branding, booking page, team, and automation."
+        actions={
+          <ButtonLink href="/dashboard/settings/team" size="sm">
+            Team
+          </ButtonLink>
+        }
       />
 
       <Surface className="max-w-lg">
@@ -240,7 +245,10 @@ export default async function SettingsPage({
       <Surface className="max-w-lg">
         <h2 className="text-sm font-semibold">Google Calendar</h2>
         <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-          Push new, rescheduled, and cancelled bookings to your Google Calendar.
+          One-way sync: BookFlow appointments are pushed to Google Calendar.
+          Reschedules update the event; cancellations remove it. Google never
+          blocks a BookFlow booking if sync fails. Connecting does not backfill
+          past appointments. BookFlow does not read busy time from Google.
         </p>
         {gcal === "connected" ? (
           <p className="mt-2 text-sm text-[var(--accent)]">Connected.</p>

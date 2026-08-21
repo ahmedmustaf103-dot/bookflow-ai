@@ -1,26 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Surface } from "@/components/ui/surface";
 import { fireConfetti } from "@/lib/confetti";
+import {
+  requiredSetupComplete,
+  type SetupItem,
+} from "@/server/onboarding/setup-items";
 
 type Props = {
   orgId: string;
-  hasServices: boolean;
-  hasResources: boolean;
-  hasBookings: boolean;
+  items: SetupItem[];
   bookPath: string;
 };
 
-export function SetupChecklist({
-  orgId,
-  hasServices,
-  hasResources,
-  hasBookings,
-  bookPath,
-}: Props) {
+export function SetupChecklist({ orgId, items, bookPath }: Props) {
   const shareKey = `bf_link_shared_${orgId}`;
   const celebKey = `bf_setup_celebrated_${orgId}`;
   const [shared, setShared] = useState(false);
@@ -51,38 +47,21 @@ export function SetupChecklist({
     };
   }, [shareKey]);
 
-  const items = [
-    {
-      id: "services",
-      label: "Review your services",
-      done: hasServices,
-      href: "/dashboard/services",
-    },
-    {
-      id: "staff",
-      label: "Confirm staff & hours",
-      done: hasResources,
-      href: "/dashboard/availability",
-    },
-    {
-      id: "share",
-      label: "Share your booking link",
-      done: shared,
-      href: bookPath,
-    },
-    {
-      id: "booking",
-      label: "Get your first booking",
-      done: hasBookings,
-      href: bookPath,
-    },
-  ];
+  const resolved = useMemo(
+    () =>
+      items.map((item) =>
+        item.id === "link" ? { ...item, done: shared, href: bookPath } : item,
+      ),
+    [items, shared, bookPath],
+  );
 
-  const doneCount = items.filter((i) => i.done).length;
-  const complete = doneCount === items.length;
+  const requiredDone = requiredSetupComplete(resolved);
+  const optionalLeft = resolved.filter((i) => i.optional && !i.done);
+  const doneCount = resolved.filter((i) => !i.optional && i.done).length;
+  const requiredCount = resolved.filter((i) => !i.optional).length;
 
   useEffect(() => {
-    if (!complete || dismissed) return;
+    if (!requiredDone || dismissed) return;
     try {
       if (localStorage.getItem(celebKey) === "1") return;
       localStorage.setItem(celebKey, "1");
@@ -91,10 +70,38 @@ export function SetupChecklist({
     } catch {
       // ignore
     }
-  }, [complete, dismissed, celebKey]);
+  }, [requiredDone, dismissed, celebKey]);
 
-  if (complete && dismissed) return null;
-  if (complete) return null;
+  if (requiredDone && optionalLeft.length === 0) return null;
+
+  if (requiredDone) {
+    return (
+      <Surface className="mb-6 bf-page-enter">
+        <p className="text-xs font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">
+          Optional
+        </p>
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {optionalLeft.map((item) => (
+            <li key={item.id}>
+              <Link
+                href={item.href}
+                className="bf-row-hover flex items-center justify-between gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm hover:bg-[var(--muted)]"
+              >
+                <span>{item.label}</span>
+                <span className="text-[11px] font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">
+                  Not set up
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-xs text-[var(--ink-tertiary)]">
+          Skip Google Calendar if you do not need appointments on your personal
+          calendar. Bookings still work.
+        </p>
+      </Surface>
+    );
+  }
 
   return (
     <Surface className="mb-6 bf-page-enter">
@@ -104,41 +111,55 @@ export function SetupChecklist({
             Getting started
           </p>
           <p className="mt-1 text-sm font-medium text-[var(--ink)]">
-            {doneCount} of {items.length} complete
+            {doneCount} of {requiredCount} complete
           </p>
         </div>
         <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--muted)]">
           <div
             className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-300"
-            style={{ width: `${(doneCount / items.length) * 100}%` }}
+            style={{ width: `${(doneCount / requiredCount) * 100}%` }}
           />
         </div>
       </div>
       <ul className="mt-4 flex flex-col gap-1.5">
-        {items.map((item) => (
+        {resolved.map((item) => (
           <li key={item.id}>
             <Link
               href={item.href}
-              className="bf-row-hover flex items-center gap-2.5 rounded-[var(--radius-control)] px-2 py-1.5 text-sm hover:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
+              className="bf-row-hover flex items-center justify-between gap-2.5 rounded-[var(--radius-control)] px-2 py-1.5 text-sm hover:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
             >
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                  item.done
-                    ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                    : "border border-[var(--border-strong)] text-[var(--ink-tertiary)]"
-                }`}
-                aria-hidden
-              >
-                {item.done ? "✓" : ""}
+              <span className="flex items-center gap-2.5">
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                    item.done
+                      ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                      : "border border-[var(--border-strong)] text-[var(--ink-tertiary)]"
+                  }`}
+                  aria-hidden
+                >
+                  {item.done ? "✓" : ""}
+                </span>
+                <span
+                  className={
+                    item.done
+                      ? "text-[var(--ink-tertiary)]"
+                      : "text-[var(--ink)]"
+                  }
+                >
+                  {item.label}
+                  {item.optional ? (
+                    <span className="ml-1 text-[11px] uppercase">optional</span>
+                  ) : null}
+                </span>
               </span>
               <span
-                className={
+                className={`text-[11px] font-medium tracking-wide uppercase ${
                   item.done
-                    ? "text-[var(--ink-tertiary)] line-through"
-                    : "text-[var(--ink)]"
-                }
+                    ? "text-[var(--accent)]"
+                    : "text-[var(--ink-tertiary)]"
+                }`}
               >
-                {item.label}
+                {item.done ? "Done" : "Not set up"}
               </span>
             </Link>
           </li>

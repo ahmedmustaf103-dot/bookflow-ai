@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildBookingIcs } from "./ics";
+import { buildBookingIcs, buildConfirmationIcs } from "./ics";
 
 describe("buildBookingIcs", () => {
   it("builds a valid VEVENT with UTC start/end", () => {
@@ -48,5 +48,23 @@ describe("buildBookingIcs", () => {
 
     expect(ics).not.toContain("DESCRIPTION:");
     expect(ics).not.toContain("LOCATION:");
+  });
+
+  it("builds a confirmation ICS with business, staff, and manage link", () => {
+    const ics = buildConfirmationIcs({
+      bookingId: "b1",
+      organizationName: "Mustaf Barbers",
+      serviceName: "Skin fade",
+      resourceName: "Jamie",
+      startAt: new Date("2026-07-23T09:00:00.000Z"),
+      endAt: new Date("2026-07-23T09:45:00.000Z"),
+      manageUrl: "https://app.test/book/manage/tok",
+    });
+    expect(ics).toContain("SUMMARY:Skin fade at Mustaf Barbers");
+    expect(ics).toContain(
+      "DESCRIPTION:With Jamie\\nManage: https://app.test/book/manage/tok",
+    );
+    expect(ics).toContain("LOCATION:Mustaf Barbers");
+    expect(ics).toContain("UID:b1@bookflow.ai");
   });
 });

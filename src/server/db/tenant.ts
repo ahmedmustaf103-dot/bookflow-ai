@@ -88,6 +88,7 @@ export function tenantDb(organizationId: string) {
       aiRun: s,
       notificationOutbox: s,
       membership: s,
+      organizationInvite: s,
       subscription: s,
       googleCalendarConnection: s,
     },

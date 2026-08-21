@@ -1,0 +1,102 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { err, type ActionResult } from "@/lib/result";
+import {
+  acceptInviteSchema,
+  inviteTeamMemberSchema,
+  parseForm,
+  revokeInviteSchema,
+} from "@/server/actions/schemas";
+import { requireDbUser, requireMembership } from "@/server/auth/session";
+import { assertRateLimit } from "@/server/rate-limit";
+import {
+  acceptOrganizationInvite,
+  createOrganizationInvite,
+  revokeOrganizationInvite,
+} from "@/server/team/team";
+import {
+  getActiveOrganization,
+  setActiveOrganizationId,
+} from "@/server/tenant/context";
+
+export async function inviteTeamMemberAction(
+  formData: FormData,
+): Promise<ActionResult<{ inviteId: string; acceptUrl: string }>> {
+  const ctx = await getActiveOrganization();
+  if (!ctx.organization || !ctx.membership) {
+    return err("No organization selected");
+  }
+  await requireMembership(ctx.organization.id, "ADMIN");
+
+  const limited = await assertRateLimit({
+    name: "team_invite",
+    key: `${ctx.organization.id}:${ctx.user.id}`,
+    limit: 20,
+    windowSec: 60 * 60,
+    message: "Too many invites — try again later",
+  });
+  if (!limited.ok) return err(limited.error);
+
+  const parsed = parseForm(inviteTeamMemberSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
+
+  const result = await createOrganizationInvite({
+    organizationId: ctx.organization.id,
+    organizationName: ctx.organization.name,
+    actorUserId: ctx.user.id,
+    actorRole: ctx.membership.role,
+    email: parsed.data.email,
+    role: parsed.data.role,
+  });
+
+  if (result.ok) {
+    revalidatePath("/dashboard/settings/team");
+    revalidatePath("/dashboard/settings");
+  }
+  return result;
+}
+
+export async function revokeInviteAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const ctx = await getActiveOrganization();
+  if (!ctx.organization || !ctx.membership) {
+    return err("No organization selected");
+  }
+  await requireMembership(ctx.organization.id, "ADMIN");
+
+  const parsed = parseForm(revokeInviteSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
+
+  const result = await revokeOrganizationInvite({
+    organizationId: ctx.organization.id,
+    actorUserId: ctx.user.id,
+    actorRole: ctx.membership.role,
+    inviteId: parsed.data.inviteId,
+  });
+  if (result.ok) {
+    revalidatePath("/dashboard/settings/team");
+  }
+  return result;
+}
+
+export async function acceptInviteAction(
+  formData: FormData,
+): Promise<ActionResult<{ organizationId: string; organizationName: string }>> {
+  const user = await requireDbUser();
+  const parsed = parseForm(acceptInviteSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
+
+  const result = await acceptOrganizationInvite({
+    token: parsed.data.token,
+    userId: user.id,
+    userEmail: user.email,
+  });
+  if (result.ok) {
+    await setActiveOrganizationId(result.data.organizationId);
+    revalidatePath("/dashboard");
+  }
+  return result;
+}

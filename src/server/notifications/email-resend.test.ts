@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/booking-urls", () => ({
   bookingManageUrl: () => "https://app.test/book/manage/t",
+  bookingCalendarIcsUrl: () => "https://app.test/book/manage/t/calendar",
   publicBookingUrl: () => "https://app.test/book/shop",
   dashboardAppointmentsUrl: () => "https://app.test/dashboard/appointments",
 }));
@@ -89,9 +90,11 @@ function confirmationItem(overrides: Record<string, unknown> = {}) {
       serviceName: "Cut",
       resourceName: "Sam",
       startAt: now.toISOString(),
+      endAt: new Date(now.getTime() + 30 * 60_000).toISOString(),
       timezone: "UTC",
       bookingId: "b1",
       manageUrl: "https://x/book/manage/t",
+      calendarIcsUrl: "https://x/book/manage/t/calendar",
       bookUrl: "https://x/book/shop",
     },
     ...overrides,
@@ -235,6 +238,16 @@ describe("Resend { error } without throw", () => {
       where: { id: "o1" },
       data: expect.objectContaining({ status: "SENT", lastError: null }),
     });
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachments: [
+          expect.objectContaining({
+            filename: "appointment.ics",
+            content: expect.any(Buffer),
+          }),
+        ],
+      }),
+    );
   });
 
   it("retries BOOKING_CREATED with the same Resend { error } outbox behaviour", async () => {

@@ -299,6 +299,22 @@ export const confirmAiBookingSchema = z.object({
     .transform((v) => (v ?? "").trim().slice(0, 2000)),
 });
 
+export const inviteTeamMemberSchema = z.object({
+  email: z.string().trim().email("Enter a valid email").max(254),
+  role: z.enum(["ADMIN", "STAFF", "VIEWER"]).default("STAFF"),
+});
+
+export const revokeInviteSchema = z.object({
+  inviteId: id,
+});
+
+export const acceptInviteSchema = z.object({
+  token: z
+    .string()
+    .trim()
+    .regex(/^[a-f0-9]{64}$/i, "This invite link is not valid"),
+});
+
 export function parseForm<T extends z.ZodType>(
   schema: T,
   formData: FormData,

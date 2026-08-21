@@ -50,6 +50,8 @@ Until an external (or Pro) cron is configured, **reminders and post-visit automa
 
 Operator checklist (env vars, curl tests, FAILED rows): [OPERATOR.md](./OPERATOR.md).
 
+Pilot shop onboarding: [PILOT.md](./PILOT.md). Confirmation emails include an ICS attachment and an add-to-calendar link when `endAt` is present.
+
 ## Transactional vs marketing consent
 
 | Kind                           | Class         | `marketingOptIn` required? |

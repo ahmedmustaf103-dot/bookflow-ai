@@ -99,6 +99,21 @@ async function findBookingByManageToken(manageToken: string) {
   });
 }
 
+/** ICS download uses the same unique manage token as the public manage page. */
+export async function findBookingByManageTokenForIcs(manageToken: string) {
+  const booking = await findBookingByManageToken(manageToken);
+  if (!booking) return null;
+  return {
+    id: booking.id,
+    organizationName: booking.organization.name,
+    serviceName: booking.service.name,
+    resourceName: booking.resource.name,
+    locationName: booking.location.name,
+    startAt: booking.startAt,
+    endAt: booking.endAt,
+  };
+}
+
 /** Load a booking for the public manage page. Token is the only identifier. */
 export async function getPublicManagedBooking(
   manageToken: string,
