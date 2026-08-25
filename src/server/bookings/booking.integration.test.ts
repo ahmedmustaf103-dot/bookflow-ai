@@ -472,7 +472,11 @@ describe("outbox + automation (DB)", () => {
     expect(slots.some((s) => s.start.getTime() > twoDaysOut.getTime())).toBe(
       true,
     );
-    const days = groupSlotsByLocalDay(slots, "UTC");
+    const days = groupSlotsByLocalDay(slots, "UTC", {
+      fromDate,
+      toDate,
+    });
+    expect(days[0]?.date).toBe(fromDate);
     expect(days.length).toBeGreaterThan(2);
   });
 

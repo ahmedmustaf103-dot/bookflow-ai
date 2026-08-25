@@ -199,7 +199,7 @@ export async function getPublicManageSlots(input: {
       excludeBookingId: booking.id,
     });
 
-    return ok(groupSlotsByLocalDay(slots, tz));
+    return ok(groupSlotsByLocalDay(slots, tz, { fromDate, toDate }));
   } catch (e) {
     captureException(e, { action: "getPublicManageSlots" });
     logger.error({ err: e }, "getPublicManageSlots failed");

@@ -58,7 +58,7 @@ export async function fetchPublicSlotsAction(input: {
       toDate,
       requireLink: true,
     });
-    return ok(groupSlotsByLocalDay(slots, tz));
+    return ok(groupSlotsByLocalDay(slots, tz, { fromDate, toDate }));
   } catch (e) {
     return err(toSafeActionError(e, "Unable to load times"));
   }

@@ -32,6 +32,21 @@ describe("public booking window", () => {
     expect(days[1]?.slots[0]?.label).toBe("11:00");
   });
 
+  it("fills empty days so today stays in the calendar strip", () => {
+    const slots = [{ start: new Date("2026-08-22T11:00:00.000Z") }];
+    const days = groupSlotsByLocalDay(slots, "UTC", {
+      fromDate: "2026-08-20",
+      toDate: "2026-08-22",
+    });
+    expect(days.map((d) => d.date)).toEqual([
+      "2026-08-20",
+      "2026-08-21",
+      "2026-08-22",
+    ]);
+    expect(days[0]?.slots).toHaveLength(0);
+    expect(days[2]?.slots).toHaveLength(1);
+  });
+
   it("adds whole days on the YYYY-MM-DD calendar", () => {
     expect(addUtcDaysToYmd("2026-08-30", 7)).toBe("2026-09-06");
   });
