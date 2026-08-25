@@ -45,6 +45,9 @@ vi.mock("@/server/db", () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
+    bookingEvent: {
+      count: vi.fn().mockResolvedValue(0),
+    },
   },
 }));
 
@@ -298,5 +301,103 @@ describe("Resend { error } without throw", () => {
         scheduledFor: nextRetryAt(OUTBOX_KINDS.BOOKING_CREATED, now),
       },
     });
+  });
+
+  it("attaches an updated ICS and calendar link on reschedule", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    const newStart = new Date("2026-08-20T15:00:00.000Z");
+    const newEnd = new Date("2026-08-20T15:30:00.000Z");
+    findMany.mockResolvedValue([
+      confirmationItem({
+        id: "o-reschedule",
+        kind: OUTBOX_KINDS.BOOKING_RESCHEDULED,
+        payload: {
+          to: "client@example.com",
+          organizationName: "Shop",
+          clientName: "Alex",
+          serviceName: "Cut",
+          resourceName: "Sam",
+          startAt: newStart.toISOString(),
+          endAt: newEnd.toISOString(),
+          timezone: "UTC",
+          bookingId: "b1",
+          manageUrl: "https://x/book/manage/t",
+          calendarIcsUrl: "https://x/book/manage/t/calendar",
+          icsSequence: 1,
+        },
+      }),
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendMock.mockResolvedValue({
+      data: { id: "email_reschedule" },
+      error: null,
+    });
+
+    const result = await processDueOutbox(50, now);
+
+    expect(result.sent).toBe(1);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        html: expect.stringContaining("Add to calendar"),
+        attachments: [
+          expect.objectContaining({
+            filename: "appointment.ics",
+            content: expect.any(Buffer),
+          }),
+        ],
+      }),
+    );
+    const sent = sendMock.mock.calls[0][0] as {
+      attachments: Array<{ content: Buffer }>;
+    };
+    const ics = sent.attachments[0]!.content.toString("utf8");
+    expect(ics).toContain("UID:b1@bookflow.ai");
+    expect(ics).toContain("DTSTART:20260820T150000Z");
+    expect(ics).toContain("DTEND:20260820T153000Z");
+    expect(ics).toContain("SEQUENCE:1");
+    expect(ics).toContain("METHOD:REQUEST");
+  });
+
+  it("attaches a METHOD:CANCEL ICS on cancellation", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    findMany.mockResolvedValue([
+      confirmationItem({
+        id: "o-cancel",
+        kind: OUTBOX_KINDS.BOOKING_CANCELLATION,
+        payload: {
+          to: "client@example.com",
+          organizationName: "Shop",
+          clientName: "Alex",
+          serviceName: "Cut",
+          resourceName: "Sam",
+          startAt: now.toISOString(),
+          endAt: new Date(now.getTime() + 30 * 60_000).toISOString(),
+          timezone: "UTC",
+          bookingId: "b1",
+          icsSequence: 1,
+        },
+      }),
+    ]);
+    updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    sendMock.mockResolvedValue({
+      data: { id: "email_cancel" },
+      error: null,
+    });
+
+    const result = await processDueOutbox(50, now);
+
+    expect(result.sent).toBe(1);
+    const sent = sendMock.mock.calls[0][0] as {
+      attachments: Array<{ filename: string; content: Buffer }>;
+    };
+    expect(sent.attachments[0]!.filename).toBe("appointment-cancelled.ics");
+    const ics = sent.attachments[0]!.content.toString("utf8");
+    expect(ics).toContain("METHOD:CANCEL");
+    expect(ics).toContain("UID:b1@bookflow.ai");
+    expect(ics).toContain("STATUS:CANCELLED");
   });
 });

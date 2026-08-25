@@ -15,7 +15,7 @@ export async function getSlotsForServiceResource(input: {
   resourceId: string;
   /** Inclusive local YYYY-MM-DD; defaults to today in location TZ */
   fromDate?: string;
-  /** Inclusive local YYYY-MM-DD; defaults to fromDate + 6 days */
+  /** Inclusive local YYYY-MM-DD; defaults to fromDate + 6 days (public booking passes a 28-day horizon) */
   toDate?: string;
   /** Dashboard preview may allow unlinked pairs; public booking must not */
   requireLink?: boolean;

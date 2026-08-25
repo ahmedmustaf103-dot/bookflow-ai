@@ -1,7 +1,7 @@
 "use server";
 
-import { formatInTimeZone } from "date-fns-tz";
-
+import { groupSlotsByLocalDay, publicBookingHorizon } from "@/lib/booking-window";
+import type { PublicSlotDay } from "@/lib/booking-types";
 import { toSafeActionError } from "@/lib/action-errors";
 import { err, ok, type ActionResult } from "@/lib/result";
 import { getClientIp } from "@/lib/request-ip";
@@ -14,7 +14,7 @@ export async function fetchPublicSlotsAction(input: {
   organizationId: string;
   serviceId: string;
   resourceId: string;
-}): Promise<ActionResult<Array<{ startIso: string; label: string }>>> {
+}): Promise<ActionResult<PublicSlotDay[]>> {
   const parsed = publicSlotsSchema.safeParse(input);
   if (!parsed.success) {
     return err(parsed.error.issues[0]?.message ?? "Invalid input");
@@ -48,19 +48,17 @@ export async function fetchPublicSlotsAction(input: {
   if (!resource) return err("Resource not found");
 
   try {
+    const tz = resource.location.timezone;
+    const { fromDate, toDate } = publicBookingHorizon(tz);
     const slots = await getSlotsForServiceResource({
       organizationId: org.id,
       serviceId: parsed.data.serviceId,
       resourceId: parsed.data.resourceId,
+      fromDate,
+      toDate,
       requireLink: true,
     });
-    const tz = resource.location.timezone;
-    return ok(
-      slots.slice(0, 48).map((s) => ({
-        startIso: s.start.toISOString(),
-        label: formatInTimeZone(s.start, tz, "EEE MMM d · HH:mm"),
-      })),
-    );
+    return ok(groupSlotsByLocalDay(slots, tz));
   } catch (e) {
     return err(toSafeActionError(e, "Unable to load times"));
   }

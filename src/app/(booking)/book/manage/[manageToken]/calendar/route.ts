@@ -21,6 +21,7 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
+  const cancelled = booking.status === "CANCELLED";
   const ics = buildConfirmationIcs({
     bookingId: booking.id,
     organizationName: booking.organizationName,
@@ -29,13 +30,21 @@ export async function GET(
     startAt: booking.startAt,
     endAt: booking.endAt,
     location: booking.locationName,
+    manageUrl: booking.manageUrl,
+    sequence: booking.sequence,
+    method: cancelled ? "CANCEL" : "REQUEST",
   });
+
+  const method = cancelled ? "CANCEL" : "REQUEST";
+  const filename = cancelled
+    ? "appointment-cancelled.ics"
+    : "appointment.ics";
 
   return new NextResponse(ics, {
     status: 200,
     headers: {
-      "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `attachment; filename="appointment.ics"`,
+      "Content-Type": `text/calendar; charset=utf-8; method=${method}`,
+      "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "private, no-store",
     },
   });

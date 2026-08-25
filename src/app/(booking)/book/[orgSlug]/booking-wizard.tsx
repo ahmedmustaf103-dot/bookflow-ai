@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { SlotDayPicker } from "@/components/booking/slot-day-picker";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import { fireConfetti } from "@/lib/confetti";
 import { createPublicBookingAction } from "@/server/actions/booking";
 import { fetchPublicSlotsAction } from "@/server/actions/public-slots";
+import type { PublicSlotDay } from "@/lib/booking-types";
 
 type Service = {
   id: string;
@@ -25,11 +27,6 @@ type Resource = {
   id: string;
   name: string;
   serviceIds: string[];
-};
-
-type Slot = {
-  startIso: string;
-  label: string;
 };
 
 type Step = 1 | 2 | 3 | 4;
@@ -138,7 +135,7 @@ export function PublicBookingWizard({
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [resourceId, setResourceId] = useState("");
   const [startAt, setStartAt] = useState("");
-  const [slots, setSlots] = useState<Slot[]>([]);
+  const [slots, setSlots] = useState<PublicSlotDay[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -157,7 +154,15 @@ export function PublicBookingWizard({
     "";
   const activeResource =
     filteredResources.find((r) => r.id === activeResourceId) ?? null;
-  const selectedSlot = slots.find((s) => s.startIso === startAt) ?? null;
+  const selectedSlot =
+    slots
+      .flatMap((day) =>
+        day.slots.map((slot) => ({
+          ...slot,
+          dateLabel: day.label,
+        })),
+      )
+      .find((s) => s.startIso === startAt) ?? null;
 
   const progress: Step = !serviceId
     ? 1
@@ -264,7 +269,11 @@ export function PublicBookingWizard({
         {selectedSlot && progress > 3 && activePanel !== 3 ? (
           <Chip
             label="Time"
-            value={selectedSlot.label}
+            value={
+              selectedSlot
+                ? `${selectedSlot.dateLabel} · ${selectedSlot.label}`
+                : ""
+            }
             onEdit={() => setEditing(3)}
           />
         ) : null}
@@ -372,36 +381,16 @@ export function PublicBookingWizard({
               <p className="mt-3 text-sm text-red-600" role="alert">
                 {error}
               </p>
-            ) : slots.length === 0 ? (
-              <p className="mt-3 text-sm text-[var(--ink-secondary)]">
-                No open slots in the next week.
-              </p>
             ) : (
-              <div
-                className="mt-3 grid max-h-64 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3"
-                role="radiogroup"
-                aria-label="Appointment time"
-              >
-                {slots.map((slot) => (
-                  <button
-                    key={slot.startIso}
-                    type="button"
-                    role="radio"
-                    aria-checked={startAt === slot.startIso}
-                    onClick={() => {
-                      setStartAt(slot.startIso);
-                      setEditing(null);
-                    }}
-                    className={`bf-row-hover rounded-[var(--radius-control)] px-2 py-2 text-left text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none sm:text-sm ${
-                      startAt === slot.startIso
-                        ? "bg-[var(--accent)] text-white"
-                        : "border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--muted)]"
-                    }`}
-                  >
-                    {slot.label}
-                  </button>
-                ))}
-              </div>
+              <SlotDayPicker
+                days={slots}
+                value={startAt}
+                onChange={(startIso) => {
+                  setStartAt(startIso);
+                  if (startIso) setEditing(null);
+                }}
+                emptyMessage="No open slots in the next 4 weeks."
+              />
             )}
           </section>
         ) : null}

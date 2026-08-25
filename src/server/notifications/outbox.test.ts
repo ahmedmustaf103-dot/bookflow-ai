@@ -53,6 +53,9 @@ vi.mock("@/server/db", () => ({
       findFirst: bookingFindFirst,
       findMany: vi.fn(),
     },
+    bookingEvent: {
+      count: vi.fn().mockResolvedValue(0),
+    },
   },
 }));
 

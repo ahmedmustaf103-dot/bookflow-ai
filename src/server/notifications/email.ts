@@ -8,7 +8,7 @@ import { draftBodyToHtml } from "@/lib/ai-draft";
 import { UserFacingError } from "@/lib/action-errors";
 import { formatMoney } from "@/lib/client-tags";
 import { env } from "@/lib/env";
-import { buildConfirmationIcs } from "@/lib/ics";
+import { buildConfirmationIcs, type IcsMethod } from "@/lib/ics";
 import { logger } from "@/lib/logger";
 
 export type BookingEmailInput = {
@@ -31,6 +31,8 @@ export type BookingEmailInput = {
   dashboardUrl?: string | null;
   endAt?: Date | string | null;
   calendarIcsUrl?: string | null;
+  /** RFC 5545 SEQUENCE — bump on reschedule/cancel so clients replace the event. */
+  icsSequence?: number;
 };
 
 export type SendEmailResult = { skipped: boolean };
@@ -111,7 +113,11 @@ async function deliver(input: {
   bookingId?: string;
   kind: string;
   organizationName: string;
-  attachments?: Array<{ filename: string; content: Buffer }>;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+  }>;
 }): Promise<SendEmailResult> {
   const resend = getResend();
   if (!resend) {
@@ -151,7 +157,10 @@ async function deliver(input: {
   return { skipped: false };
 }
 
-function confirmationIcsAttachment(input: BookingEmailInput) {
+function bookingIcsAttachment(
+  input: BookingEmailInput,
+  method: IcsMethod,
+) {
   const startAt = asDate(input.startAt);
   const endAt = input.endAt ? asDate(input.endAt) : null;
   if (!endAt || Number.isNaN(endAt.getTime()) || Number.isNaN(startAt.getTime())) {
@@ -166,17 +175,21 @@ function confirmationIcsAttachment(input: BookingEmailInput) {
       startAt,
       endAt,
       manageUrl: input.manageUrl,
+      sequence: input.icsSequence ?? (method === "CANCEL" ? 1 : 0),
+      method,
     });
     return [
       {
-        filename: "appointment.ics",
+        filename:
+          method === "CANCEL" ? "appointment-cancelled.ics" : "appointment.ics",
         content: Buffer.from(ics, "utf8"),
+        contentType: `text/calendar; method=${method}; charset=utf-8`,
       },
     ];
   } catch (e) {
     logger.warn(
-      { err: e, bookingId: input.bookingId },
-      "ICS attachment skipped — sending confirmation without it",
+      { err: e, bookingId: input.bookingId, method },
+      "ICS attachment skipped — sending email without it",
     );
     return undefined;
   }
@@ -211,7 +224,7 @@ export async function sendBookingConfirmation(
     bookingId: input.bookingId,
     kind: "BOOKING_CONFIRMATION",
     organizationName: input.organizationName,
-    attachments: confirmationIcsAttachment(input),
+    attachments: bookingIcsAttachment(input, "REQUEST"),
   });
 }
 
@@ -294,6 +307,7 @@ export async function sendBookingCancellation(
       <p>Your appointment has been cancelled.</p>
       ${appointmentList(input)}
       ${bookLink(input, "Book a new appointment")}
+      <p style="margin-top:16px;color:#666;font-size:12px;">A calendar cancellation is attached. Opening it removes the event in apps that support it (Apple Calendar, Outlook). BookFlow cannot remotely delete an event you added by hand to iCloud or another personal calendar.</p>
     `,
     input,
   );
@@ -304,6 +318,7 @@ export async function sendBookingCancellation(
     bookingId: input.bookingId,
     kind: "BOOKING_CANCELLATION",
     organizationName: input.organizationName,
+    attachments: bookingIcsAttachment(input, "CANCEL"),
   });
 }
 
@@ -318,6 +333,7 @@ export async function sendBookingReschedule(
       <p>Your appointment has been moved to a new time.</p>
       ${appointmentList(input)}
       ${manageLink(input)}
+      ${addToCalendarLink(input)}
       <p style="color:#666;font-size:12px;">Booking ID: ${escapeHtml(input.bookingId)}</p>
     `,
     input,
@@ -329,6 +345,7 @@ export async function sendBookingReschedule(
     bookingId: input.bookingId,
     kind: "BOOKING_RESCHEDULED",
     organizationName: input.organizationName,
+    attachments: bookingIcsAttachment(input, "REQUEST"),
   });
 }
 

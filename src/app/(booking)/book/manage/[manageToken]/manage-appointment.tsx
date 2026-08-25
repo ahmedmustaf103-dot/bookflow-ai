@@ -3,18 +3,17 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { SlotDayPicker } from "@/components/booking/slot-day-picker";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Surface } from "@/components/ui/surface";
 import { useToast } from "@/components/ui/toast";
-import type { PublicManagedBookingView } from "@/lib/booking-types";
+import type { PublicManagedBookingView, PublicSlotDay } from "@/lib/booking-types";
 import {
   cancelPublicManagedBookingAction,
   fetchPublicManageSlotsAction,
   reschedulePublicManagedBookingAction,
 } from "@/server/actions/public-manage";
-
-type Slot = { startIso: string; label: string };
 
 type Mode = "view" | "reschedule" | "cancelConfirm";
 
@@ -30,7 +29,7 @@ export function ManageAppointmentClient({
   const [pending, startTransition] = useTransition();
   const [booking, setBooking] = useState(initial);
   const [mode, setMode] = useState<Mode>("view");
-  const [slots, setSlots] = useState<Slot[]>([]);
+  const [slots, setSlots] = useState<PublicSlotDay[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [selectedStart, setSelectedStart] = useState("");
@@ -203,7 +202,17 @@ export function ManageAppointmentClient({
             >
               Add to calendar
             </Button>
-          ) : null}
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                window.location.href = `/book/manage/${manageToken}/calendar`;
+              }}
+            >
+              Download calendar cancellation
+            </Button>
+          )}
           {!booking.canCancel && !booking.canReschedule ? (
             <p className="text-sm text-[var(--ink-secondary)]">
               This appointment can no longer be changed online. Contact{" "}
@@ -271,37 +280,18 @@ export function ManageAppointmentClient({
             <p className="mt-3 text-sm text-[var(--danger)]" role="alert">
               {slotsError}
             </p>
-          ) : slots.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--ink-secondary)]">
-              No open slots in the next week. Try again later or contact the
-              business.
-            </p>
           ) : (
-            <div
-              className="mt-3 grid max-h-64 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3"
-              role="radiogroup"
-              aria-label="New appointment time"
-            >
-              {slots.map((slot) => (
-                <button
-                  key={slot.startIso}
-                  type="button"
-                  role="radio"
-                  aria-checked={selectedStart === slot.startIso}
-                  onClick={() => {
-                    setSelectedStart(slot.startIso);
-                    setError(null);
-                  }}
-                  className={`rounded-[var(--radius-control)] border px-2 py-2 text-left text-xs transition-colors ${
-                    selectedStart === slot.startIso
-                      ? "border-[var(--accent)] bg-[var(--accent-soft)] font-medium text-[var(--accent)]"
-                      : "border-[var(--border)] text-[var(--ink-secondary)] hover:bg-[var(--muted)]"
-                  }`}
-                >
-                  {slot.label}
-                </button>
-              ))}
-            </div>
+            <SlotDayPicker
+              days={slots}
+              value={selectedStart}
+              onChange={(startIso) => {
+                setSelectedStart(startIso);
+                setError(null);
+              }}
+              datesLabel="New appointment date"
+              timesLabel="New appointment time"
+              emptyMessage="No open slots in the next 4 weeks. Try again later or contact the business."
+            />
           )}
 
           <div className="mt-4 flex flex-wrap gap-2">

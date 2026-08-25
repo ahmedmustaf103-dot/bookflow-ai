@@ -1,5 +1,8 @@
 /** Minimal RFC 5545 (iCalendar) builder for a single booking event. */
 
+export type IcsMethod = "PUBLISH" | "REQUEST" | "CANCEL";
+export type IcsStatus = "CONFIRMED" | "CANCELLED" | "TENTATIVE";
+
 export type BookingIcsInput = {
   uid: string;
   title: string;
@@ -7,7 +10,17 @@ export type BookingIcsInput = {
   location?: string;
   startAt: Date;
   endAt: Date;
+  /** Monotonic update counter so calendar clients replace the prior event. */
+  sequence?: number;
+  method?: IcsMethod;
+  status?: IcsStatus;
+  organizerName?: string;
+  organizerEmail?: string;
 };
+
+export function bookingIcsUid(bookingId: string): string {
+  return `${bookingId}@bookflow.ai`;
+}
 
 function toIcsUtc(date: Date): string {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
@@ -44,10 +57,17 @@ export function buildConfirmationIcs(input: {
   endAt: Date;
   manageUrl?: string | null;
   location?: string | null;
+  sequence?: number;
+  method?: IcsMethod;
+  status?: IcsStatus;
 }): string {
+  const method = input.method ?? "REQUEST";
+  const cancelled = method === "CANCEL" || input.status === "CANCELLED";
   return buildBookingIcs({
-    uid: `${input.bookingId}@bookflow.ai`,
-    title: `${input.serviceName} at ${input.organizationName}`,
+    uid: bookingIcsUid(input.bookingId),
+    title: cancelled
+      ? `Cancelled: ${input.serviceName} at ${input.organizationName}`
+      : `${input.serviceName} at ${input.organizationName}`,
     description: [
       `With ${input.resourceName}`,
       input.manageUrl ? `Manage: ${input.manageUrl}` : "",
@@ -57,22 +77,38 @@ export function buildConfirmationIcs(input: {
     location: input.location ?? input.organizationName,
     startAt: input.startAt,
     endAt: input.endAt,
+    sequence: input.sequence ?? 0,
+    method,
+    status: cancelled ? "CANCELLED" : (input.status ?? "CONFIRMED"),
+    organizerName: input.organizationName,
   });
 }
 
 export function buildBookingIcs(input: BookingIcsInput): string {
   const now = toIcsUtc(new Date());
+  const method = input.method ?? "REQUEST";
+  const status =
+    input.status ?? (method === "CANCEL" ? "CANCELLED" : "CONFIRMED");
+  const sequence = Number.isFinite(input.sequence)
+    ? Math.max(0, Math.floor(input.sequence!))
+    : 0;
+  const organizerEmail = input.organizerEmail ?? "calendar@bookflow.ai";
+  const organizerCn = escapeIcsText(input.organizerName ?? "BookFlow AI");
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//BookFlow AI//Booking//EN",
     "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
+    `METHOD:${method}`,
     "BEGIN:VEVENT",
     `UID:${input.uid}`,
+    `SEQUENCE:${sequence}`,
+    `STATUS:${status}`,
     `DTSTAMP:${now}`,
+    `LAST-MODIFIED:${now}`,
     `DTSTART:${toIcsUtc(input.startAt)}`,
     `DTEND:${toIcsUtc(input.endAt)}`,
+    `ORGANIZER;CN=${organizerCn}:mailto:${organizerEmail}`,
     `SUMMARY:${escapeIcsText(input.title)}`,
   ];
   if (input.description) {

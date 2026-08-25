@@ -32,6 +32,7 @@ Be honest with the shop:
 
 - Two-way Google Calendar (Google does not write busy time back into BookFlow)
 - Automatic Google busy-time blocking
+- Remotely editing or deleting an event a customer imported by hand into iCloud / Apple Calendar (an updated or cancellation ICS is emailed; they must open it)
 - Customer card deposits / Stripe Checkout for clients
 - Full self-serve custom domains (field exists; DNS activation is ops-assisted)
 - In-app chatbot

@@ -112,6 +112,49 @@ export async function fetchGoogleAccountEmail(accessToken: string) {
   return data.email ?? null;
 }
 
+/**
+ * Google Calendar event IDs must be base32hex (`[0-9a-v]`, 5–1024 chars).
+ * Hex of the booking id is a stable subset, so reschedule/cancel can address
+ * the same event even if `googleEventId` has not been persisted yet.
+ */
+export function googleEventIdForBooking(bookingId: string): string {
+  return `bf1${Buffer.from(bookingId, "utf8").toString("hex")}`;
+}
+
+function eventUrl(calendarId: string, eventId?: string) {
+  const base = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
+  return eventId ? `${base}/${encodeURIComponent(eventId)}` : base;
+}
+
+async function storedGoogleEventId(bookingId: string): Promise<string | null> {
+  const row = await db.booking.findUnique({
+    where: { id: bookingId },
+    select: { googleEventId: true },
+  });
+  return row?.googleEventId ?? null;
+}
+
+async function persistGoogleEventId(
+  bookingId: string,
+  googleEventId: string | null,
+) {
+  await db.booking.update({
+    where: { id: bookingId },
+    data: { googleEventId },
+  });
+}
+
+function uniqueIds(ids: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
 export async function pushGoogleCalendarUpsert(input: {
   organizationId: string;
   bookingId: string;
@@ -126,6 +169,7 @@ export async function pushGoogleCalendarUpsert(input: {
   try {
     const auth = await getAccessToken(input.organizationId);
     if (!auth) return;
+    const { accessToken, calendarId } = auth;
 
     const body = {
       summary: input.summary,
@@ -140,57 +184,66 @@ export async function pushGoogleCalendarUpsert(input: {
       },
     };
 
-    let eventId = input.googleEventId ?? null;
-    if (eventId) {
-      const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(auth.calendarId)}/events/${encodeURIComponent(eventId)}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${auth.accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        },
+    const stored = await storedGoogleEventId(input.bookingId);
+    const deterministic = googleEventIdForBooking(input.bookingId);
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    };
+
+    async function patch(eventId: string): Promise<"ok" | "missing" | "error"> {
+      const res = await fetch(eventUrl(calendarId, eventId), {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return "ok";
+      if (res.status === 404 || res.status === 410) return "missing";
+      logger.warn(
+        { bookingId: input.bookingId, status: res.status, eventId },
+        "Google Calendar event update failed",
       );
-      if (res.status === 404) {
-        eventId = null;
-      } else if (!res.ok) {
-        logger.warn(
-          { bookingId: input.bookingId, status: res.status },
-          "Google Calendar event update failed",
-        );
-        return;
-      }
+      return "error";
     }
 
-    if (!eventId) {
-      const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(auth.calendarId)}/events`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${auth.accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) {
-        logger.warn(
-          { bookingId: input.bookingId, status: res.status },
-          "Google Calendar event create failed",
-        );
+    for (const eventId of uniqueIds([stored, input.googleEventId])) {
+      const result = await patch(eventId);
+      if (result === "ok") {
+        if (stored !== eventId) {
+          await persistGoogleEventId(input.bookingId, eventId);
+        }
         return;
       }
-      const created = (await res.json()) as { id?: string };
-      if (created.id) {
-        await db.booking.update({
-          where: { id: input.bookingId },
-          data: { googleEventId: created.id },
-        });
-      }
+      if (result === "error") return;
     }
+
+    const createRes = await fetch(eventUrl(calendarId), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ ...body, id: deterministic }),
+    });
+
+    if (createRes.status === 409) {
+      const patched = await patch(deterministic);
+      if (patched === "ok") {
+        await persistGoogleEventId(input.bookingId, deterministic);
+      }
+      return;
+    }
+
+    if (!createRes.ok) {
+      logger.warn(
+        { bookingId: input.bookingId, status: createRes.status },
+        "Google Calendar event create failed",
+      );
+      return;
+    }
+
+    const created = (await createRes.json()) as { id?: string };
+    await persistGoogleEventId(
+      input.bookingId,
+      created.id ?? deterministic,
+    );
   } catch (e) {
     logger.warn({ err: e, bookingId: input.bookingId }, "Google Calendar sync skipped");
   }
@@ -201,28 +254,42 @@ export async function pushGoogleCalendarCancel(input: {
   bookingId: string;
   googleEventId?: string | null;
 }) {
-  if (!isGoogleCalendarConfigured() || !input.googleEventId) return;
+  if (!isGoogleCalendarConfigured()) return;
   try {
     const auth = await getAccessToken(input.organizationId);
     if (!auth) return;
-    const res = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(auth.calendarId)}/events/${encodeURIComponent(input.googleEventId)}`,
-      {
+
+    const stored = await storedGoogleEventId(input.bookingId);
+    const candidates = uniqueIds([
+      stored,
+      input.googleEventId,
+      googleEventIdForBooking(input.bookingId),
+    ]);
+    if (candidates.length === 0) return;
+
+    let failed = false;
+    let gone = false;
+    for (const eventId of candidates) {
+      const res = await fetch(eventUrl(auth.calendarId, eventId), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${auth.accessToken}` },
-      },
-    );
-    if (!res.ok && res.status !== 404 && res.status !== 410) {
+      });
+      if (res.ok || res.status === 404 || res.status === 410) {
+        gone = true;
+        if (res.ok) break;
+        continue;
+      }
       logger.warn(
-        { bookingId: input.bookingId, status: res.status },
+        { bookingId: input.bookingId, status: res.status, eventId },
         "Google Calendar event delete failed",
       );
-      return;
+      failed = true;
     }
-    await db.booking.update({
-      where: { id: input.bookingId },
-      data: { googleEventId: null },
-    });
+
+    if (failed) return;
+    if (gone || stored) {
+      await persistGoogleEventId(input.bookingId, null);
+    }
   } catch (e) {
     logger.warn(
       { err: e, bookingId: input.bookingId },

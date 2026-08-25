@@ -10,7 +10,7 @@ import {
   getPublicManagedBooking,
   reschedulePublicManagedBooking,
 } from "@/server/bookings/manage";
-import type { PublicManagedBookingView } from "@/lib/booking-types";
+import type { PublicManagedBookingView, PublicSlotDay } from "@/lib/booking-types";
 import { assertRateLimit } from "@/server/rate-limit";
 import {
   cancelPublicManagedBookingSchema,
@@ -47,7 +47,7 @@ export async function loadPublicManagedBookingAction(
 
 export async function fetchPublicManageSlotsAction(input: {
   manageToken: string;
-}): Promise<ActionResult<Array<{ startIso: string; label: string }>>> {
+}): Promise<ActionResult<PublicSlotDay[]>> {
   const parsed = publicManageSlotsSchema.safeParse(input);
   if (!parsed.success) {
     return err(parsed.error.issues[0]?.message ?? "Invalid input");

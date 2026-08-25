@@ -3,8 +3,15 @@ import "server-only";
 import { formatInTimeZone } from "date-fns-tz";
 
 import type { BookingStatus } from "@/generated/prisma/client";
-import { publicBookingUrl } from "@/lib/booking-urls";
-import type { PublicManagedBookingView } from "@/lib/booking-types";
+import { publicBookingUrl, bookingManageUrl } from "@/lib/booking-urls";
+import {
+  groupSlotsByLocalDay,
+  publicBookingHorizon,
+} from "@/lib/booking-window";
+import type {
+  PublicManagedBookingView,
+  PublicSlotDay,
+} from "@/lib/booking-types";
 import { toSafeActionError } from "@/lib/action-errors";
 import { err, ok, type ActionResult } from "@/lib/result";
 import { logger } from "@/lib/logger";
@@ -103,14 +110,22 @@ async function findBookingByManageToken(manageToken: string) {
 export async function findBookingByManageTokenForIcs(manageToken: string) {
   const booking = await findBookingByManageToken(manageToken);
   if (!booking) return null;
+  const reschedules = await db.bookingEvent.count({
+    where: { bookingId: booking.id, type: "RESCHEDULED" },
+  });
+  const sequence =
+    booking.status === "CANCELLED" ? reschedules + 1 : reschedules;
   return {
     id: booking.id,
+    status: booking.status,
     organizationName: booking.organization.name,
     serviceName: booking.service.name,
     resourceName: booking.resource.name,
     locationName: booking.location.name,
     startAt: booking.startAt,
     endAt: booking.endAt,
+    manageUrl: bookingManageUrl(booking.manageToken, booking.organization),
+    sequence,
   };
 }
 
@@ -164,7 +179,7 @@ export async function cancelPublicManagedBooking(input: {
 
 export async function getPublicManageSlots(input: {
   manageToken: string;
-}): Promise<ActionResult<Array<{ startIso: string; label: string }>>> {
+}): Promise<ActionResult<PublicSlotDay[]>> {
   try {
     const booking = await findBookingByManageToken(input.manageToken);
     if (!booking) return err("Appointment not found");
@@ -173,20 +188,18 @@ export async function getPublicManageSlots(input: {
     }
 
     const tz = booking.location.timezone;
+    const { fromDate, toDate } = publicBookingHorizon(tz);
     const slots = await getSlotsForServiceResource({
       organizationId: booking.organization.id,
       serviceId: booking.service.id,
       resourceId: booking.resource.id,
+      fromDate,
+      toDate,
       requireLink: true,
       excludeBookingId: booking.id,
     });
 
-    return ok(
-      slots.slice(0, 48).map((s) => ({
-        startIso: s.start.toISOString(),
-        label: formatInTimeZone(s.start, tz, "EEE MMM d · HH:mm"),
-      })),
-    );
+    return ok(groupSlotsByLocalDay(slots, tz));
   } catch (e) {
     captureException(e, { action: "getPublicManageSlots" });
     logger.error({ err: e }, "getPublicManageSlots failed");

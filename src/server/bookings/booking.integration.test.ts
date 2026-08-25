@@ -2,8 +2,12 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { OUTBOX_KINDS } from "@/server/notifications/kinds";
 import { enqueueOwnerNewBooking } from "@/server/notifications/outbox";
-import { createBooking, transitionBooking } from "@/server/bookings/service";
+import { createBooking, rescheduleBooking, transitionBooking } from "@/server/bookings/service";
 import { getSlotsForServiceResource } from "@/server/availability/slots";
+import {
+  groupSlotsByLocalDay,
+  publicBookingHorizon,
+} from "@/lib/booking-window";
 import { disconnectTestPrisma, getTestPrisma } from "@/test/prisma";
 import { resetAndSeedTestOrg, type TestSeed } from "@/test/seed";
 
@@ -445,6 +449,84 @@ describe("outbox + automation (DB)", () => {
       },
     });
     expect(rows.length).toBeGreaterThan(0);
+    const cancelPayload = rows[0]!.payload as {
+      icsSequence?: number;
+      endAt?: string;
+    };
+    expect(cancelPayload.endAt).toBeTruthy();
+    expect(cancelPayload.icsSequence).toBeGreaterThanOrEqual(1);
+  });
+
+  it("offers public slots beyond two days across the 28-day horizon", async () => {
+    const { fromDate, toDate } = publicBookingHorizon("UTC");
+    const slots = await getSlotsForServiceResource({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      fromDate,
+      toDate,
+      requireLink: true,
+    });
+    const twoDaysOut = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    expect(slots.length).toBeGreaterThan(48);
+    expect(slots.some((s) => s.start.getTime() > twoDaysOut.getTime())).toBe(
+      true,
+    );
+    const days = groupSlotsByLocalDay(slots, "UTC");
+    expect(days.length).toBeGreaterThan(2);
+  });
+
+  it("enqueues a reschedule email with the new time and calendar payload", async () => {
+    const slots = await getSlotsForServiceResource({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      requireLink: true,
+    });
+    const first = slots[0];
+    const second = slots[1];
+    expect(first && second).toBeTruthy();
+    if (!first || !second) return;
+
+    const created = await createBooking({
+      organizationId: seed.organizationId,
+      serviceId: seed.serviceId,
+      resourceId: seed.resourceId,
+      startAt: first.start,
+      client: {
+        name: "Move Me",
+        email: `move+${Date.now()}@example.test`,
+      },
+      source: "PUBLIC",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const moved = await rescheduleBooking({
+      organizationId: seed.organizationId,
+      bookingId: created.data.bookingId,
+      startAt: second.start,
+    });
+    expect(moved.ok).toBe(true);
+
+    const db = getTestPrisma();
+    const movedRows = await db.notificationOutbox.findMany({
+      where: {
+        bookingId: created.data.bookingId,
+        kind: OUTBOX_KINDS.BOOKING_RESCHEDULED,
+      },
+    });
+    expect(movedRows.length).toBeGreaterThan(0);
+    const payload = movedRows[0]!.payload as {
+      startAt: string;
+      endAt: string;
+      calendarIcsUrl: string;
+      icsSequence: number;
+    };
+    expect(new Date(payload.startAt).getTime()).toBe(second.start.getTime());
+    expect(payload.calendarIcsUrl).toContain("/calendar");
+    expect(payload.icsSequence).toBeGreaterThanOrEqual(1);
+    expect(payload.endAt).toBeTruthy();
   });
 
   it("enqueues follow-up, review, and rebooking when opted-in visit is completed", async () => {

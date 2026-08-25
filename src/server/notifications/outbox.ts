@@ -135,6 +135,7 @@ export function scheduleDueOutboxFlush(reason: string): void {
 function emailPayload(
   ctx: BookingNotifyContext,
   to: string,
+  extras?: { icsSequence?: number },
 ): BookingEmailInput {
   const orgUrl = {
     slug: ctx.organizationSlug,
@@ -160,7 +161,15 @@ function emailPayload(
     currency: ctx.currency ?? null,
     dashboardUrl: dashboardAppointmentsUrl(),
     endAt: ctx.endAt.toISOString(),
+    icsSequence: extras?.icsSequence ?? 0,
   };
+}
+
+async function icsSequenceForBooking(bookingId: string, extra = 0) {
+  const reschedules = await db.bookingEvent.count({
+    where: { bookingId, type: "RESCHEDULED" },
+  });
+  return reschedules + extra;
 }
 
 async function enqueueRow(row: {
@@ -258,7 +267,9 @@ export async function enqueueOwnerNewBooking(ctx: BookingNotifyContext) {
 /** Cancellation email — due immediately. */
 export async function enqueueBookingCancellation(ctx: BookingNotifyContext) {
   if (!ctx.clientEmail) return;
-  const payload = emailPayload(ctx, ctx.clientEmail);
+  const payload = emailPayload(ctx, ctx.clientEmail, {
+    icsSequence: await icsSequenceForBooking(ctx.bookingId, 1),
+  });
   await enqueueRow({
     organizationId: ctx.organizationId,
     bookingId: ctx.bookingId,
@@ -278,7 +289,9 @@ export async function enqueueBookingCancellation(ctx: BookingNotifyContext) {
 /** Reschedule email — due immediately (new time in payload). */
 export async function enqueueBookingReschedule(ctx: BookingNotifyContext) {
   if (!ctx.clientEmail) return;
-  const payload = emailPayload(ctx, ctx.clientEmail);
+  const payload = emailPayload(ctx, ctx.clientEmail, {
+    icsSequence: await icsSequenceForBooking(ctx.bookingId),
+  });
   await enqueueRow({
     organizationId: ctx.organizationId,
     bookingId: ctx.bookingId,
