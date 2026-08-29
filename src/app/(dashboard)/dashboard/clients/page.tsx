@@ -12,6 +12,11 @@ import { Surface } from "@/components/ui/surface";
 import { TagChip } from "@/components/ui/tag-chip";
 import { formatMoney } from "@/lib/client-tags";
 import { createManualClientAction } from "@/server/actions/ops";
+import { canManage } from "@/server/auth/session";
+import {
+  bookingWhereForScope,
+  resolveStaffResourceScope,
+} from "@/server/staff/scope";
 import { requireOrgRole } from "@/server/tenant/context";
 
 type ClientRow = {
@@ -56,6 +61,12 @@ export default async function ClientsPage({
   const tag = params.tag?.trim() ?? "";
   const repeatOnly = params.repeat === "1";
   const tzDefault = ctx.organization.timezoneDefault;
+  const scope = await resolveStaffResourceScope({
+    organizationId: ctx.organization.id,
+    userId: ctx.user.id,
+    role: ctx.membership.role,
+  });
+  const showFinance = canManage(ctx.membership.role);
 
   const where: Prisma.ClientWhereInput = {
     AND: [
@@ -71,6 +82,13 @@ export default async function ClientsPage({
           }
         : {},
       tag ? { tags: { has: tag } } : {},
+      scope.all
+        ? {}
+        : {
+            bookings: {
+              some: { resourceId: { in: scope.resourceIds } },
+            },
+          },
     ],
   };
 
@@ -98,7 +116,10 @@ export default async function ClientsPage({
     clientIds.length === 0
       ? []
       : await ctx.db.booking.findMany({
-          where: { clientId: { in: clientIds } },
+          where: {
+            clientId: { in: clientIds },
+            ...bookingWhereForScope(scope),
+          },
           select: {
             clientId: true,
             startAt: true,
@@ -147,8 +168,8 @@ export default async function ClientsPage({
       phone: c.phone,
       tags: c.tags,
       notes: c.notes,
-      bookingCount: c._count.bookings,
-      isRepeat: c._count.bookings >= 2,
+      bookingCount: list.length,
+      isRepeat: list.length >= 2,
       ltvCents,
       currency,
       lastAt: last?.startAt ?? null,
@@ -168,7 +189,11 @@ export default async function ClientsPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Clients"
-        description="Search, filter, and open profiles — LTV, visits, and upcoming appointments at a glance."
+        description={
+          showFinance
+            ? "Search, filter, and open profiles — LTV, visits, and upcoming appointments at a glance."
+            : "Customers who have booked with you."
+        }
         actions={
           <ButtonLink href="#add-client" variant="secondary" size="sm">
             Add client
@@ -294,16 +319,22 @@ export default async function ClientsPage({
               <span className="tabular-nums">{r.bookingCount}</span>
             ),
           },
-          {
-            key: "ltv",
-            header: "LTV",
-            className: "w-24",
-            cell: (r) => (
-              <span className="tabular-nums">
-                {r.ltvCents > 0 ? formatMoney(r.ltvCents, r.currency) : "—"}
-              </span>
-            ),
-          },
+          ...(showFinance
+            ? [
+                {
+                  key: "ltv" as const,
+                  header: "LTV",
+                  className: "w-24",
+                  cell: (r: ClientRow) => (
+                    <span className="tabular-nums">
+                      {r.ltvCents > 0
+                        ? formatMoney(r.ltvCents, r.currency)
+                        : "—"}
+                    </span>
+                  ),
+                },
+              ]
+            : []),
           {
             key: "last",
             header: "Last",

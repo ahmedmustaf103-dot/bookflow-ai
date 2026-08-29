@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import type { MembershipRole } from "@/generated/prisma/client";
 import { toSafeActionError } from "@/lib/action-errors";
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { err, ok, type ActionResult } from "@/lib/result";
 import { writeAuditLog } from "@/server/billing/entitlements";
 import { db } from "@/server/db";
@@ -33,6 +34,21 @@ export function inviteAcceptUrl(token: string) {
   return `${origin}/invite/${token}`;
 }
 
+export async function peekOrganizationInvite(token: string) {
+  const trimmed = token.trim();
+  if (!/^[a-f0-9]{64}$/i.test(trimmed)) return null;
+  return db.organizationInvite.findUnique({
+    where: { token: trimmed },
+    select: {
+      email: true,
+      role: true,
+      status: true,
+      expiresAt: true,
+      organization: { select: { name: true } },
+    },
+  });
+}
+
 function newInviteToken() {
   return randomBytes(32).toString("hex");
 }
@@ -44,6 +60,7 @@ export async function createOrganizationInvite(input: {
   actorRole: MembershipRole;
   email: string;
   role: MembershipRole;
+  resourceId?: string | null;
 }): Promise<ActionResult<{ inviteId: string; acceptUrl: string }>> {
   if (!canAssignInviteRole(input.actorRole, input.role)) {
     return err("You cannot invite someone with that role");
@@ -77,6 +94,19 @@ export async function createOrganizationInvite(input: {
     return err("An invite is already pending for that email");
   }
 
+  let resourceId: string | null = null;
+  if (input.resourceId) {
+    const resource = await db.resource.findFirst({
+      where: {
+        id: input.resourceId,
+        organizationId: input.organizationId,
+      },
+      select: { id: true },
+    });
+    if (!resource) return err("Staff chair not found");
+    resourceId = resource.id;
+  }
+
   try {
     const invite = await db.organizationInvite.create({
       data: {
@@ -85,17 +115,36 @@ export async function createOrganizationInvite(input: {
         role: input.role,
         token: newInviteToken(),
         invitedById: input.actorUserId,
+        resourceId,
         expiresAt: new Date(Date.now() + INVITE_TTL_MS),
       },
     });
 
     const acceptUrl = inviteAcceptUrl(invite.token);
-    await sendTeamInviteEmail({
-      to: email,
-      organizationName: input.organizationName,
-      role: input.role,
-      acceptUrl,
-    });
+    try {
+      await sendTeamInviteEmail({
+        to: email,
+        organizationName: input.organizationName,
+        role: input.role,
+        acceptUrl,
+      });
+    } catch (e) {
+      logger.warn(
+        { err: e, to: email },
+        "Team invite email failed — invite still created",
+      );
+      await writeAuditLog({
+        organizationId: input.organizationId,
+        actorId: input.actorUserId,
+        action: "team.invited",
+        entityType: "organization_invite",
+        entityId: invite.id,
+        metadata: { email, role: input.role, emailSent: false },
+      });
+      return err(
+        `${toSafeActionError(e, "The invite email could not be sent")}. The invite is saved — copy the link from Pending invites below.`,
+      );
+    }
 
     await writeAuditLog({
       organizationId: input.organizationId,
@@ -214,6 +263,24 @@ export async function acceptOrganizationInvite(input: {
           status: "ACTIVE",
         },
       });
+      if (invite.resourceId) {
+        const resource = await tx.resource.findFirst({
+          where: {
+            id: invite.resourceId,
+            organizationId: invite.organizationId,
+          },
+          select: { id: true, userId: true },
+        });
+        if (
+          resource &&
+          (resource.userId == null || resource.userId === input.userId)
+        ) {
+          await tx.resource.update({
+            where: { id: resource.id },
+            data: { userId: input.userId },
+          });
+        }
+      }
       await tx.organizationInvite.update({
         where: { id: invite.id },
         data: { status: "ACCEPTED", acceptedAt: new Date() },

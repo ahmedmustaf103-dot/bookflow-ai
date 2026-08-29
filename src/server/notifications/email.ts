@@ -254,21 +254,13 @@ export async function sendTeamInviteEmail(input: {
       bookingId: "invite",
     },
   );
-  try {
-    return await deliver({
-      to: input.to,
-      subject,
-      html,
-      kind: "TEAM_INVITE",
-      organizationName: input.organizationName,
-    });
-  } catch (e) {
-    logger.warn(
-      { err: e, to: input.to },
-      "Team invite email failed — invite still created",
-    );
-    return { skipped: true };
-  }
+  return deliver({
+    to: input.to,
+    subject,
+    html,
+    kind: "TEAM_INVITE",
+    organizationName: input.organizationName,
+  });
 }
 
 export async function sendBookingReminder(
@@ -405,6 +397,72 @@ export async function sendOwnerNewBookingEmail(
     html,
     bookingId: input.bookingId,
     kind: "BOOKING_CREATED",
+    organizationName: input.organizationName,
+  });
+}
+
+export async function sendStaffBookingRescheduleEmail(
+  input: BookingEmailInput,
+): Promise<SendEmailResult> {
+  const when = whenLabel(input.startAt, input.timezone);
+  const subject = `Appointment moved: ${input.serviceName} at ${input.organizationName}`;
+  const html = shell(
+    "Appointment rescheduled",
+    `
+      <p>An appointment assigned to you was moved to a new time.</p>
+      <ul style="padding-left: 18px;">
+        <li><strong>Customer:</strong> ${escapeHtml(input.clientName)}</li>
+        <li><strong>Service:</strong> ${escapeHtml(input.serviceName)}</li>
+        ${
+          input.resourceName
+            ? `<li><strong>Staff:</strong> ${escapeHtml(input.resourceName)}</li>`
+            : ""
+        }
+        <li><strong>New time:</strong> ${escapeHtml(when)}</li>
+      </ul>
+      ${dashboardLink(input)}
+    `,
+    input,
+  );
+  return deliver({
+    to: input.to,
+    subject,
+    html,
+    bookingId: input.bookingId,
+    kind: "STAFF_BOOKING_RESCHEDULED",
+    organizationName: input.organizationName,
+  });
+}
+
+export async function sendStaffBookingCancellationEmail(
+  input: BookingEmailInput,
+): Promise<SendEmailResult> {
+  const when = whenLabel(input.startAt, input.timezone);
+  const subject = `Appointment cancelled: ${input.serviceName} at ${input.organizationName}`;
+  const html = shell(
+    "Appointment cancelled",
+    `
+      <p>An appointment assigned to you was cancelled.</p>
+      <ul style="padding-left: 18px;">
+        <li><strong>Customer:</strong> ${escapeHtml(input.clientName)}</li>
+        <li><strong>Service:</strong> ${escapeHtml(input.serviceName)}</li>
+        ${
+          input.resourceName
+            ? `<li><strong>Staff:</strong> ${escapeHtml(input.resourceName)}</li>`
+            : ""
+        }
+        <li><strong>Was scheduled:</strong> ${escapeHtml(when)}</li>
+      </ul>
+      ${dashboardLink(input)}
+    `,
+    input,
+  );
+  return deliver({
+    to: input.to,
+    subject,
+    html,
+    bookingId: input.bookingId,
+    kind: "STAFF_BOOKING_CANCELLED",
     organizationName: input.organizationName,
   });
 }

@@ -132,6 +132,8 @@ export const updateResourceSchema = z.object({
   resourceId: id,
   name: z.string().trim().min(1, "Staff name is required").max(120),
   isActive: checkboxOn,
+  /** Empty string unlinks. Omitted leaves the login assignment unchanged. */
+  userId: z.string().max(64).optional(),
 });
 
 export const dashboardBookingSchema = z.object({
@@ -302,6 +304,7 @@ export const confirmAiBookingSchema = z.object({
 export const inviteTeamMemberSchema = z.object({
   email: z.string().trim().email("Enter a valid email").max(254),
   role: z.enum(["ADMIN", "STAFF", "VIEWER"]).default("STAFF"),
+  resourceId: optionalText(64),
 });
 
 export const revokeInviteSchema = z.object({

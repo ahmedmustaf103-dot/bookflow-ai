@@ -165,4 +165,79 @@ describe("team invites (DB)", () => {
     });
     expect(accepted.ok).toBe(false);
   });
+
+  it("links the accepted member to the invited chair", async () => {
+    const created = await createOrganizationInvite({
+      organizationId: seed.organizationId,
+      organizationName: "E2E Shop",
+      actorUserId: "owner",
+      actorRole: "OWNER",
+      email: "chair@example.test",
+      role: "STAFF",
+      resourceId: seed.resourceId,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const db = getTestPrisma();
+    const invite = await db.organizationInvite.findUniqueOrThrow({
+      where: { id: created.data.inviteId },
+    });
+    expect(invite.resourceId).toBe(seed.resourceId);
+
+    const user = await db.user.create({
+      data: {
+        clerkUserId: `clerk-chair-${Date.now()}`,
+        email: "chair@example.test",
+        firstName: "Chair",
+      },
+    });
+    const accepted = await acceptOrganizationInvite({
+      token: invite.token,
+      userId: user.id,
+      userEmail: "chair@example.test",
+    });
+    expect(accepted.ok).toBe(true);
+
+    const resource = await db.resource.findUniqueOrThrow({
+      where: { id: seed.resourceId },
+    });
+    expect(resource.userId).toBe(user.id);
+  });
+
+  it("does not attach a chair from another organization", async () => {
+    const db = getTestPrisma();
+    await db.organization.deleteMany({ where: { slug: "invite-other-shop" } });
+    const other = await db.organization.create({
+      data: {
+        name: "Other",
+        slug: "invite-other-shop",
+        plan: "STARTER",
+        timezoneDefault: "UTC",
+        locations: { create: { name: "Other", timezone: "UTC" } },
+      },
+      include: { locations: true },
+    });
+    const foreign = await db.resource.create({
+      data: {
+        organizationId: other.id,
+        locationId: other.locations[0]!.id,
+        name: "Foreign",
+        type: "STAFF",
+      },
+    });
+
+    const result = await createOrganizationInvite({
+      organizationId: seed.organizationId,
+      organizationName: "E2E Shop",
+      actorUserId: "owner",
+      actorRole: "OWNER",
+      email: "foreign@example.test",
+      role: "STAFF",
+      resourceId: foreign.id,
+    });
+    expect(result.ok).toBe(false);
+
+    await db.organization.deleteMany({ where: { slug: "invite-other-shop" } });
+  });
 });

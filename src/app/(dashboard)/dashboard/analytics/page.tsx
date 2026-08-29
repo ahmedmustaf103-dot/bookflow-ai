@@ -27,7 +27,7 @@ function pct(n: number) {
 }
 
 export default async function AnalyticsPage() {
-  const ctx = await requireOrgRole("STAFF");
+  const ctx = await requireOrgRole("ADMIN");
   const orgId = ctx.organization.id;
   const days = 30;
 

@@ -5,12 +5,18 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Surface } from "@/components/ui/surface";
+import { resolveStaffResourceScope } from "@/server/staff/scope";
 import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function NewAppointmentPage() {
   const ctx = await requireOrgRole("STAFF");
   const tz = ctx.organization.timezoneDefault;
   const defaultDay = formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
+  const scope = await resolveStaffResourceScope({
+    organizationId: ctx.organization.id,
+    userId: ctx.user.id,
+    role: ctx.membership.role,
+  });
 
   const [clients, services, staff] = await Promise.all([
     ctx.db.client.findMany({
@@ -24,7 +30,10 @@ export default async function NewAppointmentPage() {
       orderBy: { name: "asc" },
     }),
     ctx.db.resource.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(scope.all ? {} : { id: { in: scope.resourceIds } }),
+      },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
@@ -53,11 +62,17 @@ export default async function NewAppointmentPage() {
       {bookableServices.length === 0 || staff.length === 0 ? (
         <EmptyState
           title="Nothing to book yet"
-          description="Add an active service linked to active staff first."
+          description={
+            !scope.all && scope.resourceIds.length === 0
+              ? "Ask the owner to assign your login to a chair on Staff first."
+              : "Add an active service linked to active staff first."
+          }
           action={
-            <ButtonLink href="/dashboard/services" size="sm" variant="primary">
-              Services
-            </ButtonLink>
+            scope.all ? (
+              <ButtonLink href="/dashboard/services" size="sm" variant="primary">
+                Services
+              </ButtonLink>
+            ) : undefined
           }
         />
       ) : (

@@ -9,7 +9,7 @@ export default async function AiPage({
 }: {
   searchParams: Promise<{ clientId?: string; intent?: string }>;
 }) {
-  const ctx = await requireOrgRole("STAFF");
+  const ctx = await requireOrgRole("ADMIN");
   const params = await searchParams;
   const limits = getPlanLimits(ctx.organization.plan);
   const allowsAi = planAllowsAi(ctx.organization.plan);

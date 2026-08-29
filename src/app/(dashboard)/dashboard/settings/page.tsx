@@ -55,7 +55,7 @@ export default async function SettingsPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Settings"
-        description="Business preferences, branding, booking page, team, and automation."
+        description="Business preferences, branding, booking page, and automation. Team logins are optional if you work alone."
         actions={
           <ButtonLink href="/dashboard/settings/team" size="sm">
             Team

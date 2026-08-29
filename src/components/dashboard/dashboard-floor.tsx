@@ -34,12 +34,16 @@ export function DashboardFloor({
   recentlyCompleted,
   timeZone,
   bookPath,
+  showOwnerLinks = true,
+  showCrmLink = true,
 }: {
   current: FloorBooking | null;
   upcoming: FloorBooking[];
   recentlyCompleted: FloorBooking[];
   timeZone: string;
   bookPath: string;
+  showOwnerLinks?: boolean;
+  showCrmLink?: boolean;
 }) {
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -187,30 +191,36 @@ export function DashboardFloor({
           </ul>
         )}
         <ul className="mt-6 space-y-2 border-t border-[var(--border)] pt-4 text-sm">
-          <li>
-            <Link
-              href="/dashboard/analytics"
-              className="text-[var(--accent)] hover:underline"
-            >
-              Revenue & customer insights →
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/dashboard/clients"
-              className="text-[var(--accent)] hover:underline"
-            >
-              Client CRM →
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/dashboard/settings"
-              className="text-[var(--accent)] hover:underline"
-            >
-              Automation settings →
-            </Link>
-          </li>
+          {showOwnerLinks ? (
+            <li>
+              <Link
+                href="/dashboard/analytics"
+                className="text-[var(--accent)] hover:underline"
+              >
+                Revenue & customer insights →
+              </Link>
+            </li>
+          ) : null}
+          {showCrmLink ? (
+            <li>
+              <Link
+                href="/dashboard/clients"
+                className="text-[var(--accent)] hover:underline"
+              >
+                Client CRM →
+              </Link>
+            </li>
+          ) : null}
+          {showOwnerLinks ? (
+            <li>
+              <Link
+                href="/dashboard/settings"
+                className="text-[var(--accent)] hover:underline"
+              >
+                Automation settings →
+              </Link>
+            </li>
+          ) : null}
         </ul>
       </Surface>
     </div>

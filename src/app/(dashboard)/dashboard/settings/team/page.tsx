@@ -20,27 +20,46 @@ export default async function TeamSettingsPage() {
     canAssignInviteRole(actorRole, role),
   );
 
-  const [members, invites] = await Promise.all([
+  const [members, invites, resources] = await Promise.all([
     ctx.db.membership.findMany({
       where: { status: "ACTIVE" },
       include: {
         user: {
-          select: { email: true, firstName: true, lastName: true },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
         },
       },
       orderBy: { createdAt: "asc" },
     }),
     ctx.db.organizationInvite.findMany({
       where: { status: "PENDING", expiresAt: { gt: new Date() } },
+      include: { resource: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
+    ctx.db.resource.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, userId: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
+
+  const chairsByUserId = new Map<string, string[]>();
+  for (const resource of resources) {
+    if (!resource.userId) continue;
+    const names = chairsByUserId.get(resource.userId) ?? [];
+    names.push(resource.name);
+    chairsByUserId.set(resource.userId, names);
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Team"
-        description="Invite people who need a dashboard login. Bookable chairs stay on Staff."
+        description="Optional. If you work alone, skip this. Invite people when you hire — they join this same business, they do not create a new one."
         actions={
           <ButtonLink href="/dashboard/settings" size="sm" variant="secondary">
             Back to settings
@@ -62,6 +81,7 @@ export default async function TeamSettingsPage() {
               const name = [m.user.firstName, m.user.lastName]
                 .filter(Boolean)
                 .join(" ");
+              const chairs = chairsByUserId.get(m.user.id) ?? [];
               return (
                 <li
                   key={m.id}
@@ -76,6 +96,13 @@ export default async function TeamSettingsPage() {
                         {m.user.email}
                       </p>
                     ) : null}
+                    <p className="mt-0.5 text-xs text-[var(--ink-tertiary)]">
+                      {chairs.length > 0
+                        ? `Chair: ${chairs.join(", ")}`
+                        : m.role === "OWNER"
+                          ? "Owner login"
+                          : "No chair linked yet — assign on Staff"}
+                    </p>
                   </div>
                   <span className="inline-flex items-center rounded-md bg-[var(--muted)] px-2 py-0.5 text-[11px] font-medium tracking-wide text-[var(--ink-secondary)] uppercase">
                     {m.role}
@@ -89,6 +116,11 @@ export default async function TeamSettingsPage() {
 
       <Surface className="max-w-lg">
         <h2 className="text-sm font-semibold">Pending invites</h2>
+        <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
+          If the email does not arrive, copy the link below and send it
+          yourself. Resend must have a verified domain to email anyone other
+          than the account owner.
+        </p>
         {invites.length === 0 ? (
           <p className="mt-2 text-sm text-[var(--ink-tertiary)]">
             No outstanding invites.
@@ -105,6 +137,9 @@ export default async function TeamSettingsPage() {
                   <p className="text-xs text-[var(--ink-tertiary)]">
                     {invite.role} · expires{" "}
                     {invite.expiresAt.toISOString().slice(0, 10)}
+                    {invite.resource
+                      ? ` · chair ${invite.resource.name}`
+                      : ""}
                   </p>
                   <p className="mt-1 break-all text-[11px] text-[var(--ink-tertiary)]">
                     {inviteAcceptUrl(invite.token)}
@@ -129,7 +164,8 @@ export default async function TeamSettingsPage() {
         <h2 className="text-sm font-semibold">Invite member</h2>
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
           They sign in with Clerk using this email, then join this business
-          only. You cannot invite an owner.
+          only. You cannot invite an owner. Assign a chair so they see their
+          own calendar and get booking emails.
         </p>
         {assignable.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--ink-secondary)]">
@@ -164,6 +200,18 @@ export default async function TeamSettingsPage() {
                 {assignable.map((role) => (
                   <option key={role} value={role}>
                     {role}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="invite-chair">Assign to chair (optional)</Label>
+              <Select id="invite-chair" name="resourceId" defaultValue="">
+                <option value="">Assign later on Staff</option>
+                {resources.map((resource) => (
+                  <option key={resource.id} value={resource.id}>
+                    {resource.name}
+                    {resource.userId ? " (already linked)" : ""}
                   </option>
                 ))}
               </Select>

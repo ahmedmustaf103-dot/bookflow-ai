@@ -50,7 +50,7 @@ export async function clientSummaryAction(
   try {
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
-    await requireMembership(ctx.organization.id, "STAFF");
+    await requireMembership(ctx.organization.id, "ADMIN");
 
     const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
     if (!rl.ok) return rl;
@@ -84,7 +84,7 @@ export async function messageDraftAction(
   try {
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
-    await requireMembership(ctx.organization.id, "STAFF");
+    await requireMembership(ctx.organization.id, "ADMIN");
 
     const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
     if (!rl.ok) return rl;
@@ -120,7 +120,7 @@ export async function insightDigestAction(
   try {
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
-    await requireMembership(ctx.organization.id, "STAFF");
+    await requireMembership(ctx.organization.id, "ADMIN");
 
     const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
     if (!rl.ok) return rl;
@@ -160,7 +160,7 @@ export async function bookingAssistantAction(
   try {
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
-    await requireMembership(ctx.organization.id, "STAFF");
+    await requireMembership(ctx.organization.id, "ADMIN");
 
     const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
     if (!rl.ok) return rl;
@@ -204,7 +204,7 @@ export async function confirmAiBookingProposalAction(
   try {
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
-    await requireMembership(ctx.organization.id, "STAFF");
+    await requireMembership(ctx.organization.id, "ADMIN");
 
     const limited = await assertRateLimit({
       name: "ai_booking_confirm",
@@ -261,7 +261,7 @@ export async function sendAiDraftAction(
   try {
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
-    await requireMembership(ctx.organization.id, "STAFF");
+    await requireMembership(ctx.organization.id, "ADMIN");
 
     const limited = await assertRateLimit({
       name: "ai_draft_send",

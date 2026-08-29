@@ -55,13 +55,13 @@ export default async function DashboardLayout({
             href: "/dashboard/ai",
             label: "AI",
             group: "operate" as const,
-            min: "STAFF" as const,
+            min: "ADMIN" as const,
           },
           {
             href: "/dashboard/analytics",
             label: "Analytics",
             group: "operate" as const,
-            min: "STAFF" as const,
+            min: "ADMIN" as const,
           },
           {
             href: "/dashboard/locations",

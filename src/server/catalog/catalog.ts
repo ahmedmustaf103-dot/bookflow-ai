@@ -102,6 +102,8 @@ export async function updateResource(input: {
   isActive: boolean;
   serviceIds: string[];
   actorId?: string | null;
+  /** undefined = leave unchanged, null = unlink login */
+  userId?: string | null;
 }): Promise<ActionResult<{ id: string }>> {
   const resource = await db.resource.findFirst({
     where: { id: input.resourceId, organizationId: input.organizationId },
@@ -113,6 +115,19 @@ export async function updateResource(input: {
     input.serviceIds.slice(0, 50),
   );
 
+  const nextUserId = input.userId;
+  if (nextUserId) {
+    const member = await db.membership.findFirst({
+      where: {
+        organizationId: input.organizationId,
+        userId: nextUserId,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    });
+    if (!member) return err("That person is not on this team");
+  }
+
   try {
     await db.$transaction(async (tx) => {
       await tx.resource.update({
@@ -120,6 +135,7 @@ export async function updateResource(input: {
         data: {
           name: input.name,
           isActive: input.isActive,
+          ...(nextUserId !== undefined ? { userId: nextUserId } : {}),
         },
       });
       await tx.serviceResource.deleteMany({
@@ -142,7 +158,10 @@ export async function updateResource(input: {
       action: "resource.updated",
       entityType: "resource",
       entityId: resource.id,
-      metadata: { isActive: input.isActive },
+      metadata: {
+        isActive: input.isActive,
+        ...(nextUserId !== undefined ? { userId: nextUserId } : {}),
+      },
     });
     return ok({ id: resource.id });
   } catch (e) {

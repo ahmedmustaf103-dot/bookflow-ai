@@ -53,6 +53,7 @@ export function ActionForm({
             if (!result.ok) {
               setError(result.error);
               toast(result.error, "error");
+              router.refresh();
               return;
             }
             if (resetOnSuccess) {

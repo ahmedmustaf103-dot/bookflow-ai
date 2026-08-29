@@ -195,6 +195,47 @@ describe("catalog updates (DB)", () => {
     expect(resource?.isActive).toBe(true);
   });
 
+  it("links a team login to a chair and rejects someone outside the org", async () => {
+    const db = getTestPrisma();
+    const owner = await db.user.findUniqueOrThrow({
+      where: { clerkUserId: "test-seed-owner" },
+    });
+
+    const linked = await updateResource({
+      organizationId: seed.organizationId,
+      resourceId: seed.resourceId,
+      name: "Alex Rivera",
+      isActive: true,
+      serviceIds: [seed.serviceId],
+      userId: owner.id,
+    });
+    expect(linked.ok).toBe(true);
+    expect(
+      (await db.resource.findUnique({ where: { id: seed.resourceId } }))
+        ?.userId,
+    ).toBe(owner.id);
+
+    const outsider = await db.user.create({
+      data: {
+        clerkUserId: `outsider-${Date.now()}`,
+        email: `out+${Date.now()}@example.test`,
+      },
+    });
+    const rejected = await updateResource({
+      organizationId: seed.organizationId,
+      resourceId: seed.resourceId,
+      name: "Alex Rivera",
+      isActive: true,
+      serviceIds: [seed.serviceId],
+      userId: outsider.id,
+    });
+    expect(rejected.ok).toBe(false);
+    expect(
+      (await db.resource.findUnique({ where: { id: seed.resourceId } }))
+        ?.userId,
+    ).toBe(owner.id);
+  });
+
   it("blocks new public bookings for inactive staff and keeps appointments", async () => {
     const db = getTestPrisma();
     const existing = await db.booking.findUnique({

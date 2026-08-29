@@ -1,7 +1,7 @@
 import { ActionForm } from "@/components/forms/action-form";
 import { ConfirmActiveCheckbox } from "@/components/dashboard/confirm-active-checkbox";
 import { ButtonLink } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { Surface } from "@/components/ui/surface";
@@ -17,7 +17,7 @@ export default async function EditStaffPage({
   const ctx = await requireOrgRole("ADMIN");
   const { resourceId } = await params;
 
-  const [resource, services] = await Promise.all([
+  const [resource, services, members] = await Promise.all([
     ctx.db.resource.findFirst({
       where: { id: resourceId },
       include: {
@@ -28,6 +28,20 @@ export default async function EditStaffPage({
     }),
     ctx.db.service.findMany({
       orderBy: { name: "asc" },
+    }),
+    ctx.db.membership.findMany({
+      where: { status: "ACTIVE" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -79,6 +93,31 @@ export default async function EditStaffPage({
               required
               defaultValue={resource.name}
             />
+          </div>
+          <div>
+            <Label htmlFor="edit-staff-login">Dashboard login</Label>
+            <Select
+              id="edit-staff-login"
+              name="userId"
+              defaultValue={resource.userId ?? ""}
+            >
+              <option value="">Not linked — chair only</option>
+              {members.map((m) => {
+                const name = [m.user.firstName, m.user.lastName]
+                  .filter(Boolean)
+                  .join(" ");
+                return (
+                  <option key={m.user.id} value={m.user.id}>
+                    {name ? `${name} (${m.user.email})` : m.user.email} ·{" "}
+                    {m.role}
+                  </option>
+                );
+              })}
+            </Select>
+            <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
+              Link a team login so this person sees their own appointments and
+              gets booking emails. Solo owners are linked automatically.
+            </p>
           </div>
           {services.length > 0 ? (
             <fieldset className="flex flex-col gap-2">

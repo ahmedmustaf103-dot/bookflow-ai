@@ -249,6 +249,12 @@ export async function updateResourceAction(
     isActive: parsed.data.isActive,
     serviceIds,
     actorId: ctx.user.id,
+    userId:
+      parsed.data.userId === undefined
+        ? undefined
+        : parsed.data.userId.trim() === ""
+          ? null
+          : parsed.data.userId.trim(),
   });
 
   if (result.ok) {

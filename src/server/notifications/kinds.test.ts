@@ -9,6 +9,8 @@ import {
   ownerNotifyDedupeKey,
   reminderDedupeKey,
   rescheduleDedupeKey,
+  staffCancelDedupeKey,
+  staffRescheduleDedupeKey,
   uniqueOwnerNotifyEmails,
 } from "@/server/notifications/kinds";
 
@@ -53,6 +55,18 @@ describe("outbox kinds", () => {
     expect(rescheduleDedupeKey("b1", start)).toBe(
       "BOOKING_RESCHEDULED:b1:EMAIL:2026-08-10T16:00:00.000Z",
     );
+    expect(
+      staffRescheduleDedupeKey(
+        "b1",
+        "Barber@Shop.test",
+        start,
+      ),
+    ).toBe(
+      "STAFF_BOOKING_RESCHEDULED:b1:EMAIL:barber@shop.test:2026-08-10T16:00:00.000Z",
+    );
+    expect(staffCancelDedupeKey("b1", "Barber@Shop.test")).toBe(
+      "STAFF_BOOKING_CANCELLED:b1:EMAIL:barber@shop.test",
+    );
   });
 
   it("marks confirmation/owner/cancel/reschedule as immediate flush kinds", () => {
@@ -62,6 +76,8 @@ describe("outbox kinds", () => {
         "BOOKING_CREATED",
         "BOOKING_CANCELLATION",
         "BOOKING_RESCHEDULED",
+        "STAFF_BOOKING_RESCHEDULED",
+        "STAFF_BOOKING_CANCELLED",
       ]),
     );
     expect(IMMEDIATE_OUTBOX_KINDS).not.toContain("BOOKING_REMINDER");
@@ -78,6 +94,8 @@ describe("outbox kinds", () => {
   it("cancels pending post-visit jobs with reminders on booking cancel", () => {
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("BOOKING_REMINDER");
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("BOOKING_RESCHEDULED");
+    expect(CANCEL_ON_BOOKING_CANCEL).toContain("STAFF_BOOKING_RESCHEDULED");
+    expect(CANCEL_ON_BOOKING_CANCEL).not.toContain("STAFF_BOOKING_CANCELLED");
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("FOLLOW_UP");
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("REVIEW_REQUEST");
     expect(CANCEL_ON_BOOKING_CANCEL).toContain("REBOOKING_REMINDER");

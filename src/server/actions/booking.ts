@@ -21,6 +21,10 @@ import {
 } from "@/server/bookings/service";
 import { db } from "@/server/db";
 import { assertRateLimit } from "@/server/rate-limit";
+import {
+  assertStaffCanAccessBooking,
+  assertStaffCanAccessResource,
+} from "@/server/staff/scope";
 import { getActiveOrganization } from "@/server/tenant/context";
 import {
   checkoutSchema,
@@ -102,6 +106,14 @@ export async function createDashboardBookingAction(
   const parsed = parseForm(dashboardBookingSchema, formData);
   if (!parsed.ok) return err(parsed.error);
 
+  const chair = await assertStaffCanAccessResource({
+    organizationId: ctx.organization.id,
+    userId: ctx.user.id,
+    role: ctx.membership.role,
+    resourceId: parsed.data.resourceId,
+  });
+  if (!chair.ok) return err(chair.error);
+
   const startAt = new Date(parsed.data.startAt);
   if (Number.isNaN(startAt.getTime())) return err("Invalid start time");
 
@@ -157,7 +169,7 @@ export async function fetchDashboardSlotsAction(input: {
   day: string;
 }): Promise<ActionResult<Array<{ startIso: string; label: string }>>> {
   const ctx = await getActiveOrganization();
-  if (!ctx.organization) return err("No organization selected");
+  if (!ctx.organization || !ctx.membership) return err("No organization selected");
   await requireMembership(ctx.organization.id, "STAFF");
 
   const parsed = dashboardSlotsSchema.safeParse(input);
@@ -172,6 +184,14 @@ export async function fetchDashboardSlotsAction(input: {
     windowSec: 60,
   });
   if (!limited.ok) return err(limited.error);
+
+  const chair = await assertStaffCanAccessResource({
+    organizationId: ctx.organization.id,
+    userId: ctx.user.id,
+    role: ctx.membership.role,
+    resourceId: parsed.data.resourceId,
+  });
+  if (!chair.ok) return err(chair.error);
 
   const resource = await db.resource.findFirst({
     where: {
@@ -225,6 +245,14 @@ export async function transitionBookingAction(
   const parsed = parseForm(transitionBookingSchema, formData);
   if (!parsed.ok) return err(parsed.error);
 
+  const access = await assertStaffCanAccessBooking({
+    organizationId: ctx.organization.id,
+    userId: ctx.user.id,
+    role: ctx.membership.role,
+    bookingId: parsed.data.bookingId,
+  });
+  if (!access.ok) return err(access.error);
+
   const result = await transitionBooking({
     organizationId: ctx.organization.id,
     bookingId: parsed.data.bookingId,
@@ -262,6 +290,14 @@ export async function rescheduleBookingAction(
   const parsed = parseForm(rescheduleBookingSchema, formData);
   if (!parsed.ok) return err(parsed.error);
 
+  const access = await assertStaffCanAccessBooking({
+    organizationId: ctx.organization.id,
+    userId: ctx.user.id,
+    role: ctx.membership.role,
+    bookingId: parsed.data.bookingId,
+  });
+  if (!access.ok) return err(access.error);
+
   const startAt = new Date(parsed.data.startAt);
   if (Number.isNaN(startAt.getTime())) return err("Invalid start time");
 
@@ -286,7 +322,7 @@ export async function startCheckoutAction(formData: FormData): Promise<void> {
     throw new Error("No organization");
   }
 
-  await requireMembership(ctx.organization.id, "ADMIN");
+  await requireMembership(ctx.organization.id, "OWNER");
 
   const limited = await assertRateLimit({
     name: "checkout",
@@ -332,7 +368,7 @@ export async function openBillingPortalAction(): Promise<void> {
     throw new Error("No organization");
   }
 
-  await requireMembership(ctx.organization.id, "ADMIN");
+  await requireMembership(ctx.organization.id, "OWNER");
 
   const result = await createBillingPortalSession(ctx.organization.id);
   if (!result.ok) {

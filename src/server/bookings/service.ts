@@ -70,6 +70,7 @@ function notifyContext(booking: {
   };
   service: { name: string; priceCents?: number; currency?: string };
   resource: { name: string };
+  resourceId: string;
   location: { timezone: string };
 }): BookingNotifyContext {
   return {
@@ -88,6 +89,7 @@ function notifyContext(booking: {
     marketingOptIn: booking.client.marketingOptIn ?? false,
     serviceName: booking.service.name,
     resourceName: booking.resource.name,
+    resourceId: booking.resourceId,
     priceCents: booking.service.priceCents ?? null,
     currency: booking.service.currency ?? null,
     reviewUrl: booking.organization.reviewUrl ?? null,

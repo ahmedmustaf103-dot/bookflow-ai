@@ -192,15 +192,19 @@ model OrganizationInvite {
   token          String         @unique
   status         InviteStatus   @default(PENDING)
   invitedById    String?
+  /// Optional bookable chair to link when the invite is accepted.
+  resourceId     String?
   expiresAt      DateTime
   acceptedAt     DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource     Resource?    @relation(fields: [resourceId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status])
   @@index([email, status])
+  @@index([resourceId])
   @@map("organization_invites")
 }
 
@@ -242,6 +246,7 @@ model Resource {
   organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   location     Location               @relation(fields: [locationId], references: [id], onDelete: Cascade)
   user         User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invites      OrganizationInvite[]
   services     ServiceResource[]
   rules        AvailabilityRule[]
   overrides    AvailabilityOverride[]

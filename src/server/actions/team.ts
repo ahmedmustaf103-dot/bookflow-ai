@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { err, type ActionResult } from "@/lib/result";
 import {
@@ -49,12 +50,11 @@ export async function inviteTeamMemberAction(
     actorRole: ctx.membership.role,
     email: parsed.data.email,
     role: parsed.data.role,
+    resourceId: parsed.data.resourceId ?? null,
   });
 
-  if (result.ok) {
-    revalidatePath("/dashboard/settings/team");
-    revalidatePath("/dashboard/settings");
-  }
+  revalidatePath("/dashboard/settings/team");
+  revalidatePath("/dashboard/settings");
   return result;
 }
 
@@ -94,9 +94,13 @@ export async function acceptInviteAction(
     userId: user.id,
     userEmail: user.email,
   });
-  if (result.ok) {
-    await setActiveOrganizationId(result.data.organizationId);
-    revalidatePath("/dashboard");
+  if (!result.ok) {
+    redirect(
+      `/invite/${parsed.data.token}?error=${encodeURIComponent(result.error)}`,
+    );
   }
-  return result;
+
+  await setActiveOrganizationId(result.data.organizationId);
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
 }

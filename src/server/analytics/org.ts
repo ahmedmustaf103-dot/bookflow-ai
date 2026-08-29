@@ -365,9 +365,12 @@ export async function getTodayAgenda(
 export async function getDashboardFloor(
   organizationId: string,
   now = new Date(),
+  resourceIds?: string[],
 ) {
   const timeZone = await getOrgTimezone(organizationId);
   const today = resolveTodayPeriod(timeZone, now);
+  const resourceFilter =
+    resourceIds != null ? { resourceId: { in: resourceIds } } : {};
 
   const [open, recentlyCompleted] = await Promise.all([
     db.booking.findMany({
@@ -375,6 +378,7 @@ export async function getDashboardFloor(
         organizationId,
         status: { in: ["PENDING", "CONFIRMED"] },
         startAt: { gte: today.start, lt: today.end },
+        ...resourceFilter,
       },
       orderBy: { startAt: "asc" },
       include: floorInclude,
@@ -384,6 +388,7 @@ export async function getDashboardFloor(
         organizationId,
         status: "COMPLETED",
         startAt: { gte: today.start, lt: today.end },
+        ...resourceFilter,
       },
       orderBy: { startAt: "desc" },
       take: 5,

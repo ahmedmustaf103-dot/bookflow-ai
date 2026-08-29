@@ -13,6 +13,12 @@ import { Surface } from "@/components/ui/surface";
 import { TagChip } from "@/components/ui/tag-chip";
 import { formatMoney } from "@/lib/client-tags";
 import { updateClientAction } from "@/server/actions/ops";
+import { canManage } from "@/server/auth/session";
+import {
+  bookingWhereForScope,
+  clientVisibleInStaffScope,
+  resolveStaffResourceScope,
+} from "@/server/staff/scope";
 import { requireOrgRole } from "@/server/tenant/context";
 
 export default async function ClientDetailPage({
@@ -23,11 +29,24 @@ export default async function ClientDetailPage({
   const ctx = await requireOrgRole("STAFF");
   const { clientId } = await params;
   const tzDefault = ctx.organization.timezoneDefault;
+  const scope = await resolveStaffResourceScope({
+    organizationId: ctx.organization.id,
+    userId: ctx.user.id,
+    role: ctx.membership.role,
+  });
+  const showFinance = canManage(ctx.membership.role);
+  const visible = await clientVisibleInStaffScope({
+    organizationId: ctx.organization.id,
+    clientId,
+    scope,
+  });
+  if (!visible) notFound();
 
   const client = await ctx.db.client.findFirst({
     where: { id: clientId },
     include: {
       bookings: {
+        where: bookingWhereForScope(scope),
         include: {
           service: true,
           resource: true,
@@ -89,18 +108,22 @@ export default async function ClientDetailPage({
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={`/dashboard/ai?clientId=${encodeURIComponent(client.id)}`}
-              className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--muted)]"
-            >
-              AI summary
-            </Link>
-            <Link
-              href={`/dashboard/ai?clientId=${encodeURIComponent(client.id)}&intent=follow_up`}
-              className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--muted)]"
-            >
-              Draft follow-up
-            </Link>
+            {showFinance ? (
+              <>
+                <Link
+                  href={`/dashboard/ai?clientId=${encodeURIComponent(client.id)}`}
+                  className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--muted)]"
+                >
+                  AI summary
+                </Link>
+                <Link
+                  href={`/dashboard/ai?clientId=${encodeURIComponent(client.id)}&intent=follow_up`}
+                  className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--muted)]"
+                >
+                  Draft follow-up
+                </Link>
+              </>
+            ) : null}
             {isRepeat ? (
               <span className="inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold tracking-wide text-[var(--accent)] uppercase">
                 Repeat customer
@@ -127,11 +150,13 @@ export default async function ClientDetailPage({
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Lifetime value"
-          value={formatMoney(lifetimeValueCents, currency)}
-          hint={`${completed.length} completed`}
-        />
+        {showFinance ? (
+          <Stat
+            label="Lifetime value"
+            value={formatMoney(lifetimeValueCents, currency)}
+            hint={`${completed.length} completed`}
+          />
+        ) : null}
         <Stat
           label="Visits"
           value={client.bookings.length}

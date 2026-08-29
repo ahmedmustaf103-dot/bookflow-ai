@@ -9,7 +9,12 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 import { CalendarBoard, type CalendarBooking } from "./calendar-board";
 import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  bookingWhereForScope,
+  resolveStaffResourceScope,
+} from "@/server/staff/scope";
 import { requireOrgRole } from "@/server/tenant/context";
 
 type View = "day" | "week" | "month";
@@ -68,7 +73,17 @@ export default async function AppointmentsPage({
   const day = params.day ?? formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
   const view: View =
     params.view === "week" || params.view === "month" ? params.view : "day";
-  const resourceId = params.resourceId?.trim() || undefined;
+  const requestedResourceId = params.resourceId?.trim() || undefined;
+  const scope = await resolveStaffResourceScope({
+    organizationId: ctx.organization.id,
+    userId: ctx.user.id,
+    role: ctx.membership.role,
+  });
+  const resourceId =
+    requestedResourceId &&
+    (scope.all || scope.resourceIds.includes(requestedResourceId))
+      ? requestedResourceId
+      : undefined;
 
   const { from, to } = rangeForView(day, view, tz);
 
@@ -76,6 +91,7 @@ export default async function AppointmentsPage({
     ctx.db.booking.findMany({
       where: {
         startAt: { gte: from, lt: to },
+        ...bookingWhereForScope(scope),
         ...(resourceId ? { resourceId } : {}),
         status: { not: "CANCELLED" },
       },
@@ -88,7 +104,10 @@ export default async function AppointmentsPage({
       orderBy: { startAt: "asc" },
     }),
     ctx.db.resource.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(scope.all ? {} : { id: { in: scope.resourceIds } }),
+      },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
@@ -112,31 +131,48 @@ export default async function AppointmentsPage({
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Calendar"
-        description="Day, week, and month views — drag bookings to reschedule. Filter by staff."
+        description={
+          scope.all
+            ? "Day, week, and month views — drag bookings to reschedule. Filter by staff."
+            : scope.resourceIds.length === 0
+              ? "Ask the owner to assign your login to a chair on Staff so appointments show here."
+              : "Your appointments — drag to reschedule."
+        }
         actions={
-          <>
-            <ButtonLink href="/dashboard/appointments/new" size="sm">
-              New appointment
-            </ButtonLink>
-            <ButtonLink
-              href={`/book/${ctx.organization.slug}`}
-              variant="secondary"
-              size="sm"
-            >
-              Booking page
-            </ButtonLink>
-          </>
+          scope.all || scope.resourceIds.length > 0 ? (
+            <>
+              <ButtonLink href="/dashboard/appointments/new" size="sm">
+                New appointment
+              </ButtonLink>
+              {scope.all ? (
+                <ButtonLink
+                  href={`/book/${ctx.organization.slug}`}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Booking page
+                </ButtonLink>
+              ) : null}
+            </>
+          ) : null
         }
       />
 
-      <CalendarBoard
-        day={day}
-        view={view}
-        timezone={tz}
-        resourceId={resourceId}
-        resources={resources}
-        bookings={calendarBookings}
-      />
+      {!scope.all && scope.resourceIds.length === 0 ? (
+        <EmptyState
+          title="No chair assigned"
+          description="The owner can assign your login to a bookable chair under Staff. Until then, this calendar stays empty."
+        />
+      ) : (
+        <CalendarBoard
+          day={day}
+          view={view}
+          timezone={tz}
+          resourceId={resourceId}
+          resources={resources}
+          bookings={calendarBookings}
+        />
+      )}
     </div>
   );
 }

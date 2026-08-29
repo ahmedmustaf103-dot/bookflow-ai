@@ -8,6 +8,8 @@ export const OUTBOX_KINDS = {
   FOLLOW_UP: "FOLLOW_UP",
   REVIEW_REQUEST: "REVIEW_REQUEST",
   REBOOKING_REMINDER: "REBOOKING_REMINDER",
+  STAFF_BOOKING_RESCHEDULED: "STAFF_BOOKING_RESCHEDULED",
+  STAFF_BOOKING_CANCELLED: "STAFF_BOOKING_CANCELLED",
 } as const;
 
 export type OutboxKind = (typeof OUTBOX_KINDS)[keyof typeof OUTBOX_KINDS];
@@ -22,6 +24,8 @@ export const TRANSACTIONAL_OUTBOX_KINDS: OutboxKind[] = [
   OUTBOX_KINDS.BOOKING_CANCELLATION,
   OUTBOX_KINDS.BOOKING_RESCHEDULED,
   OUTBOX_KINDS.BOOKING_REMINDER,
+  OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED,
+  OUTBOX_KINDS.STAFF_BOOKING_CANCELLED,
 ];
 
 /** Active memberships that receive operational shop emails (matches canManage). */
@@ -41,6 +45,7 @@ export const MARKETING_OUTBOX_KINDS: OutboxKind[] = [
 export const CANCEL_ON_BOOKING_CANCEL: OutboxKind[] = [
   OUTBOX_KINDS.BOOKING_REMINDER,
   OUTBOX_KINDS.BOOKING_RESCHEDULED,
+  OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED,
   OUTBOX_KINDS.FOLLOW_UP,
   OUTBOX_KINDS.REVIEW_REQUEST,
   OUTBOX_KINDS.REBOOKING_REMINDER,
@@ -52,6 +57,8 @@ export const IMMEDIATE_OUTBOX_KINDS: OutboxKind[] = [
   OUTBOX_KINDS.BOOKING_CREATED,
   OUTBOX_KINDS.BOOKING_CANCELLATION,
   OUTBOX_KINDS.BOOKING_RESCHEDULED,
+  OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED,
+  OUTBOX_KINDS.STAFF_BOOKING_CANCELLED,
 ];
 
 export function isMarketingOutboxKind(kind: string): boolean {
@@ -108,4 +115,16 @@ export function uniqueOwnerNotifyEmails(
     out.push(email);
   }
   return out;
+}
+
+export function staffRescheduleDedupeKey(
+  bookingId: string,
+  email: string,
+  startAt: Date,
+) {
+  return `${OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED}:${bookingId}:EMAIL:${email.trim().toLowerCase()}:${startAt.toISOString()}`;
+}
+
+export function staffCancelDedupeKey(bookingId: string, email: string) {
+  return `${OUTBOX_KINDS.STAFF_BOOKING_CANCELLED}:${bookingId}:EMAIL:${email.trim().toLowerCase()}`;
 }

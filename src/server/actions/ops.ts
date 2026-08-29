@@ -12,6 +12,10 @@ import { storeBrandAsset } from "@/server/branding/assets";
 import { db } from "@/server/db";
 import { tenantDb } from "@/server/db/tenant";
 import { cancelPendingMarketingForClient } from "@/server/notifications/outbox";
+import {
+  clientVisibleInStaffScope,
+  resolveStaffResourceScope,
+} from "@/server/staff/scope";
 import { getActiveOrganization } from "@/server/tenant/context";
 import {
   activateCustomDomainSchema,
@@ -26,7 +30,7 @@ export async function updateClientAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const ctx = await getActiveOrganization();
-  if (!ctx.organization) return err("No organization selected");
+  if (!ctx.organization || !ctx.membership) return err("No organization selected");
   await requireMembership(ctx.organization.id, "STAFF");
 
   const parsed = parseForm(updateClientSchema, formData);
@@ -49,6 +53,18 @@ export async function updateClientAction(
       where: { id: clientId },
     });
     if (!existing) return err("Client not found");
+
+    const scope = await resolveStaffResourceScope({
+      organizationId: ctx.organization.id,
+      userId: ctx.user.id,
+      role: ctx.membership.role,
+    });
+    const visible = await clientVisibleInStaffScope({
+      organizationId: ctx.organization.id,
+      clientId,
+      scope,
+    });
+    if (!visible) return err("Client not found");
 
     await tdb.client.updateMany({
       where: { id: clientId },

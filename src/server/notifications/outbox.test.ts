@@ -26,6 +26,8 @@ const {
   sendReview,
   sendRebooking,
   sendOwnerNew,
+  sendStaffReschedule,
+  sendStaffCancel,
 } = vi.hoisted(() => ({
   findMany: vi.fn(),
   updateMany: vi.fn(),
@@ -39,6 +41,8 @@ const {
   sendReview: vi.fn(),
   sendRebooking: vi.fn(),
   sendOwnerNew: vi.fn(),
+  sendStaffReschedule: vi.fn(),
+  sendStaffCancel: vi.fn(),
 }));
 
 vi.mock("@/server/db", () => ({
@@ -56,6 +60,9 @@ vi.mock("@/server/db", () => ({
     bookingEvent: {
       count: vi.fn().mockResolvedValue(0),
     },
+    resource: {
+      findFirst: vi.fn(),
+    },
   },
 }));
 
@@ -68,6 +75,8 @@ vi.mock("@/server/notifications/email", () => ({
   sendReviewRequestEmail: sendReview,
   sendRebookingReminderEmail: sendRebooking,
   sendOwnerNewBookingEmail: sendOwnerNew,
+  sendStaffBookingRescheduleEmail: sendStaffReschedule,
+  sendStaffBookingCancellationEmail: sendStaffCancel,
 }));
 
 vi.mock("@/server/notifications/sms", () => ({
@@ -104,6 +113,12 @@ describe("outbox timing helpers", () => {
     expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_CREATED)).toBe(true);
     expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_CANCELLATION)).toBe(true);
     expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_RESCHEDULED)).toBe(true);
+    expect(isImmediateOutboxKind(OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED)).toBe(
+      true,
+    );
+    expect(isImmediateOutboxKind(OUTBOX_KINDS.STAFF_BOOKING_CANCELLED)).toBe(
+      true,
+    );
     expect(isImmediateOutboxKind(OUTBOX_KINDS.BOOKING_REMINDER)).toBe(false);
   });
 

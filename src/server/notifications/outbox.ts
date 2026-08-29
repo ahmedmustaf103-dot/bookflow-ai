@@ -19,6 +19,8 @@ import {
   sendOwnerNewBookingEmail,
   sendRebookingReminderEmail,
   sendReviewRequestEmail,
+  sendStaffBookingCancellationEmail,
+  sendStaffBookingRescheduleEmail,
   type BookingEmailInput,
 } from "@/server/notifications/email";
 import {
@@ -33,6 +35,8 @@ import {
   ownerNotifyDedupeKey,
   reminderDedupeKey,
   rescheduleDedupeKey,
+  staffCancelDedupeKey,
+  staffRescheduleDedupeKey,
   uniqueOwnerNotifyEmails,
 } from "@/server/notifications/kinds";
 import {
@@ -73,6 +77,7 @@ export type BookingNotifyContext = {
   marketingOptIn?: boolean;
   serviceName: string;
   resourceName: string;
+  resourceId?: string | null;
   priceCents?: number | null;
   currency?: string | null;
   reviewUrl?: string | null;
@@ -237,13 +242,15 @@ export async function enqueueOwnerNewBooking(ctx: BookingNotifyContext) {
     },
     select: { user: { select: { email: true } } },
   });
-  const recipients = uniqueOwnerNotifyEmails(
-    memberships.map((m) => m.user.email),
-  );
+  const assignedEmail = await assignedStaffEmail(ctx);
+  const recipients = uniqueOwnerNotifyEmails([
+    ...memberships.map((m) => m.user.email),
+    assignedEmail,
+  ]);
   if (recipients.length === 0) {
     logger.info(
       { bookingId: ctx.bookingId, organizationId: ctx.organizationId },
-      "Skipped owner new-booking email — no OWNER/ADMIN email",
+      "Skipped owner new-booking email — no OWNER/ADMIN/assigned-staff email",
     );
     return;
   }
@@ -264,44 +271,90 @@ export async function enqueueOwnerNewBooking(ctx: BookingNotifyContext) {
   scheduleDueOutboxFlush("booking_created_owner");
 }
 
-/** Cancellation email — due immediately. */
-export async function enqueueBookingCancellation(ctx: BookingNotifyContext) {
-  if (!ctx.clientEmail) return;
-  const payload = emailPayload(ctx, ctx.clientEmail, {
-    icsSequence: await icsSequenceForBooking(ctx.bookingId, 1),
+async function assignedStaffEmail(
+  ctx: BookingNotifyContext,
+): Promise<string | null> {
+  if (!ctx.resourceId) return null;
+  const resource = await db.resource.findFirst({
+    where: {
+      id: ctx.resourceId,
+      organizationId: ctx.organizationId,
+    },
+    select: { user: { select: { email: true } } },
   });
+  return uniqueOwnerNotifyEmails([resource?.user?.email])[0] ?? null;
+}
+
+async function enqueueAssignedStaffCopy(
+  ctx: BookingNotifyContext,
+  kind:
+    | typeof OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED
+    | typeof OUTBOX_KINDS.STAFF_BOOKING_CANCELLED,
+) {
+  const to = await assignedStaffEmail(ctx);
+  if (!to) return;
+  const client = ctx.clientEmail?.trim().toLowerCase();
+  if (client && client === to) return;
+
+  const dedupeKey =
+    kind === OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED
+      ? staffRescheduleDedupeKey(ctx.bookingId, to, ctx.startAt)
+      : staffCancelDedupeKey(ctx.bookingId, to);
+
   await enqueueRow({
     organizationId: ctx.organizationId,
     bookingId: ctx.bookingId,
     channel: "EMAIL",
-    kind: OUTBOX_KINDS.BOOKING_CANCELLATION,
-    dedupeKey: bookingDedupeKey(
-      OUTBOX_KINDS.BOOKING_CANCELLATION,
-      ctx.bookingId,
-    ),
-    toAddress: ctx.clientEmail,
+    kind,
+    dedupeKey,
+    toAddress: to,
     scheduledFor: new Date(),
-    payload,
+    payload: emailPayload(ctx, to),
   });
+}
+
+/** Cancellation email — due immediately. */
+export async function enqueueBookingCancellation(ctx: BookingNotifyContext) {
+  if (ctx.clientEmail) {
+    const payload = emailPayload(ctx, ctx.clientEmail, {
+      icsSequence: await icsSequenceForBooking(ctx.bookingId, 1),
+    });
+    await enqueueRow({
+      organizationId: ctx.organizationId,
+      bookingId: ctx.bookingId,
+      channel: "EMAIL",
+      kind: OUTBOX_KINDS.BOOKING_CANCELLATION,
+      dedupeKey: bookingDedupeKey(
+        OUTBOX_KINDS.BOOKING_CANCELLATION,
+        ctx.bookingId,
+      ),
+      toAddress: ctx.clientEmail,
+      scheduledFor: new Date(),
+      payload,
+    });
+  }
+  await enqueueAssignedStaffCopy(ctx, OUTBOX_KINDS.STAFF_BOOKING_CANCELLED);
   scheduleDueOutboxFlush("booking_cancellation");
 }
 
 /** Reschedule email — due immediately (new time in payload). */
 export async function enqueueBookingReschedule(ctx: BookingNotifyContext) {
-  if (!ctx.clientEmail) return;
-  const payload = emailPayload(ctx, ctx.clientEmail, {
-    icsSequence: await icsSequenceForBooking(ctx.bookingId),
-  });
-  await enqueueRow({
-    organizationId: ctx.organizationId,
-    bookingId: ctx.bookingId,
-    channel: "EMAIL",
-    kind: OUTBOX_KINDS.BOOKING_RESCHEDULED,
-    dedupeKey: rescheduleDedupeKey(ctx.bookingId, ctx.startAt),
-    toAddress: ctx.clientEmail,
-    scheduledFor: new Date(),
-    payload,
-  });
+  if (ctx.clientEmail) {
+    const payload = emailPayload(ctx, ctx.clientEmail, {
+      icsSequence: await icsSequenceForBooking(ctx.bookingId),
+    });
+    await enqueueRow({
+      organizationId: ctx.organizationId,
+      bookingId: ctx.bookingId,
+      channel: "EMAIL",
+      kind: OUTBOX_KINDS.BOOKING_RESCHEDULED,
+      dedupeKey: rescheduleDedupeKey(ctx.bookingId, ctx.startAt),
+      toAddress: ctx.clientEmail,
+      scheduledFor: new Date(),
+      payload,
+    });
+  }
+  await enqueueAssignedStaffCopy(ctx, OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED);
   scheduleDueOutboxFlush("booking_reschedule");
 }
 
@@ -604,6 +657,10 @@ async function dispatchOutboxItem(item: {
         return sendBookingCancellation(payload);
       case OUTBOX_KINDS.BOOKING_RESCHEDULED:
         return sendBookingReschedule(payload);
+      case OUTBOX_KINDS.STAFF_BOOKING_RESCHEDULED:
+        return sendStaffBookingRescheduleEmail(payload);
+      case OUTBOX_KINDS.STAFF_BOOKING_CANCELLED:
+        return sendStaffBookingCancellationEmail(payload);
       case OUTBOX_KINDS.FOLLOW_UP:
         return sendFollowUpEmail(payload);
       case OUTBOX_KINDS.REVIEW_REQUEST:

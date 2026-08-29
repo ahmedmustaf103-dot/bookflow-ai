@@ -14,12 +14,23 @@ import {
   getOrgAnalytics,
   getDashboardFloor,
 } from "@/server/analytics/org";
+import { canEditCalendar, canManage } from "@/server/auth/session";
 import { getPilotSetupStatus } from "@/server/onboarding/setup-status";
+import { resolveStaffResourceScope } from "@/server/staff/scope";
 import { requireOrgOrRedirect } from "@/server/tenant/context";
 
 export default async function DashboardPage() {
   const ctx = await requireOrgOrRedirect();
   const orgId = ctx.organization.id;
+  const role = ctx.membership.role;
+  const manage = canManage(role);
+  const staffPlus = canEditCalendar(role);
+  const scope = await resolveStaffResourceScope({
+    organizationId: orgId,
+    userId: ctx.user.id,
+    role,
+  });
+  const floorResourceIds = scope.all ? undefined : scope.resourceIds;
 
   const [
     locationCount,
@@ -29,23 +40,32 @@ export default async function DashboardPage() {
     floor,
     setup,
   ] = await Promise.all([
-    ctx.db.location.count({ where: { isActive: true } }),
-    ctx.db.resource.count({ where: { isActive: true } }),
-    ctx.db.service.count({ where: { isActive: true } }),
-    getOrgAnalytics(orgId, 7),
-    getDashboardFloor(orgId),
-    getPilotSetupStatus({
-      organizationId: orgId,
-      name: ctx.organization.name,
-      logoUrl: ctx.organization.logoUrl,
-      reminderHoursBefore: ctx.organization.reminderHoursBefore,
-    }),
+    manage
+      ? ctx.db.location.count({ where: { isActive: true } })
+      : Promise.resolve(0),
+    manage
+      ? ctx.db.resource.count({ where: { isActive: true } })
+      : Promise.resolve(0),
+    manage
+      ? ctx.db.service.count({ where: { isActive: true } })
+      : Promise.resolve(0),
+    manage ? getOrgAnalytics(orgId, 7) : Promise.resolve(null),
+    getDashboardFloor(orgId, new Date(), floorResourceIds),
+    manage
+      ? getPilotSetupStatus({
+          organizationId: orgId,
+          name: ctx.organization.name,
+          logoUrl: ctx.organization.logoUrl,
+          reminderHoursBefore: ctx.organization.reminderHoursBefore,
+        })
+      : Promise.resolve(null),
   ]);
 
   const bookUrl = publicBookingUrl(ctx.organization);
   const bookPath = `/book/${ctx.organization.slug}`;
   const setupComplete =
     serviceCount > 0 && resourceCount > 0 && locationCount > 0;
+  const upcomingCount = analytics7?.upcoming ?? floor.upcoming.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -54,45 +74,55 @@ export default async function DashboardPage() {
         description={`Welcome${ctx.user.firstName ? `, ${ctx.user.firstName}` : ""}. Plan ${ctx.organization.plan}.`}
         actions={
           <>
-            <ButtonLink href="/dashboard/appointments/new" size="sm">
-              New appointment
-            </ButtonLink>
-            <ButtonLink
-              href="/dashboard/analytics"
-              size="sm"
-              variant="secondary"
-            >
-              Analytics
-            </ButtonLink>
-            <ButtonLink
-              href="/dashboard/appointments"
-              size="sm"
-              variant="secondary"
-            >
-              Calendar
-            </ButtonLink>
+            {staffPlus ? (
+              <ButtonLink href="/dashboard/appointments/new" size="sm">
+                New appointment
+              </ButtonLink>
+            ) : null}
+            {manage ? (
+              <ButtonLink
+                href="/dashboard/analytics"
+                size="sm"
+                variant="secondary"
+              >
+                Analytics
+              </ButtonLink>
+            ) : null}
+            {staffPlus ? (
+              <ButtonLink
+                href="/dashboard/appointments"
+                size="sm"
+                variant="secondary"
+              >
+                Calendar
+              </ButtonLink>
+            ) : null}
           </>
         }
       />
 
-      <SetupChecklist
-        orgId={ctx.organization.id}
-        items={setup.items}
-        bookPath={bookPath}
-      />
-
-      <Surface padding="md">
-        <p className="mb-2 text-xs font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">
-          Public booking link
-        </p>
-        <OverviewCopyLink
+      {setup ? (
+        <SetupChecklist
           orgId={ctx.organization.id}
-          value={bookUrl}
-          label="Public booking link"
+          items={setup.items}
+          bookPath={bookPath}
         />
-      </Surface>
+      ) : null}
 
-      {setupComplete ? (
+      {manage ? (
+        <Surface padding="md">
+          <p className="mb-2 text-xs font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">
+            Public booking link
+          </p>
+          <OverviewCopyLink
+            orgId={ctx.organization.id}
+            value={bookUrl}
+            label="Public booking link"
+          />
+        </Surface>
+      ) : null}
+
+      {manage && setupComplete && analytics7 ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Link
             href="/dashboard/appointments"
@@ -144,7 +174,7 @@ export default async function DashboardPage() {
             />
           </Link>
         </div>
-      ) : (
+      ) : manage && analytics7 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
@@ -177,7 +207,26 @@ export default async function DashboardPage() {
             </Link>
           ))}
         </div>
-      )}
+      ) : staffPlus ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link
+            href="/dashboard/appointments"
+            className="bf-row-hover rounded-[var(--radius-panel)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
+          >
+            <Stat
+              label="Upcoming today"
+              value={upcomingCount}
+              hint={
+                scope.all
+                  ? "On the calendar"
+                  : scope.resourceIds.length === 0
+                    ? "Ask the owner to assign your login to a chair"
+                    : "Your appointments"
+              }
+            />
+          </Link>
+        </div>
+      ) : null}
 
       <DashboardFloor
         current={floor.current}
@@ -185,6 +234,8 @@ export default async function DashboardPage() {
         recentlyCompleted={floor.recentlyCompleted}
         timeZone={floor.timeZone}
         bookPath={bookPath}
+        showOwnerLinks={manage}
+        showCrmLink={staffPlus}
       />
     </div>
   );
