@@ -69,7 +69,7 @@ export function buildPilotSetupItems(input: {
     {
       id: "google",
       label: "Google Calendar",
-      href: "/dashboard/settings",
+      href: "/dashboard/settings/calendar",
       done: input.googleConnected,
       optional: true,
     },

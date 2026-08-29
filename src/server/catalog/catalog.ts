@@ -1,10 +1,111 @@
 import "server-only";
 
+import type { ResourceType } from "@/generated/prisma/client";
 import { toSafeActionError } from "@/lib/action-errors";
 import { err, ok, type ActionResult } from "@/lib/result";
-import { writeAuditLog } from "@/server/billing/entitlements";
+import {
+  checkResourceEntitlement,
+  writeAuditLog,
+} from "@/server/billing/entitlements";
 import { invalidateSlotsForResource } from "@/server/cache/slots";
 import { db } from "@/server/db";
+
+const DEFAULT_WEEKDAY_HOURS = [1, 2, 3, 4, 5].map((weekday) => ({
+  weekday,
+  startMin: 9 * 60,
+  endMin: 17 * 60,
+}));
+
+/** Create a bookable chair: hours + every active service, so they show on booking immediately. */
+export async function provisionBookableStaff(input: {
+  organizationId: string;
+  name: string;
+  locationId?: string;
+  type?: ResourceType;
+  userId?: string | null;
+  actorId?: string | null;
+}): Promise<ActionResult<{ id: string }>> {
+  const entitlement = await checkResourceEntitlement(input.organizationId);
+  if (!entitlement.ok) return err(entitlement.error);
+
+  const location = input.locationId
+    ? await db.location.findFirst({
+        where: { id: input.locationId, organizationId: input.organizationId },
+        select: { id: true },
+      })
+    : await db.location.findFirst({
+        where: { organizationId: input.organizationId, isActive: true },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+  if (!location) return err("Add a location first");
+
+  if (input.userId) {
+    const member = await db.membership.findFirst({
+      where: {
+        organizationId: input.organizationId,
+        userId: input.userId,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    });
+    if (!member) return err("That person is not on this team");
+  }
+
+  const [template, services] = await Promise.all([
+    db.resource.findFirst({
+      where: { organizationId: input.organizationId, isActive: true },
+      include: { rules: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    db.service.findMany({
+      where: { organizationId: input.organizationId, isActive: true },
+      select: { id: true },
+    }),
+  ]);
+
+  const hours =
+    template && template.rules.length > 0
+      ? template.rules.map((rule) => ({
+          weekday: rule.weekday,
+          startMin: rule.startMin,
+          endMin: rule.endMin,
+        }))
+      : DEFAULT_WEEKDAY_HOURS;
+
+  try {
+    const resource = await db.resource.create({
+      data: {
+        organizationId: input.organizationId,
+        locationId: location.id,
+        name: input.name.trim().slice(0, 120) || "Staff",
+        type: input.type ?? "STAFF",
+        userId: input.userId ?? null,
+        rules: { create: hours },
+        services:
+          services.length > 0
+            ? {
+                create: services.map((service) => ({
+                  serviceId: service.id,
+                })),
+              }
+            : undefined,
+      },
+    });
+
+    await invalidateSlotsForResource(resource.id);
+    await writeAuditLog({
+      organizationId: input.organizationId,
+      actorId: input.actorId,
+      action: "resource.created",
+      entityType: "resource",
+      entityId: resource.id,
+    });
+    return ok({ id: resource.id });
+  } catch (e) {
+    return err(toSafeActionError(e, "Unable to add staff"));
+  }
+}
 
 async function orgResourceIds(organizationId: string, ids: string[]) {
   if (ids.length === 0) return [];

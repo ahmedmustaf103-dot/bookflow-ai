@@ -89,8 +89,9 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  memberships Membership[]
-  resources   Resource[]
+  memberships              Membership[]
+  resources                Resource[]
+  googleCalendarConnections GoogleCalendarConnection[]
 
   @@index([email])
   @@map("users")
@@ -146,14 +147,15 @@ model Organization {
   outbox                  NotificationOutbox[]
   auditLogs               AuditLog[]
   aiRuns                  AiRun[]
-  googleCalendarConnection GoogleCalendarConnection?
+  googleCalendarConnections GoogleCalendarConnection[]
 
   @@map("organizations")
 }
 
 model GoogleCalendarConnection {
   id                   String    @id @default(cuid())
-  organizationId       String    @unique
+  organizationId       String
+  userId               String
   refreshToken         String
   accessToken          String?
   accessTokenExpiresAt DateTime?
@@ -163,7 +165,10 @@ model GoogleCalendarConnection {
   updatedAt            DateTime  @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([organizationId, userId])
+  @@index([userId])
   @@map("google_calendar_connections")
 }
 

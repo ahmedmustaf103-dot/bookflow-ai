@@ -26,7 +26,7 @@ export default async function StaffPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Staff & resources"
-        description="Bookable people and chairs. Inactive staff stay listed here with past appointments, and they are hidden from public booking."
+        description="Bookable people and chairs. New staff are added to your services and hours automatically. Uncheck Active on Edit to hide them from booking — past appointments stay."
       />
 
       {resources.length === 0 ? (
@@ -80,7 +80,11 @@ export default async function StaffPage() {
       )}
 
       <Surface id="add-resource" className="max-w-md scroll-mt-6">
-        <h2 className="text-sm font-semibold">Add resource</h2>
+        <h2 className="text-sm font-semibold">Add staff</h2>
+        <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
+          They appear on booking, Hours, Calendar, and Analytics right away.
+          Link a dashboard login later on Edit, or invite them from Team.
+        </p>
         <ActionForm
           action={createResourceAction}
           submitLabel="Add resource"

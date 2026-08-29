@@ -8,13 +8,19 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { err, ok, type ActionResult } from "@/lib/result";
 import { writeAuditLog } from "@/server/billing/entitlements";
+import { provisionBookableStaff } from "@/server/catalog/catalog";
 import { db } from "@/server/db";
 import { sendTeamInviteEmail } from "@/server/notifications/email";
-import { canAssignInviteRole, normalizeInviteEmail } from "./roles";
+import {
+  canAssignInviteRole,
+  canRemoveTeamMember,
+  normalizeInviteEmail,
+} from "./roles";
 
 export {
   INVITEABLE_ROLES,
   canAssignInviteRole,
+  canRemoveTeamMember,
   isInviteableRole,
   normalizeInviteEmail,
 } from "./roles";
@@ -28,6 +34,15 @@ const ROLE_RANK: Record<MembershipRole, number> = {
   ADMIN: 3,
   OWNER: 4,
 };
+
+export function chairNameFromEmail(email: string) {
+  const local = email.split("@")[0] ?? "Staff";
+  const name = local
+    .replace(/[._+-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .trim();
+  return name.slice(0, 120) || "Staff";
+}
 
 export function inviteAcceptUrl(token: string) {
   const origin = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
@@ -105,6 +120,14 @@ export async function createOrganizationInvite(input: {
     });
     if (!resource) return err("Staff chair not found");
     resourceId = resource.id;
+  } else if (input.role === "STAFF" || input.role === "ADMIN") {
+    const chair = await provisionBookableStaff({
+      organizationId: input.organizationId,
+      name: chairNameFromEmail(email),
+      actorId: input.actorUserId,
+    });
+    if (!chair.ok) return chair;
+    resourceId = chair.data.id;
   }
 
   try {
@@ -302,4 +325,109 @@ export async function acceptOrganizationInvite(input: {
   } catch (e) {
     return err(toSafeActionError(e, "Unable to accept invite"));
   }
+}
+
+export async function removeTeamMember(input: {
+  organizationId: string;
+  actorUserId: string;
+  actorRole: MembershipRole;
+  membershipId: string;
+}): Promise<ActionResult<{ id: string }>> {
+  const membership = await db.membership.findFirst({
+    where: {
+      id: input.membershipId,
+      organizationId: input.organizationId,
+      status: "ACTIVE",
+    },
+    select: { id: true, userId: true, role: true },
+  });
+  if (!membership) return err("Team member not found");
+  if (
+    !canRemoveTeamMember(
+      input.actorRole,
+      membership.role,
+      input.actorUserId,
+      membership.userId,
+    )
+  ) {
+    return err("You cannot remove that team member");
+  }
+
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.membership.update({
+        where: { id: membership.id },
+        data: { status: "SUSPENDED" },
+      });
+      await tx.resource.updateMany({
+        where: {
+          organizationId: input.organizationId,
+          userId: membership.userId,
+        },
+        data: { userId: null },
+      });
+      await tx.googleCalendarConnection.deleteMany({
+        where: {
+          organizationId: input.organizationId,
+          userId: membership.userId,
+        },
+      });
+    });
+    await writeAuditLog({
+      organizationId: input.organizationId,
+      actorId: input.actorUserId,
+      action: "team.member_removed",
+      entityType: "membership",
+      entityId: membership.id,
+      metadata: { userId: membership.userId, role: membership.role },
+    });
+    return ok({ id: membership.id });
+  } catch (e) {
+    return err(toSafeActionError(e, "Unable to remove team member"));
+  }
+}
+
+export async function provisionChairForMember(input: {
+  organizationId: string;
+  actorUserId: string;
+  actorRole: MembershipRole;
+  membershipId: string;
+}): Promise<ActionResult<{ id: string }>> {
+  if (ROLE_RANK[input.actorRole] < ROLE_RANK.ADMIN) {
+    return err("Forbidden");
+  }
+
+  const membership = await db.membership.findFirst({
+    where: {
+      id: input.membershipId,
+      organizationId: input.organizationId,
+      status: "ACTIVE",
+    },
+    include: {
+      user: { select: { email: true, firstName: true, lastName: true } },
+    },
+  });
+  if (!membership) return err("Team member not found");
+
+  const existing = await db.resource.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      userId: membership.userId,
+    },
+    select: { id: true },
+  });
+  if (existing) return ok({ id: existing.id });
+
+  const name =
+    [membership.user.firstName, membership.user.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || chairNameFromEmail(membership.user.email);
+
+  return provisionBookableStaff({
+    organizationId: input.organizationId,
+    name,
+    userId: membership.userId,
+    actorId: input.actorUserId,
+  });
 }

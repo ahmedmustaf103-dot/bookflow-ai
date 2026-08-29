@@ -311,6 +311,10 @@ export const revokeInviteSchema = z.object({
   inviteId: id,
 });
 
+export const membershipIdSchema = z.object({
+  membershipId: id,
+});
+
 export const acceptInviteSchema = z.object({
   token: z
     .string()

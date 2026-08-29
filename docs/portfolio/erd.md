@@ -10,7 +10,8 @@ erDiagram
   User ||--o{ Membership : has
   Organization ||--o{ Membership : has
   Organization ||--o| Subscription : has
-  Organization ||--o| GoogleCalendarConnection : has
+  Organization ||--o{ GoogleCalendarConnection : has
+  User ||--o{ GoogleCalendarConnection : connects
   Organization ||--o{ Location : has
   Organization ||--o{ Resource : has
   Organization ||--o{ Service : has
@@ -141,6 +142,8 @@ erDiagram
 
   GoogleCalendarConnection {
     string id PK
+    string organizationId FK
+    string userId FK
     string calendarId
   }
 ```

@@ -3,6 +3,8 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   acceptOrganizationInvite,
   createOrganizationInvite,
+  provisionChairForMember,
+  removeTeamMember,
   revokeOrganizationInvite,
 } from "@/server/team/team";
 import { disconnectTestPrisma, getTestPrisma } from "@/test/prisma";
@@ -39,7 +41,17 @@ describe("team invites (DB)", () => {
     expect(invite?.role).toBe("STAFF");
     expect(invite?.status).toBe("PENDING");
     expect(invite?.organizationId).toBe(seed.organizationId);
+    expect(invite?.resourceId).toBeTruthy();
+    expect(invite?.resourceId).not.toBe(seed.resourceId);
     expect(result.data.acceptUrl).toContain("/invite/");
+
+    const chair = await db.resource.findUniqueOrThrow({
+      where: { id: invite!.resourceId! },
+      include: { services: true, rules: true },
+    });
+    expect(chair.organizationId).toBe(seed.organizationId);
+    expect(chair.services.map((row) => row.serviceId)).toContain(seed.serviceId);
+    expect(chair.rules.length).toBeGreaterThan(0);
   });
 
   it("does not let staff invite members", async () => {
@@ -239,5 +251,138 @@ describe("team invites (DB)", () => {
     expect(result.ok).toBe(false);
 
     await db.organization.deleteMany({ where: { slug: "invite-other-shop" } });
+  });
+
+  it("does not auto-create a chair when inviting a viewer", async () => {
+    const result = await createOrganizationInvite({
+      organizationId: seed.organizationId,
+      organizationName: "E2E Shop",
+      actorUserId: "owner",
+      actorRole: "OWNER",
+      email: "viewer@example.test",
+      role: "VIEWER",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const db = getTestPrisma();
+    const invite = await db.organizationInvite.findUniqueOrThrow({
+      where: { id: result.data.inviteId },
+    });
+    expect(invite.resourceId).toBeNull();
+  });
+
+  it("removes a staff member login without deleting their chair", async () => {
+    const created = await createOrganizationInvite({
+      organizationId: seed.organizationId,
+      organizationName: "E2E Shop",
+      actorUserId: "owner",
+      actorRole: "OWNER",
+      email: "drop@example.test",
+      role: "STAFF",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const db = getTestPrisma();
+    const invite = await db.organizationInvite.findUniqueOrThrow({
+      where: { id: created.data.inviteId },
+    });
+    const user = await db.user.create({
+      data: {
+        clerkUserId: `clerk-drop-${Date.now()}`,
+        email: "drop@example.test",
+        firstName: "Drop",
+      },
+    });
+    const accepted = await acceptOrganizationInvite({
+      token: invite.token,
+      userId: user.id,
+      userEmail: "drop@example.test",
+    });
+    expect(accepted.ok).toBe(true);
+
+    const membership = await db.membership.findUniqueOrThrow({
+      where: {
+        organizationId_userId: {
+          organizationId: seed.organizationId,
+          userId: user.id,
+        },
+      },
+    });
+    const owner = await db.membership.findFirstOrThrow({
+      where: { organizationId: seed.organizationId, role: "OWNER" },
+    });
+
+    const removed = await removeTeamMember({
+      organizationId: seed.organizationId,
+      actorUserId: owner.userId,
+      actorRole: "OWNER",
+      membershipId: membership.id,
+    });
+    expect(removed.ok).toBe(true);
+
+    const after = await db.membership.findUniqueOrThrow({
+      where: { id: membership.id },
+    });
+    expect(after.status).toBe("SUSPENDED");
+    const chair = await db.resource.findUniqueOrThrow({
+      where: { id: invite.resourceId! },
+    });
+    expect(chair.userId).toBeNull();
+    expect(chair.isActive).toBe(true);
+  });
+
+  it("adds a bookable chair for a member who only has a login", async () => {
+    const created = await createOrganizationInvite({
+      organizationId: seed.organizationId,
+      organizationName: "E2E Shop",
+      actorUserId: "owner",
+      actorRole: "OWNER",
+      email: "later@example.test",
+      role: "VIEWER",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const db = getTestPrisma();
+    const invite = await db.organizationInvite.findUniqueOrThrow({
+      where: { id: created.data.inviteId },
+    });
+    const user = await db.user.create({
+      data: {
+        clerkUserId: `clerk-later-${Date.now()}`,
+        email: "later@example.test",
+        firstName: "Later",
+      },
+    });
+    await acceptOrganizationInvite({
+      token: invite.token,
+      userId: user.id,
+      userEmail: "later@example.test",
+    });
+    const membership = await db.membership.findUniqueOrThrow({
+      where: {
+        organizationId_userId: {
+          organizationId: seed.organizationId,
+          userId: user.id,
+        },
+      },
+    });
+
+    const provisioned = await provisionChairForMember({
+      organizationId: seed.organizationId,
+      actorUserId: "owner",
+      actorRole: "OWNER",
+      membershipId: membership.id,
+    });
+    expect(provisioned.ok).toBe(true);
+    if (!provisioned.ok) return;
+
+    const chair = await db.resource.findUniqueOrThrow({
+      where: { id: provisioned.data.id },
+      include: { services: true },
+    });
+    expect(chair.userId).toBe(user.id);
+    expect(chair.services.map((row) => row.serviceId)).toContain(seed.serviceId);
   });
 });

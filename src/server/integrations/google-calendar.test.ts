@@ -14,11 +14,14 @@ vi.mock("@/lib/logger", () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
 }));
 
-const { findUnique, connUpdate, bookingUpdate } = vi.hoisted(() => ({
-  findUnique: vi.fn(),
-  connUpdate: vi.fn(),
-  bookingUpdate: vi.fn(),
-}));
+const { findUnique, connUpdate, bookingUpdate, resourceFindFirst, membershipFindFirst } =
+  vi.hoisted(() => ({
+    findUnique: vi.fn(),
+    connUpdate: vi.fn(),
+    bookingUpdate: vi.fn(),
+    resourceFindFirst: vi.fn(),
+    membershipFindFirst: vi.fn(),
+  }));
 
 vi.mock("@/server/db", () => ({
   db: {
@@ -27,6 +30,8 @@ vi.mock("@/server/db", () => ({
       update: connUpdate,
     },
     booking: { update: bookingUpdate, findUnique: findUnique },
+    resource: { findFirst: resourceFindFirst },
+    membership: { findFirst: membershipFindFirst },
   },
 }));
 
@@ -34,34 +39,51 @@ import {
   googleEventIdForBooking,
   pushGoogleCalendarCancel,
   pushGoogleCalendarUpsert,
+  resolveGoogleCalendarUserId,
 } from "./google-calendar";
 
+function isConnectionLookup(args: {
+  where?: { organizationId_userId?: { userId: string }; id?: string };
+}) {
+  return Boolean(args.where?.organizationId_userId);
+}
+
 function connectedAuth() {
-  findUnique.mockImplementation(async (args: { where?: { organizationId?: string; id?: string } }) => {
-    if (args.where?.organizationId) {
-      return {
-        accessToken: "ya29.test",
-        accessTokenExpiresAt: new Date(Date.now() + 60 * 60_000),
-        calendarId: "primary",
-        refreshToken: "refresh",
-      };
-    }
-    return { googleEventId: null };
-  });
+  findUnique.mockImplementation(
+    async (args: {
+      where?: { organizationId_userId?: { userId: string }; id?: string };
+    }) => {
+      if (isConnectionLookup(args)) {
+        return {
+          id: "conn1",
+          accessToken: "ya29.test",
+          accessTokenExpiresAt: new Date(Date.now() + 60 * 60_000),
+          calendarId: "primary",
+          refreshToken: "refresh",
+        };
+      }
+      return { googleEventId: null };
+    },
+  );
 }
 
 function storedEvent(eventId: string | null) {
-  findUnique.mockImplementation(async (args: { where?: { organizationId?: string; id?: string } }) => {
-    if (args.where?.organizationId) {
-      return {
-        accessToken: "ya29.test",
-        accessTokenExpiresAt: new Date(Date.now() + 60 * 60_000),
-        calendarId: "primary",
-        refreshToken: "refresh",
-      };
-    }
-    return { googleEventId: eventId };
-  });
+  findUnique.mockImplementation(
+    async (args: {
+      where?: { organizationId_userId?: { userId: string }; id?: string };
+    }) => {
+      if (isConnectionLookup(args)) {
+        return {
+          id: "conn1",
+          accessToken: "ya29.test",
+          accessTokenExpiresAt: new Date(Date.now() + 60 * 60_000),
+          calendarId: "primary",
+          refreshToken: "refresh",
+        };
+      }
+      return { googleEventId: eventId };
+    },
+  );
 }
 
 describe("Google Calendar one-way sync", () => {
@@ -85,6 +107,7 @@ describe("Google Calendar one-way sync", () => {
 
     await pushGoogleCalendarUpsert({
       organizationId: "org1",
+      userId: "u1",
       bookingId: "b1",
       summary: "Cut · Alex",
       startAt: new Date("2026-08-20T10:00:00.000Z"),
@@ -117,6 +140,7 @@ describe("Google Calendar one-way sync", () => {
 
     await pushGoogleCalendarUpsert({
       organizationId: "org1",
+      userId: "u1",
       bookingId: "b1",
       googleEventId: null,
       summary: "Cut · Alex",
@@ -147,6 +171,7 @@ describe("Google Calendar one-way sync", () => {
 
     await pushGoogleCalendarUpsert({
       organizationId: "org1",
+      userId: "u1",
       bookingId: "b1",
       googleEventId: "evt_hint",
       summary: "Cut · Alex",
@@ -168,6 +193,7 @@ describe("Google Calendar one-way sync", () => {
 
     await pushGoogleCalendarCancel({
       organizationId: "org1",
+      userId: "u1",
       bookingId: "b1",
       googleEventId: null,
     });
@@ -189,6 +215,7 @@ describe("Google Calendar one-way sync", () => {
 
     await pushGoogleCalendarCancel({
       organizationId: "org1",
+      userId: "u1",
       bookingId: "b1",
     });
 
@@ -215,6 +242,7 @@ describe("Google Calendar one-way sync", () => {
 
     await pushGoogleCalendarUpsert({
       organizationId: "org1",
+      userId: "u1",
       bookingId: "b1",
       summary: "Cut · Alex",
       startAt: new Date("2026-08-20T10:00:00.000Z"),
@@ -243,6 +271,7 @@ describe("Google Calendar one-way sync", () => {
     await expect(
       pushGoogleCalendarUpsert({
         organizationId: "org1",
+        userId: "u1",
         bookingId: "b1",
         summary: "Cut · Alex",
         startAt: new Date("2026-08-20T10:00:00.000Z"),
@@ -262,6 +291,7 @@ describe("Google Calendar one-way sync", () => {
     await expect(
       pushGoogleCalendarCancel({
         organizationId: "org1",
+        userId: "u1",
         bookingId: "b1",
         googleEventId: "evt_1",
       }),
@@ -272,5 +302,27 @@ describe("Google Calendar one-way sync", () => {
     const id = googleEventIdForBooking("clxyzBooking_01");
     expect(id).toMatch(/^[0-9a-v]+$/);
     expect(id.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("resolves the assigned barber before the shop owner", async () => {
+    resourceFindFirst.mockResolvedValue({ userId: "barber-1" });
+    await expect(
+      resolveGoogleCalendarUserId({
+        organizationId: "org1",
+        resourceId: "chair-1",
+      }),
+    ).resolves.toBe("barber-1");
+    expect(membershipFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the owner when the chair has no login", async () => {
+    resourceFindFirst.mockResolvedValue({ userId: null });
+    membershipFindFirst.mockResolvedValue({ userId: "owner-1" });
+    await expect(
+      resolveGoogleCalendarUserId({
+        organizationId: "org1",
+        resourceId: "chair-1",
+      }),
+    ).resolves.toBe("owner-1");
   });
 });

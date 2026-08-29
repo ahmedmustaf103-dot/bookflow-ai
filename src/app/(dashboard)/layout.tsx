@@ -46,6 +46,12 @@ export default async function DashboardLayout({
             min: "STAFF" as const,
           },
           {
+            href: "/dashboard/settings/calendar",
+            label: "Google Calendar",
+            group: "operate" as const,
+            min: "STAFF" as const,
+          },
+          {
             href: "/dashboard/clients",
             label: pack.terminology.clients,
             group: "operate" as const,

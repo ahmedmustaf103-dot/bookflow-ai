@@ -4,7 +4,7 @@ import {
 } from "@/components/dashboard/branding-controls";
 import { BrandColorField } from "@/components/dashboard/brand-color-field";
 import { ActionForm } from "@/components/forms/action-form";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +14,6 @@ import { DEFAULT_BRAND_PRIMARY } from "@/lib/branding";
 import { appHostHostname, publicBookingUrl } from "@/lib/booking-urls";
 import { updateOrganizationSettingsAction } from "@/server/actions/ops";
 import { planAllowsReminders } from "@/server/billing/entitlements";
-import { db } from "@/server/db";
-import { isGoogleCalendarConfigured } from "@/server/integrations/google-calendar";
 import { requireOrgRole } from "@/server/tenant/context";
 
 const TIMEZONES = [
@@ -30,21 +28,11 @@ const TIMEZONES = [
   "Australia/Sydney",
 ];
 
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ gcal?: string }>;
-}) {
+export default async function SettingsPage() {
   const ctx = await requireOrgRole("ADMIN");
   const org = ctx.organization;
   const bookUrl = publicBookingUrl(org);
   const appHost = appHostHostname();
-  const { gcal } = await searchParams;
-  const gcalConfigured = isGoogleCalendarConfigured();
-  // Use root db — tenantDb proxy does not expose googleCalendarConnection.
-  const gcalConnection = await db.googleCalendarConnection.findUnique({
-    where: { organizationId: org.id },
-  });
 
   const recentAudit = await ctx.db.auditLog.findMany({
     orderBy: { createdAt: "desc" },
@@ -245,59 +233,18 @@ export default async function SettingsPage({
       <Surface className="max-w-lg">
         <h2 className="text-sm font-semibold">Google Calendar</h2>
         <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-          One-way sync: BookFlow appointments are pushed to Google Calendar.
-          Reschedules update the event; cancellations remove it. Google never
-          blocks a BookFlow booking if sync fails. Connecting does not backfill
-          past appointments. BookFlow does not read busy time from Google.
+          Each barber connects their own Google account. Bookings on their
+          chair go to their calendar.
         </p>
-        {gcal === "connected" ? (
-          <p className="mt-2 text-sm text-[var(--accent)]">Connected.</p>
-        ) : null}
-        {gcal === "disconnected" ? (
-          <p className="mt-2 text-sm text-[var(--ink-secondary)]">Disconnected.</p>
-        ) : null}
-        {gcal === "error" ? (
-          <p className="mt-2 text-sm text-[var(--danger)]">
-            Couldn’t complete Google connection. Try again.
-          </p>
-        ) : null}
-        {gcal === "not_configured" ? (
-          <p className="mt-2 text-sm text-[var(--danger)]">
-            Add GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET to
-            the environment first.
-          </p>
-        ) : null}
-
-        {!gcalConfigured ? (
-          <p className="mt-3 text-xs text-[var(--ink-tertiary)]">
-            Google Calendar sync is not configured on this server. See
-            .env.example for OAuth setup.
-          </p>
-        ) : gcalConnection ? (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <p className="text-sm">
-              Connected as{" "}
-              <span className="font-medium">
-                {gcalConnection.accountEmail ?? "Google account"}
-              </span>
-            </p>
-            <form action="/api/integrations/google-calendar/disconnect" method="post">
-              <Button type="submit" variant="secondary" size="sm">
-                Disconnect
-              </Button>
-            </form>
-          </div>
-        ) : (
-          <div className="mt-4">
-            <ButtonLink
-              href="/api/integrations/google-calendar/connect"
-              variant="primary"
-              size="sm"
-            >
-              Connect Google Calendar
-            </ButtonLink>
-          </div>
-        )}
+        <div className="mt-4">
+          <ButtonLink
+            href="/dashboard/settings/calendar"
+            variant="primary"
+            size="sm"
+          >
+            Open Google Calendar
+          </ButtonLink>
+        </div>
       </Surface>
 
       <div>

@@ -7,9 +7,15 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Surface } from "@/components/ui/surface";
 import {
   inviteTeamMemberAction,
+  provisionChairForMemberAction,
+  removeTeamMemberAction,
   revokeInviteAction,
 } from "@/server/actions/team";
-import { canAssignInviteRole, INVITEABLE_ROLES } from "@/server/team/roles";
+import {
+  canAssignInviteRole,
+  canRemoveTeamMember,
+  INVITEABLE_ROLES,
+} from "@/server/team/roles";
 import { inviteAcceptUrl } from "@/server/team/team";
 import { requireOrgRole } from "@/server/tenant/context";
 
@@ -98,15 +104,57 @@ export default async function TeamSettingsPage() {
                     ) : null}
                     <p className="mt-0.5 text-xs text-[var(--ink-tertiary)]">
                       {chairs.length > 0
-                        ? `Chair: ${chairs.join(", ")}`
+                        ? `On booking as ${chairs.join(", ")}`
                         : m.role === "OWNER"
-                          ? "Owner login"
-                          : "No chair linked yet — assign on Staff"}
+                          ? "Owner login — add a chair if they take bookings"
+                          : "Not on the booking page yet"}
                     </p>
                   </div>
-                  <span className="inline-flex items-center rounded-md bg-[var(--muted)] px-2 py-0.5 text-[11px] font-medium tracking-wide text-[var(--ink-secondary)] uppercase">
-                    {m.role}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <span className="inline-flex items-center rounded-md bg-[var(--muted)] px-2 py-0.5 text-[11px] font-medium tracking-wide text-[var(--ink-secondary)] uppercase">
+                      {m.role}
+                    </span>
+                    {chairs.length === 0 && m.role !== "VIEWER" ? (
+                      <ActionForm
+                        action={provisionChairForMemberAction}
+                        submitLabel="Add to booking"
+                        submitVariant="secondary"
+                        submitSize="sm"
+                        successMessage="Added to booking"
+                        resetOnSuccess={false}
+                        className="flex items-center"
+                      >
+                        <input
+                          type="hidden"
+                          name="membershipId"
+                          value={m.id}
+                        />
+                      </ActionForm>
+                    ) : null}
+                    {canRemoveTeamMember(
+                      actorRole,
+                      m.role,
+                      ctx.user.id,
+                      m.user.id,
+                    ) ? (
+                      <ActionForm
+                        action={removeTeamMemberAction}
+                        submitLabel="Remove"
+                        submitVariant="danger"
+                        submitSize="sm"
+                        successMessage="Removed from team"
+                        resetOnSuccess={false}
+                        confirmMessage="Remove this person from the team? They lose dashboard access. Their chair and past appointments stay unless you hide the chair on Staff."
+                        className="flex items-center"
+                      >
+                        <input
+                          type="hidden"
+                          name="membershipId"
+                          value={m.id}
+                        />
+                      </ActionForm>
+                    ) : null}
+                  </div>
                 </li>
               );
             })}
@@ -163,9 +211,9 @@ export default async function TeamSettingsPage() {
       <Surface className="max-w-lg">
         <h2 className="text-sm font-semibold">Invite member</h2>
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-          They sign in with Clerk using this email, then join this business
-          only. You cannot invite an owner. Assign a chair so they see their
-          own calendar and get booking emails.
+          Staff and admin invites create a bookable person (hours + your
+          services) so they show on booking, Staff, Hours, Calendar, and
+          Analytics. Pick an existing chair only if they should share one.
         </p>
         {assignable.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--ink-secondary)]">
@@ -205,9 +253,9 @@ export default async function TeamSettingsPage() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="invite-chair">Assign to chair (optional)</Label>
+              <Label htmlFor="invite-chair">Chair</Label>
               <Select id="invite-chair" name="resourceId" defaultValue="">
-                <option value="">Assign later on Staff</option>
+                <option value="">Create a new chair for them</option>
                 {resources.map((resource) => (
                   <option key={resource.id} value={resource.id}>
                     {resource.name}

@@ -25,6 +25,19 @@ export function canAssignInviteRole(
   return ROLE_RANK[actorRole] > ROLE_RANK[targetRole];
 }
 
+/** Admin+ can remove a strictly lower role. Nobody removes the owner or themselves. */
+export function canRemoveTeamMember(
+  actorRole: MembershipRole,
+  targetRole: MembershipRole,
+  actorUserId: string,
+  targetUserId: string,
+): boolean {
+  if (actorUserId === targetUserId) return false;
+  if (targetRole === "OWNER") return false;
+  if (ROLE_RANK[actorRole] < ROLE_RANK.ADMIN) return false;
+  return ROLE_RANK[actorRole] > ROLE_RANK[targetRole];
+}
+
 export function normalizeInviteEmail(email: string) {
   return email.trim().toLowerCase();
 }

@@ -55,13 +55,61 @@ export async function exchangeGoogleCalendarCode(code: string) {
   }>;
 }
 
-async function getAccessToken(organizationId: string): Promise<{
+export async function resolveGoogleCalendarUserId(input: {
+  organizationId: string;
+  userId?: string | null;
+  resourceId?: string | null;
+}): Promise<string | null> {
+  if (input.userId) return input.userId;
+  if (input.resourceId) {
+    const resource = await db.resource.findFirst({
+      where: { id: input.resourceId, organizationId: input.organizationId },
+      select: { userId: true },
+    });
+    if (resource?.userId) return resource.userId;
+  }
+  const owner = await db.membership.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      role: "OWNER",
+      status: "ACTIVE",
+    },
+    select: { userId: true },
+  });
+  return owner?.userId ?? null;
+}
+
+async function findConnection(organizationId: string, userId: string) {
+  return db.googleCalendarConnection.findUnique({
+    where: { organizationId_userId: { organizationId, userId } },
+  });
+}
+
+async function getAccessToken(input: {
+  organizationId: string;
+  userId?: string | null;
+  resourceId?: string | null;
+}): Promise<{
   accessToken: string;
   calendarId: string;
 } | null> {
-  const conn = await db.googleCalendarConnection.findUnique({
-    where: { organizationId },
-  });
+  const preferredUserId = await resolveGoogleCalendarUserId(input);
+  if (!preferredUserId) return null;
+
+  let conn = await findConnection(input.organizationId, preferredUserId);
+  if (!conn) {
+    const owner = await db.membership.findFirst({
+      where: {
+        organizationId: input.organizationId,
+        role: "OWNER",
+        status: "ACTIVE",
+      },
+      select: { userId: true },
+    });
+    if (owner && owner.userId !== preferredUserId) {
+      conn = await findConnection(input.organizationId, owner.userId);
+    }
+  }
   if (!conn) return null;
 
   if (
@@ -84,7 +132,7 @@ async function getAccessToken(organizationId: string): Promise<{
   });
   if (!res.ok) {
     logger.warn(
-      { organizationId, status: res.status },
+      { organizationId: input.organizationId, status: res.status },
       "Google Calendar token refresh failed",
     );
     return null;
@@ -94,7 +142,7 @@ async function getAccessToken(organizationId: string): Promise<{
     expires_in: number;
   };
   await db.googleCalendarConnection.update({
-    where: { organizationId },
+    where: { id: conn.id },
     data: {
       accessToken: data.access_token,
       accessTokenExpiresAt: new Date(Date.now() + data.expires_in * 1000),
@@ -158,6 +206,8 @@ function uniqueIds(ids: Array<string | null | undefined>): string[] {
 export async function pushGoogleCalendarUpsert(input: {
   organizationId: string;
   bookingId: string;
+  resourceId?: string | null;
+  userId?: string | null;
   googleEventId?: string | null;
   summary: string;
   description?: string;
@@ -167,7 +217,7 @@ export async function pushGoogleCalendarUpsert(input: {
 }) {
   if (!isGoogleCalendarConfigured()) return;
   try {
-    const auth = await getAccessToken(input.organizationId);
+    const auth = await getAccessToken(input);
     if (!auth) return;
     const { accessToken, calendarId } = auth;
 
@@ -252,11 +302,13 @@ export async function pushGoogleCalendarUpsert(input: {
 export async function pushGoogleCalendarCancel(input: {
   organizationId: string;
   bookingId: string;
+  resourceId?: string | null;
+  userId?: string | null;
   googleEventId?: string | null;
 }) {
   if (!isGoogleCalendarConfigured()) return;
   try {
-    const auth = await getAccessToken(input.organizationId);
+    const auth = await getAccessToken(input);
     if (!auth) return;
 
     const stored = await storedGoogleEventId(input.bookingId);

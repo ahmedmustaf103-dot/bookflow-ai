@@ -1,14 +1,16 @@
-# Google Calendar (one-way)
+# Google Calendar (one-way, per barber)
 
-BookFlow pushes appointments **to** the shop's connected Google Calendar. It does not read Google busy time and it does not implement two-way sync.
+BookFlow pushes appointments **to** the Google Calendar of the barber assigned to that chair. It does not read Google busy time and it does not implement two-way sync.
+
+Each staff member connects **their own** Google account from **Google Calendar** in the dashboard (STAFF+). If that barber has not connected, BookFlow falls back to the **owner’s** connected calendar (useful for solo shops).
 
 Customer "Add to calendar" / ICS files are a **separate** path. They go to the customer's own calendar app. BookFlow cannot remotely edit or delete an event the customer imported into iCloud, Apple Calendar, or a personal Google account.
 
-## Shop Google Calendar
+## Barber Google Calendar
 
 | BookFlow action | Google Calendar |
 | --------------- | --------------- |
-| New booking     | Create event (stable id derived from the booking) |
+| New booking     | Create event on the assigned barber’s calendar (stable id derived from the booking) |
 | Reschedule      | Update **the same** event (PATCH stored `googleEventId`, never a second create) |
 | Cancel          | Delete that event |
 
@@ -32,8 +34,8 @@ Unit tests mock `fetch` (no OAuth in CI): create stores `googleEventId`, resched
 
 ## Manual live check
 
-1. Settings → Connect Google Calendar (needs `GOOGLE_CALENDAR_CLIENT_ID` / `SECRET` and the callback URL on the Google Cloud OAuth client).
-2. Create a test booking. Confirm an event on the connected calendar.
+1. Each barber: Google Calendar → Connect my Google Calendar (needs `GOOGLE_CALENDAR_CLIENT_ID` / `SECRET` and the callback URL on the Google Cloud OAuth client).
+2. Create a test booking on that chair. Confirm an event on **that barber’s** calendar.
 3. Reschedule via the manage link. Confirm the **same** event moved (not a duplicate).
 4. Cancel. Confirm the event is gone.
 5. Disconnect Google, create another booking. Confirm BookFlow still books.

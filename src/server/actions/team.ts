@@ -7,6 +7,7 @@ import { err, type ActionResult } from "@/lib/result";
 import {
   acceptInviteSchema,
   inviteTeamMemberSchema,
+  membershipIdSchema,
   parseForm,
   revokeInviteSchema,
 } from "@/server/actions/schemas";
@@ -15,6 +16,8 @@ import { assertRateLimit } from "@/server/rate-limit";
 import {
   acceptOrganizationInvite,
   createOrganizationInvite,
+  provisionChairForMember,
+  removeTeamMember,
   revokeOrganizationInvite,
 } from "@/server/team/team";
 import {
@@ -53,8 +56,64 @@ export async function inviteTeamMemberAction(
     resourceId: parsed.data.resourceId ?? null,
   });
 
+  if (result.ok) {
+    revalidatePath("/dashboard/settings");
+    revalidateStaffSurfaces();
+  }
+  return result;
+}
+
+function revalidateStaffSurfaces() {
   revalidatePath("/dashboard/settings/team");
-  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/staff");
+  revalidatePath("/dashboard/services");
+  revalidatePath("/dashboard/availability");
+  revalidatePath("/dashboard/appointments");
+  revalidatePath("/dashboard/appointments/new");
+  revalidatePath("/dashboard/analytics");
+}
+
+export async function removeTeamMemberAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const ctx = await getActiveOrganization();
+  if (!ctx.organization || !ctx.membership) {
+    return err("No organization selected");
+  }
+  await requireMembership(ctx.organization.id, "ADMIN");
+
+  const parsed = parseForm(membershipIdSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
+
+  const result = await removeTeamMember({
+    organizationId: ctx.organization.id,
+    actorUserId: ctx.user.id,
+    actorRole: ctx.membership.role,
+    membershipId: parsed.data.membershipId,
+  });
+  if (result.ok) revalidateStaffSurfaces();
+  return result;
+}
+
+export async function provisionChairForMemberAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const ctx = await getActiveOrganization();
+  if (!ctx.organization || !ctx.membership) {
+    return err("No organization selected");
+  }
+  await requireMembership(ctx.organization.id, "ADMIN");
+
+  const parsed = parseForm(membershipIdSchema, formData);
+  if (!parsed.ok) return err(parsed.error);
+
+  const result = await provisionChairForMember({
+    organizationId: ctx.organization.id,
+    actorUserId: ctx.user.id,
+    actorRole: ctx.membership.role,
+    membershipId: parsed.data.membershipId,
+  });
+  if (result.ok) revalidateStaffSurfaces();
   return result;
 }
 
@@ -82,12 +141,15 @@ export async function revokeInviteAction(
   return result;
 }
 
-export async function acceptInviteAction(
-  formData: FormData,
-): Promise<ActionResult<{ organizationId: string; organizationName: string }>> {
+export async function acceptInviteAction(formData: FormData): Promise<void> {
   const user = await requireDbUser();
   const parsed = parseForm(acceptInviteSchema, formData);
-  if (!parsed.ok) return err(parsed.error);
+  const token = String(formData.get("token") ?? "");
+  if (!parsed.ok) {
+    redirect(
+      `/invite/${token}?error=${encodeURIComponent(parsed.error)}`,
+    );
+  }
 
   const result = await acceptOrganizationInvite({
     token: parsed.data.token,

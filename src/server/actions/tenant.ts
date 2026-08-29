@@ -7,7 +7,6 @@ import { err, ok, okEmpty, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
 import {
   checkLocationEntitlement,
-  checkResourceEntitlement,
   writeAuditLog,
 } from "@/server/billing/entitlements";
 import { invalidateSlotsForResource } from "@/server/cache/slots";
@@ -27,7 +26,11 @@ import {
   updateResourceSchema,
   updateServiceSchema,
 } from "@/server/actions/schemas";
-import { updateResource, updateService } from "@/server/catalog/catalog";
+import {
+  provisionBookableStaff,
+  updateResource,
+  updateService,
+} from "@/server/catalog/catalog";
 
 export async function createOrganizationAction(formData: FormData) {
   const parsed = parseForm(createOrganizationSchema, formData);
@@ -98,37 +101,22 @@ export async function createResourceAction(
   const parsed = parseForm(createResourceSchema, formData);
   if (!parsed.ok) return err(parsed.error);
 
-  const entitlement = await checkResourceEntitlement(ctx.organization.id);
-  if (!entitlement.ok) return err(entitlement.error);
-
-  const tdb = tenantDb(ctx.organization.id);
-  const location = await tdb.location.findFirst({
-    where: { id: parsed.data.locationId },
+  const result = await provisionBookableStaff({
+    organizationId: ctx.organization.id,
+    name: parsed.data.name,
+    locationId: parsed.data.locationId,
+    type: parsed.data.type,
+    actorId: ctx.user.id,
   });
-  if (!location) return err("Location not found");
-
-  try {
-    const resource = await db.resource.create({
-      data: {
-        organizationId: ctx.organization.id,
-        locationId: parsed.data.locationId,
-        name: parsed.data.name,
-        type: parsed.data.type,
-        rules: {
-          create: [1, 2, 3, 4, 5].map((weekday) => ({
-            weekday,
-            startMin: 9 * 60,
-            endMin: 17 * 60,
-          })),
-        },
-      },
-    });
-
+  if (result.ok) {
     revalidatePath("/dashboard/staff");
-    return ok({ id: resource.id });
-  } catch (e) {
-    return err(toSafeActionError(e, "Unable to create resource"));
+    revalidatePath("/dashboard/services");
+    revalidatePath("/dashboard/availability");
+    revalidatePath("/dashboard/appointments");
+    revalidatePath("/dashboard/appointments/new");
+    revalidatePath("/dashboard/analytics");
   }
+  return result;
 }
 
 export async function createServiceAction(

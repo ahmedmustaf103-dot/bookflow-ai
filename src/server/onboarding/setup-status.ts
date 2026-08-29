@@ -15,7 +15,7 @@ export async function getPilotSetupStatus(input: {
     db.availabilityRule.count({
       where: { resource: { organizationId: input.organizationId } },
     }),
-    db.googleCalendarConnection.findUnique({
+    db.googleCalendarConnection.findFirst({
       where: { organizationId: input.organizationId },
       select: { id: true },
     }),

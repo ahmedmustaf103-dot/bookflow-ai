@@ -414,6 +414,8 @@ export async function createBooking(input: {
     void pushGoogleCalendarUpsert({
       organizationId: booking.organizationId,
       bookingId: booking.id,
+      resourceId: booking.resourceId,
+      userId: booking.resource.userId,
       googleEventId: booking.googleEventId,
       summary: `${booking.service.name} · ${booking.client.name}`,
       description: `With ${booking.resource.name}`,
@@ -556,6 +558,8 @@ export async function transitionBooking(input: {
       void pushGoogleCalendarCancel({
         organizationId: booking.organizationId,
         bookingId: booking.id,
+        resourceId: booking.resourceId,
+        userId: booking.resource.userId,
         googleEventId: booking.googleEventId,
       });
     }
@@ -732,6 +736,8 @@ export async function rescheduleBooking(input: {
     void pushGoogleCalendarUpsert({
       organizationId: booking.organizationId,
       bookingId: booking.id,
+      resourceId: booking.resourceId,
+      userId: booking.resource.userId,
       googleEventId: booking.googleEventId,
       summary: `${booking.service.name} · ${booking.client.name}`,
       description: `With ${booking.resource.name}`,

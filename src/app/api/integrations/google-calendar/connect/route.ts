@@ -7,23 +7,19 @@ import {
 } from "@/server/integrations/google-calendar";
 import { getActiveOrganization } from "@/server/tenant/context";
 
+const calendarPath = "/dashboard/settings/calendar";
+
 export async function GET() {
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   if (!isGoogleCalendarConfigured()) {
-    return NextResponse.redirect(
-      new URL(
-        "/dashboard/settings?gcal=not_configured",
-        process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-      ),
-    );
+    return NextResponse.redirect(new URL(`${calendarPath}?gcal=not_configured`, base));
   }
 
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
-    return NextResponse.redirect(
-      new URL("/sign-in", process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
-    );
+    return NextResponse.redirect(new URL("/sign-in", base));
   }
-  await requireMembership(ctx.organization.id, "ADMIN");
+  await requireMembership(ctx.organization.id, "STAFF");
 
   const state = Buffer.from(
     JSON.stringify({

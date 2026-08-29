@@ -12,9 +12,12 @@ type Props = {
   children: React.ReactNode;
   className?: string;
   submitLabel?: string;
+  submitVariant?: "primary" | "secondary" | "ghost" | "danger";
+  submitSize?: "sm" | "md";
   /** When true (default), reset form after create-style success. Set false for edit forms. */
   resetOnSuccess?: boolean;
   successMessage?: string;
+  confirmMessage?: string;
 };
 
 export function ActionForm({
@@ -22,8 +25,11 @@ export function ActionForm({
   children,
   className,
   submitLabel = "Save",
+  submitVariant = "primary",
+  submitSize = "md",
   resetOnSuccess = true,
   successMessage = "Saved",
+  confirmMessage,
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
@@ -43,6 +49,7 @@ export function ActionForm({
       aria-busy={pending}
       onSubmit={(e) => {
         e.preventDefault();
+        if (confirmMessage && !window.confirm(confirmMessage)) return;
         const form = e.currentTarget;
         const formData = new FormData(form);
         setError(null);
@@ -87,7 +94,13 @@ export function ActionForm({
           {successMessage}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending} aria-disabled={pending}>
+      <Button
+        type="submit"
+        variant={submitVariant}
+        size={submitSize}
+        disabled={pending}
+        aria-disabled={pending}
+      >
         {pending ? "Saving…" : submitLabel}
       </Button>
     </form>

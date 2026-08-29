@@ -153,8 +153,9 @@ export default async function EditStaffPage({
           />
         </ActionForm>
         <p className="mt-3 text-xs text-[var(--ink-tertiary)]">
-          Hours stay on the Hours page. Deactivating hides them from the public
-          booking page.
+          Uncheck Active to remove them from booking, Hours filters, and new
+          appointments. Existing appointments stay. To take away their login,
+          use Settings → Team → Remove.
         </p>
       </Surface>
     </div>

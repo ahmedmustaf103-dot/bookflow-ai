@@ -166,7 +166,7 @@ Create a **Web application** OAuth client. Authorized redirect URI:
 
 `https://<your-vercel-host>/api/integrations/google-calendar/callback`
 
-Enable the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) on that project, add scope `https://www.googleapis.com/auth/calendar.events` on the OAuth consent screen, then Dashboard → Settings → Connect Google Calendar and allow calendar access. Connecting does not import old bookings; only new / reschedule / cancel after a successful connect are pushed.
+Enable the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) on that project, add scope `https://www.googleapis.com/auth/calendar.events` on the OAuth consent screen, then each barber opens Dashboard → Google Calendar → Connect my Google Calendar and allows access. Connecting does not import old bookings; only new / reschedule / cancel after a successful connect are pushed to that barber’s calendar.
 
 ## 8. Smoke check after deploy
 

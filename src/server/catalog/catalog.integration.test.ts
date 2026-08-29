@@ -1,6 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { updateResource, updateService } from "@/server/catalog/catalog";
+import {
+  provisionBookableStaff,
+  updateResource,
+  updateService,
+} from "@/server/catalog/catalog";
 import { createBooking } from "@/server/bookings/service";
 import { getSlotsForServiceResource } from "@/server/availability/slots";
 import { disconnectTestPrisma, getTestPrisma } from "@/test/prisma";
@@ -269,5 +273,25 @@ describe("catalog updates (DB)", () => {
       source: "PUBLIC",
     });
     expect(booked.ok).toBe(false);
+  });
+
+  it("adds a new staff member to existing services and hours", async () => {
+    const created = await provisionBookableStaff({
+      organizationId: seed.organizationId,
+      name: "New Barber",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const db = getTestPrisma();
+    const resource = await db.resource.findUniqueOrThrow({
+      where: { id: created.data.id },
+      include: { services: true, rules: true },
+    });
+    expect(resource.name).toBe("New Barber");
+    expect(resource.services.map((row) => row.serviceId)).toContain(
+      seed.serviceId,
+    );
+    expect(resource.rules.length).toBeGreaterThan(0);
   });
 });
