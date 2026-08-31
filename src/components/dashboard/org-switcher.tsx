@@ -65,7 +65,7 @@ export function OrgSwitcher({
       </label>
       <Select
         id="org-switcher"
-        className="h-8 px-2 text-xs"
+        className="h-11 px-3 text-base md:h-8 md:px-2 md:text-xs"
         value={currentOrgId ?? orgs[0]!.id}
         disabled={pending}
         onChange={(event) => {

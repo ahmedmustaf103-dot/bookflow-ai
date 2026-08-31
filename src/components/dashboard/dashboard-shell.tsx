@@ -46,7 +46,7 @@ function NavLinks({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   onClick={onNavigate}
-                  className={`relative flex items-center rounded-[var(--radius-control)] px-2.5 py-1.5 text-[13px] transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
+                  className={`relative flex min-h-11 items-center rounded-[var(--radius-control)] px-2.5 py-2 text-[15px] transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none md:min-h-0 md:py-1.5 md:text-[13px] ${
                     active
                       ? "bg-[var(--accent-soft)] font-medium text-[var(--accent)]"
                       : "text-[var(--ink-secondary)] hover:bg-[var(--muted)] hover:text-[var(--ink)]"
@@ -149,14 +149,14 @@ export function DashboardShell({
       {/* Mobile */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)]/90 px-4 backdrop-blur md:hidden">
-          <Link href="/dashboard" className="text-sm font-semibold">
+          <Link href="/dashboard" className="truncate text-sm font-semibold">
             BookFlow AI
           </Link>
           <div className="flex items-center gap-2">
             {nav.length > 0 ? (
               <button
                 type="button"
-                className="rounded-[var(--radius-control)] border border-[var(--border)] px-3 py-1.5 text-sm focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border)] px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
                 aria-expanded={open}
                 aria-controls="mobile-nav"
                 onClick={() => setOpen((v) => !v)}
@@ -184,7 +184,7 @@ export function DashboardShell({
           </div>
         ) : null}
 
-        <main className="bf-page-enter mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 sm:px-6">
+        <main className="bf-page-enter mx-auto w-full min-w-0 max-w-[1200px] flex-1 px-4 py-5 sm:px-6 sm:py-6">
           {children}
         </main>
       </div>

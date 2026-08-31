@@ -26,12 +26,13 @@ export function CopyField({
         id="copy-field"
         readOnly
         value={value}
-        className="h-9 min-w-0 flex-1 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)] px-3 text-sm text-[var(--ink-secondary)]"
+        className="h-11 min-w-0 flex-1 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)] px-3 text-sm text-[var(--ink-secondary)] sm:h-9"
       />
       <Button
         type="button"
         size="sm"
         variant="secondary"
+        className="min-h-11 w-full sm:h-8 sm:w-auto"
         onClick={async () => {
           await navigator.clipboard.writeText(value);
           setCopied(true);

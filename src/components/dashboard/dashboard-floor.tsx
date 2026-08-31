@@ -62,7 +62,7 @@ export function DashboardFloor({
             </div>
             <Link
               href="/dashboard/appointments"
-              className="text-xs font-medium text-[var(--accent)] hover:underline"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--accent)] hover:underline"
             >
               Full calendar
             </Link>
@@ -140,9 +140,9 @@ export function DashboardFloor({
                 return (
                   <li
                     key={b.id}
-                    className="flex items-center justify-between gap-3 py-2.5"
+                    className="flex flex-wrap items-center justify-between gap-2 py-3"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
                         {formatInTimeZone(b.startAt, tz, "HH:mm")} —{" "}
                         {b.client.name}
@@ -153,7 +153,7 @@ export function DashboardFloor({
                     </div>
                     <Link
                       href={calendarHref(b, tz)}
-                      className="shrink-0 text-xs font-medium text-[var(--accent)] hover:underline"
+                      className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-[var(--accent)] hover:underline"
                     >
                       Details
                     </Link>

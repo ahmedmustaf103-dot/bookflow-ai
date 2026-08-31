@@ -45,11 +45,11 @@ export default async function StaffPage() {
             {resources.map((r) => (
               <li
                 key={r.id}
-                className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${
                   r.isActive ? "" : "opacity-70"
                 }`}
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-medium">{r.name}</p>
                     <span
@@ -70,6 +70,7 @@ export default async function StaffPage() {
                   href={`/dashboard/staff/${r.id}`}
                   size="sm"
                   variant="secondary"
+                  className="min-h-11 sm:h-8"
                 >
                   Edit
                 </ButtonLink>

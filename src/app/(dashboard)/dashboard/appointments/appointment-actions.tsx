@@ -38,8 +38,8 @@ export function AppointmentActions({
   if (actions.length === 0) return null;
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-wrap justify-end gap-1.5">
+    <div className="flex w-full flex-col gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
         {actions.map((action) => (
           <Button
             key={action.to}
@@ -54,7 +54,18 @@ export function AppointmentActions({
             }
             disabled={pending}
             aria-busy={pending}
+            className={`min-h-11 sm:h-8 ${
+              action.to === "CANCELLED" && actions.length % 2 === 1
+                ? "col-span-2 sm:col-span-1"
+                : ""
+            }`}
             onClick={() => {
+              if (
+                action.to === "CANCELLED" &&
+                !window.confirm("Cancel this appointment?")
+              ) {
+                return;
+              }
               const formData = new FormData();
               formData.set("bookingId", bookingId);
               formData.set("to", action.to);

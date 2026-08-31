@@ -139,22 +139,24 @@ export function NewAppointmentForm({
         });
       }}
     >
-      <fieldset className="flex gap-4 text-sm">
+      <fieldset className="flex flex-col gap-2 text-sm sm:flex-row sm:gap-4">
         <legend className="sr-only">Client</legend>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-11 items-center gap-2">
           <input
             type="radio"
             name="clientMode"
+            className="h-4 w-4"
             checked={mode === "existing"}
             disabled={clients.length === 0}
             onChange={() => setMode("existing")}
           />
           Existing client
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-11 items-center gap-2">
           <input
             type="radio"
             name="clientMode"
+            className="h-4 w-4"
             checked={mode === "new"}
             onChange={() => setMode("new")}
           />
@@ -288,7 +290,11 @@ export function NewAppointmentForm({
         </p>
       ) : null}
 
-      <Button type="submit" disabled={pending || !startAt || !resourceId}>
+      <Button
+        type="submit"
+        className="min-h-12 w-full sm:w-auto"
+        disabled={pending || !startAt || !resourceId}
+      >
         {pending ? "Booking…" : "Book appointment"}
       </Button>
     </form>

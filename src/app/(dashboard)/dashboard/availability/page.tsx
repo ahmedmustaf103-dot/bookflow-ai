@@ -125,17 +125,17 @@ export default async function AvailabilityPage({
                   return (
                     <div
                       key={weekday}
-                      className="grid grid-cols-[7rem_auto_1fr_1fr] items-center gap-2 text-sm"
+                      className="grid grid-cols-2 items-center gap-2 text-sm sm:grid-cols-[7rem_1fr_1fr]"
                     >
-                      <label className="flex items-center gap-2 text-[var(--ink)]">
+                      <label className="col-span-2 flex min-h-11 items-center gap-2 text-[var(--ink)] sm:col-span-1 sm:min-h-0">
                         <input
                           type="checkbox"
                           name={`day-${weekday}-enabled`}
                           defaultChecked={Boolean(rule)}
+                          className="h-4 w-4"
                         />
                         {label.slice(0, 3)}
                       </label>
-                      <span className="text-[var(--ink-tertiary)]"> </span>
                       <Input
                         type="time"
                         name={`day-${weekday}-start`}

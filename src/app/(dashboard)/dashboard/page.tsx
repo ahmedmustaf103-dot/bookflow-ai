@@ -75,7 +75,11 @@ export default async function DashboardPage() {
         actions={
           <>
             {staffPlus ? (
-              <ButtonLink href="/dashboard/appointments/new" size="sm">
+              <ButtonLink
+                href="/dashboard/appointments/new"
+                size="sm"
+                className="min-h-11 w-full sm:h-8 sm:w-auto"
+              >
                 New appointment
               </ButtonLink>
             ) : null}
@@ -84,6 +88,7 @@ export default async function DashboardPage() {
                 href="/dashboard/analytics"
                 size="sm"
                 variant="secondary"
+                className="min-h-11 w-full sm:h-8 sm:w-auto"
               >
                 Analytics
               </ButtonLink>
@@ -93,6 +98,7 @@ export default async function DashboardPage() {
                 href="/dashboard/appointments"
                 size="sm"
                 variant="secondary"
+                className="min-h-11 w-full sm:h-8 sm:w-auto"
               >
                 Calendar
               </ButtonLink>

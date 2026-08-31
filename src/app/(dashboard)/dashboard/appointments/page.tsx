@@ -133,15 +133,19 @@ export default async function AppointmentsPage({
         title="Calendar"
         description={
           scope.all
-            ? "Day, week, and month views — drag bookings to reschedule. Filter by staff."
+            ? "Day, week, and month views. On a phone, use the agenda list. Drag bookings on desktop to reschedule."
             : scope.resourceIds.length === 0
               ? "Ask the owner to assign your login to a chair on Staff so appointments show here."
-              : "Your appointments — drag to reschedule."
+              : "Your appointments. Open one to complete, cancel, or reschedule."
         }
         actions={
           scope.all || scope.resourceIds.length > 0 ? (
             <>
-              <ButtonLink href="/dashboard/appointments/new" size="sm">
+              <ButtonLink
+                href="/dashboard/appointments/new"
+                size="sm"
+                className="min-h-11 w-full sm:h-8 sm:w-auto"
+              >
                 New appointment
               </ButtonLink>
               {scope.all ? (
@@ -149,6 +153,7 @@ export default async function AppointmentsPage({
                   href={`/book/${ctx.organization.slug}`}
                   variant="secondary"
                   size="sm"
+                  className="min-h-11 w-full sm:h-8 sm:w-auto"
                 >
                   Booking page
                 </ButtonLink>
@@ -171,6 +176,7 @@ export default async function AppointmentsPage({
           resourceId={resourceId}
           resources={resources}
           bookings={calendarBookings}
+          newAppointmentHref="/dashboard/appointments/new"
         />
       )}
     </div>
