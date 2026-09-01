@@ -48,7 +48,10 @@ export function DashboardFloor({
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="flex flex-col gap-4">
-        <Surface className="relative overflow-hidden pl-5" data-tour="staff-appointment-actions">
+        <Surface
+          className="relative overflow-hidden pl-5"
+          data-tour="staff-appointment-actions"
+        >
           <span
             className="absolute inset-y-0 left-0 w-1 bg-[var(--accent)]"
             aria-hidden
@@ -77,7 +80,7 @@ export function DashboardFloor({
                 <p className="truncate text-sm text-[var(--ink-secondary)]">
                   {current.service.name}
                 </p>
-                <p className="mt-1 text-sm tabular-nums text-[var(--ink)]">
+                <p className="mt-1 text-sm text-[var(--ink)] tabular-nums">
                   {timeRange(current, current.location.timezone || timeZone)}
                 </p>
                 <p className="mt-0.5 text-xs text-[var(--ink-tertiary)]">

@@ -87,7 +87,9 @@ export default async function SettingsPage() {
             defaultValue={org.brandPrimary ?? DEFAULT_BRAND_PRIMARY}
           />
           <div>
-            <Label htmlFor="org-custom-domain">Your own website address (optional)</Label>
+            <Label htmlFor="org-custom-domain">
+              Your own website address (optional)
+            </Label>
             <Input
               id="org-custom-domain"
               name="customDomain"
@@ -142,8 +144,8 @@ export default async function SettingsPage() {
           <div className="mt-2 border-t border-[var(--border)] pt-4">
             <h3 className="text-sm font-semibold">Customer automation</h3>
             <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-              Confirmations, reminders, and follow-ups send automatically when
-              a customer has an email on file.
+              Confirmations, reminders, and follow-ups send automatically when a
+              customer has an email on file.
             </p>
           </div>
 
@@ -176,7 +178,9 @@ export default async function SettingsPage() {
             Send review request after completed visits
           </label>
           <div>
-            <Label htmlFor="org-review-hours">Review request delay (hours)</Label>
+            <Label htmlFor="org-review-hours">
+              Review request delay (hours)
+            </Label>
             <Input
               id="org-review-hours"
               name="reviewRequestHoursAfter"
@@ -221,7 +225,7 @@ export default async function SettingsPage() {
 
       <Surface className="max-w-lg">
         <h2 className="text-sm font-semibold">Your booking link</h2>
-        <p className="mt-2 break-all text-sm text-[var(--accent)]">{bookUrl}</p>
+        <p className="mt-2 text-sm break-all text-[var(--accent)]">{bookUrl}</p>
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
           Give this link to customers so they can book online
           {org.customDomainStatus === "ACTIVE" && org.customDomain

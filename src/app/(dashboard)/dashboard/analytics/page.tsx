@@ -31,24 +31,31 @@ export default async function AnalyticsPage() {
   const orgId = ctx.organization.id;
   const days = 30;
 
-  const [analytics, series, topServices, staff, customers, recentInsight, usage] =
-    await Promise.all([
-      getOrgAnalytics(orgId, days),
-      getBookingSeries(orgId, days),
-      getTopServices(orgId, days, 5),
-      getStaffInsights(orgId, days, 6),
-      getCustomerInsights(orgId, days),
-      ctx.db.aiRun.findFirst({
-        where: { feature: "insight_digest" },
-        orderBy: { createdAt: "desc" },
-        select: { outputPreview: true, createdAt: true },
-      }),
-      Promise.all([
-        ctx.db.location.count({ where: { isActive: true } }),
-        ctx.db.resource.count({ where: { isActive: true } }),
-        getMonthBookingUsage(orgId),
-      ]),
-    ]);
+  const [
+    analytics,
+    series,
+    topServices,
+    staff,
+    customers,
+    recentInsight,
+    usage,
+  ] = await Promise.all([
+    getOrgAnalytics(orgId, days),
+    getBookingSeries(orgId, days),
+    getTopServices(orgId, days, 5),
+    getStaffInsights(orgId, days, 6),
+    getCustomerInsights(orgId, days),
+    ctx.db.aiRun.findFirst({
+      where: { feature: "insight_digest" },
+      orderBy: { createdAt: "desc" },
+      select: { outputPreview: true, createdAt: true },
+    }),
+    Promise.all([
+      ctx.db.location.count({ where: { isActive: true } }),
+      ctx.db.resource.count({ where: { isActive: true } }),
+      getMonthBookingUsage(orgId),
+    ]),
+  ]);
 
   const [locationCount, resourceCount, monthBookings] = usage;
   const limits = getPlanLimits(ctx.organization.plan);
@@ -137,7 +144,7 @@ export default async function AnalyticsPage() {
                 Daily bookings over the last {days} days
               </p>
             </div>
-            <p className="text-xs tabular-nums text-[var(--ink-tertiary)]">
+            <p className="text-xs text-[var(--ink-tertiary)] tabular-nums">
               {analytics.bookingsCompleted} completed ·{" "}
               {analytics.bookingsCancelled} cancelled
             </p>
@@ -173,7 +180,7 @@ export default async function AnalyticsPage() {
                     className="flex items-center justify-between gap-3 py-2 text-sm"
                   >
                     <span className="truncate text-[var(--ink)]">{s.name}</span>
-                    <span className="shrink-0 tabular-nums text-[var(--ink-tertiary)]">
+                    <span className="shrink-0 text-[var(--ink-tertiary)] tabular-nums">
                       {s.count} ·{" "}
                       {formatMoney(s.revenueCents, analytics.currency)}
                     </span>
@@ -217,14 +224,17 @@ export default async function AnalyticsPage() {
             <ul className="divide-y divide-[var(--border)]">
               {staff.map((row) => {
                 const max = staff[0]?.bookings || 1;
-                const width = Math.max(8, Math.round((row.bookings / max) * 100));
+                const width = Math.max(
+                  8,
+                  Math.round((row.bookings / max) * 100),
+                );
                 return (
                   <li key={row.resourceId} className="py-3">
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span className="font-medium text-[var(--ink)]">
                         {row.name}
                       </span>
-                      <span className="tabular-nums text-[var(--ink-tertiary)]">
+                      <span className="text-[var(--ink-tertiary)] tabular-nums">
                         {row.bookings} bookings
                       </span>
                     </div>
@@ -261,7 +271,11 @@ export default async function AnalyticsPage() {
             </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Stat label="New clients" value={customers.newClients} hint={`Last ${days} days`} />
+            <Stat
+              label="New clients"
+              value={customers.newClients}
+              hint={`Last ${days} days`}
+            />
             <Stat
               label="Returning this period"
               value={customers.returningClients}
@@ -300,8 +314,7 @@ export default async function AnalyticsPage() {
                 {recentInsight.outputPreview}
               </p>
               <p className="mt-3 text-xs text-[var(--ink-tertiary)]">
-                Last generated{" "}
-                {recentInsight.createdAt.toLocaleString()}
+                Last generated {recentInsight.createdAt.toLocaleString()}
               </p>
             </>
           ) : (

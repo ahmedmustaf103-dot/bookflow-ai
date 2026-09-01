@@ -45,7 +45,11 @@ export function normalizeCustomDomain(value: string | null | undefined) {
     .replace(/\/.*$/, "")
     .replace(/:\d+$/, "")
     .replace(/\.$/, "");
-  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(cleaned)) {
+  if (
+    !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(
+      cleaned,
+    )
+  ) {
     return null;
   }
   return cleaned;

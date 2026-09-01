@@ -36,9 +36,7 @@ export async function GET(
   });
 
   const method = cancelled ? "CANCEL" : "REQUEST";
-  const filename = cancelled
-    ? "appointment-cancelled.ics"
-    : "appointment.ics";
+  const filename = cancelled ? "appointment-cancelled.ics" : "appointment.ics";
 
   return new NextResponse(ics, {
     status: 200,

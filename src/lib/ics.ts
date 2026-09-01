@@ -23,7 +23,10 @@ export function bookingIcsUid(bookingId: string): string {
 }
 
 function toIcsUtc(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  return date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
 }
 
 /** Escape text per RFC 5545 §3.3.11 (comma, semicolon, backslash, newline). */

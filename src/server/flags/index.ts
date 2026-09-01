@@ -4,10 +4,7 @@
  */
 
 export type FeatureFlag =
-  | "slot_cache"
-  | "rate_limit"
-  | "vertical_packs"
-  | "request_tracing";
+  "slot_cache" | "rate_limit" | "vertical_packs" | "request_tracing";
 
 const DEFAULTS: Record<FeatureFlag, boolean> = {
   slot_cache: true,

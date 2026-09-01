@@ -148,9 +148,7 @@ export async function insightDigestAction(
   }
 }
 
-export async function bookingAssistantAction(
-  formData: FormData,
-): Promise<
+export async function bookingAssistantAction(formData: FormData): Promise<
   ActionResult<{
     text: string;
     tokens: number;

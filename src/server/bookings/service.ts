@@ -7,10 +7,7 @@ import {
   type BookingSource,
   type BookingStatus,
 } from "@/generated/prisma/client";
-import {
-  toSafeActionError,
-  UserFacingError,
-} from "@/lib/action-errors";
+import { toSafeActionError, UserFacingError } from "@/lib/action-errors";
 import { err, ok, okEmpty, type ActionResult } from "@/lib/result";
 import { logger } from "@/lib/logger";
 import { db } from "@/server/db";
@@ -214,9 +211,7 @@ export async function createBooking(input: {
     const paddedStart = new Date(
       input.startAt.getTime() - service.bufferBefore * 60_000,
     );
-    const paddedEnd = new Date(
-      endAt.getTime() + service.bufferAfter * 60_000,
-    );
+    const paddedEnd = new Date(endAt.getTime() + service.bufferAfter * 60_000);
 
     const day = formatInTimeZone(
       input.startAt,

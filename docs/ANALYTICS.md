@@ -17,26 +17,26 @@ Bookings created today for **next month** do **not** count in the current 30-day
 
 ## Metric definitions
 
-| Metric | Definition |
-| ------ | ---------- |
-| **Bookings** | Count of appointments with `startAt` in the period (all statuses, including cancelled) |
-| **Completed** | `COMPLETED` with `startAt` in period |
-| **Cancelled** | `CANCELLED` with `startAt` in period |
-| **No-shows** | `NO_SHOW` with `startAt` in period |
-| **No-show rate** | `NO_SHOW / (COMPLETED + NO_SHOW)` in period; `0` if none eligible |
-| **Est. revenue** | Sum of `service.priceCents` for **COMPLETED** only, `startAt` in period (list price, not Stripe cash) |
-| **Upcoming** | `PENDING` + `CONFIRMED` with `startAt >= now` (not limited to the period) |
-| **Clients on file** | All-time `Client` count for the org |
-| **Trend (bookings)** | Per local day: non-cancelled appointments that day |
-| **Trend (revenue)** | Per local day: COMPLETED list-price sum that day |
-| **Popular services** | Non-cancelled in period by service; revenue = COMPLETED only |
-| **Staff insights** | Non-cancelled in period by resource |
-| **New clients** | Clients with `createdAt` in the period (profile acquisition) |
-| **Returning this period** | Clients with ≥2 non-cancelled bookings whose `startAt` is in period |
-| **Repeat bookers** | Clients with ≥2 COMPLETED bookings all-time |
-| **Clients with upcoming** | Distinct clients with a future PENDING/CONFIRMED booking |
-| **Today’s agenda** | PENDING/CONFIRMED with `startAt` in today’s org-local day |
-| **Bookings this month (plan)** | Non-cancelled with `startAt` in the current org-local calendar month |
+| Metric                         | Definition                                                                                            |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| **Bookings**                   | Count of appointments with `startAt` in the period (all statuses, including cancelled)                |
+| **Completed**                  | `COMPLETED` with `startAt` in period                                                                  |
+| **Cancelled**                  | `CANCELLED` with `startAt` in period                                                                  |
+| **No-shows**                   | `NO_SHOW` with `startAt` in period                                                                    |
+| **No-show rate**               | `NO_SHOW / (COMPLETED + NO_SHOW)` in period; `0` if none eligible                                     |
+| **Est. revenue**               | Sum of `service.priceCents` for **COMPLETED** only, `startAt` in period (list price, not Stripe cash) |
+| **Upcoming**                   | `PENDING` + `CONFIRMED` with `startAt >= now` (not limited to the period)                             |
+| **Clients on file**            | All-time `Client` count for the org                                                                   |
+| **Trend (bookings)**           | Per local day: non-cancelled appointments that day                                                    |
+| **Trend (revenue)**            | Per local day: COMPLETED list-price sum that day                                                      |
+| **Popular services**           | Non-cancelled in period by service; revenue = COMPLETED only                                          |
+| **Staff insights**             | Non-cancelled in period by resource                                                                   |
+| **New clients**                | Clients with `createdAt` in the period (profile acquisition)                                          |
+| **Returning this period**      | Clients with ≥2 non-cancelled bookings whose `startAt` is in period                                   |
+| **Repeat bookers**             | Clients with ≥2 COMPLETED bookings all-time                                                           |
+| **Clients with upcoming**      | Distinct clients with a future PENDING/CONFIRMED booking                                              |
+| **Today’s agenda**             | PENDING/CONFIRMED with `startAt` in today’s org-local day                                             |
+| **Bookings this month (plan)** | Non-cancelled with `startAt` in the current org-local calendar month                                  |
 
 ## Tenancy
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 
 import { SlotDayPicker } from "@/components/booking/slot-day-picker";
@@ -336,7 +343,7 @@ export function PublicBookingWizard({
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-sm font-medium">{s.name}</span>
-                    <span className="text-sm tabular-nums text-[var(--ink-secondary)]">
+                    <span className="text-sm text-[var(--ink-secondary)] tabular-nums">
                       {money(s.priceCents, s.currency)}
                     </span>
                   </div>
@@ -455,7 +462,10 @@ export function PublicBookingWizard({
                   setDoneId(result.data.bookingId);
                   toast("Booking confirmed", "success");
                   if (guidedTour) {
-                    markTourCompleted(bookingTourStorageKey(), browserStorage());
+                    markTourCompleted(
+                      bookingTourStorageKey(),
+                      browserStorage(),
+                    );
                   }
                   if (result.data.isFirstBooking) {
                     fireConfetti();
@@ -465,7 +475,12 @@ export function PublicBookingWizard({
             >
               <div>
                 <Label htmlFor="book-name">Full name</Label>
-                <Input id="book-name" name="name" required autoComplete="name" />
+                <Input
+                  id="book-name"
+                  name="name"
+                  required
+                  autoComplete="name"
+                />
               </div>
               <div>
                 <Label htmlFor="book-email">Email</Label>

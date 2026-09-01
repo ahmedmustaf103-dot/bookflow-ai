@@ -48,11 +48,7 @@ const HOUR_END = 21;
 const PX_PER_MIN = 1.2;
 const SNAP_MIN = 15;
 
-function buildHref(opts: {
-  day: string;
-  view: View;
-  resourceId?: string;
-}) {
+function buildHref(opts: { day: string; view: View; resourceId?: string }) {
   const sp = new URLSearchParams();
   sp.set("day", opts.day);
   sp.set("view", opts.view);
@@ -77,8 +73,11 @@ function bookingsOnDay(
 ) {
   return bookings.filter(
     (b) =>
-      formatInTimeZone(new Date(b.startAt), b.timezone || timezone, "yyyy-MM-dd") ===
-      dateStr,
+      formatInTimeZone(
+        new Date(b.startAt),
+        b.timezone || timezone,
+        "yyyy-MM-dd",
+      ) === dateStr,
   );
 }
 
@@ -153,7 +152,11 @@ export function CalendarBoard({
     });
   }
 
-  function onReschedule(booking: CalendarBooking, dateStr: string, timeStr: string) {
+  function onReschedule(
+    booking: CalendarBooking,
+    dateStr: string,
+    timeStr: string,
+  ) {
     const [h, m] = timeStr.split(":").map(Number);
     const minuteOfDay = (h ?? 0) * 60 + (m ?? 0);
     const snapped = Math.round(minuteOfDay / SNAP_MIN) * SNAP_MIN;
@@ -211,7 +214,10 @@ export function CalendarBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3" data-tour="staff-appointment-actions">
+      <div
+        className="flex flex-col gap-3"
+        data-tour="staff-appointment-actions"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="inline-flex w-full items-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-0.5 sm:w-auto">
@@ -515,14 +521,16 @@ function DayAgenda({
                   type="button"
                   onClick={() => onSelect(b.id)}
                   className={`flex min-h-16 w-full items-start gap-3 px-4 py-3 text-left ${
-                    selected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--muted)]/60"
+                    selected
+                      ? "bg-[var(--accent-soft)]"
+                      : "hover:bg-[var(--muted)]/60"
                   }`}
                 >
                   <div className="w-14 shrink-0 pt-0.5">
                     <p className="text-sm font-semibold tabular-nums">
                       {formatInTimeZone(new Date(b.startAt), tz, "HH:mm")}
                     </p>
-                    <p className="text-xs tabular-nums text-[var(--ink-tertiary)]">
+                    <p className="text-xs text-[var(--ink-tertiary)] tabular-nums">
                       {formatInTimeZone(new Date(b.endAt), tz, "HH:mm")}
                     </p>
                   </div>
@@ -564,23 +572,37 @@ function BookingDetail({
   booking: CalendarBooking;
   pending: boolean;
   onClose: () => void;
-  onReschedule: (booking: CalendarBooking, dateStr: string, timeStr: string) => void;
+  onReschedule: (
+    booking: CalendarBooking,
+    dateStr: string,
+    timeStr: string,
+  ) => void;
   showDragHint: boolean;
 }) {
   const tz = booking.timezone;
-  const dateValue = formatInTimeZone(new Date(booking.startAt), tz, "yyyy-MM-dd");
+  const dateValue = formatInTimeZone(
+    new Date(booking.startAt),
+    tz,
+    "yyyy-MM-dd",
+  );
   const timeValue = formatInTimeZone(new Date(booking.startAt), tz, "HH:mm");
 
   return (
     <Surface className="p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-base font-semibold sm:text-sm">{booking.clientName}</p>
+          <p className="text-base font-semibold sm:text-sm">
+            {booking.clientName}
+          </p>
           <p className="text-sm text-[var(--ink-secondary)]">
             {booking.serviceName} · {booking.resourceName}
           </p>
-          <p className="mt-1 text-sm tabular-nums text-[var(--ink-tertiary)] sm:text-xs">
-            {formatInTimeZone(new Date(booking.startAt), tz, "EEE MMM d · HH:mm")}{" "}
+          <p className="mt-1 text-sm text-[var(--ink-tertiary)] tabular-nums sm:text-xs">
+            {formatInTimeZone(
+              new Date(booking.startAt),
+              tz,
+              "EEE MMM d · HH:mm",
+            )}{" "}
             – {formatInTimeZone(new Date(booking.endAt), tz, "HH:mm")}
           </p>
         </div>
@@ -702,7 +724,7 @@ function TimeGrid({
             key={d.toISOString()}
             className="border-b border-l border-[var(--border)] px-2 py-2 text-center"
           >
-            <p className="text-[10px] font-medium uppercase text-[var(--ink-tertiary)]">
+            <p className="text-[10px] font-medium text-[var(--ink-tertiary)] uppercase">
               {format(d, "EEE")}
             </p>
             <Link
@@ -721,7 +743,7 @@ function TimeGrid({
           {hours.map((h) => (
             <div
               key={h}
-              className="absolute right-1 text-[10px] tabular-nums text-[var(--ink-tertiary)]"
+              className="absolute right-1 text-[10px] text-[var(--ink-tertiary)] tabular-nums"
               style={{
                 top: (h - HOUR_START) * 60 * PX_PER_MIN - 6,
               }}
@@ -760,10 +782,7 @@ function TimeGrid({
                 const startMin = minutesFromMidnight(b.startAt, b.timezone);
                 const endMin = minutesFromMidnight(b.endAt, b.timezone);
                 const top = (startMin - HOUR_START * 60) * PX_PER_MIN;
-                const height = Math.max(
-                  (endMin - startMin) * PX_PER_MIN,
-                  22,
-                );
+                const height = Math.max((endMin - startMin) * PX_PER_MIN, 22);
                 const selected = selectedId === b.id;
                 const draggable = canDrag(b.status);
                 return (
@@ -831,7 +850,7 @@ function MonthGrid({
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div
             key={d}
-            className="px-1 py-2 text-center text-[10px] font-medium uppercase text-[var(--ink-tertiary)] sm:px-2"
+            className="px-1 py-2 text-center text-[10px] font-medium text-[var(--ink-tertiary)] uppercase sm:px-2"
           >
             {compact ? d.slice(0, 1) : d}
           </div>
@@ -852,7 +871,7 @@ function MonthGrid({
                 view: compact ? "month" : "day",
                 resourceId,
               })}
-              className={`${compact ? "min-h-11" : "min-h-[4.5rem]"} border-r border-b border-[var(--border)] p-1.5 sm:p-2 hover:bg-[var(--muted)]/60 ${
+              className={`${compact ? "min-h-11" : "min-h-[4.5rem]"} border-r border-b border-[var(--border)] p-1.5 hover:bg-[var(--muted)]/60 sm:p-2 ${
                 inMonth ? "" : "bg-[var(--muted)]/30 text-[var(--ink-tertiary)]"
               } ${isSelected ? "bg-[var(--accent-soft)]" : ""}`}
             >

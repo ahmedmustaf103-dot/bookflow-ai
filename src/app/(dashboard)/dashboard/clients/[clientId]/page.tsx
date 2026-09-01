@@ -356,11 +356,7 @@ function TimelineItem({
   isLast: boolean;
   accent?: boolean;
 }) {
-  const day = formatInTimeZone(
-    b.startAt,
-    b.location.timezone,
-    "yyyy-MM-dd",
-  );
+  const day = formatInTimeZone(b.startAt, b.location.timezone, "yyyy-MM-dd");
   const when = formatInTimeZone(
     b.startAt,
     b.location.timezone,
@@ -404,7 +400,7 @@ function TimelineItem({
           </div>
           <div className="flex flex-col items-end gap-1">
             <StatusPill status={b.status} />
-            <span className="text-[11px] tabular-nums text-[var(--ink-tertiary)]">
+            <span className="text-[11px] text-[var(--ink-tertiary)] tabular-nums">
               {formatMoney(b.service.priceCents, b.service.currency)}
             </span>
           </div>

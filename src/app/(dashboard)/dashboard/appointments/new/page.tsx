@@ -69,7 +69,11 @@ export default async function NewAppointmentPage() {
           }
           action={
             scope.all ? (
-              <ButtonLink href="/dashboard/services" size="sm" variant="primary">
+              <ButtonLink
+                href="/dashboard/services"
+                size="sm"
+                variant="primary"
+              >
                 Services
               </ButtonLink>
             ) : undefined

@@ -9,7 +9,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] shadow-[var(--shadow-sm)]",
   secondary:
     "border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--muted)]",
-  ghost: "text-[var(--ink-secondary)] hover:bg-[var(--muted)] hover:text-[var(--ink)]",
+  ghost:
+    "text-[var(--ink-secondary)] hover:bg-[var(--muted)] hover:text-[var(--ink)]",
   danger:
     "bg-[var(--danger-soft)] text-[var(--danger)] hover:bg-red-100 border border-transparent",
 };
@@ -32,7 +33,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] font-medium transition-[background-color,transform,opacity] duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-45 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] font-medium transition-[background-color,transform,opacity] duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     />
   );
@@ -51,7 +52,7 @@ export function ButtonLink({
 }: ButtonLinkProps) {
   return (
     <Link
-      className={`inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] font-medium transition-[background-color,transform,opacity] duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:outline-none ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] font-medium transition-[background-color,transform,opacity] duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     />
   );

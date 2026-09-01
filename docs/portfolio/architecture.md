@@ -71,15 +71,15 @@ flowchart TB
 
 ## Request paths
 
-| Surface | Who | What happens |
-| ------- | --- | ------------ |
-| `/` | Prospects | Marketing landing → Clerk sign-up |
-| `/book/[slug]` | End customers | 4-step wizard: service → staff → time → details |
-| Custom domain | End customers | Middleware rewrites host → `/book/by-host` |
-| `/dashboard/*` | Owners / staff | Calendar, CRM, AI, analytics, settings, billing |
-| `/api/webhooks/clerk` | Clerk | Sync users into `User` + memberships |
-| `/api/webhooks/stripe` | Stripe | Plan + subscription state |
-| `/api/cron/reminders` | Vercel cron | Flush notification outbox |
+| Surface                | Who            | What happens                                    |
+| ---------------------- | -------------- | ----------------------------------------------- |
+| `/`                    | Prospects      | Marketing landing → Clerk sign-up               |
+| `/book/[slug]`         | End customers  | 4-step wizard: service → staff → time → details |
+| Custom domain          | End customers  | Middleware rewrites host → `/book/by-host`      |
+| `/dashboard/*`         | Owners / staff | Calendar, CRM, AI, analytics, settings, billing |
+| `/api/webhooks/clerk`  | Clerk          | Sync users into `User` + memberships            |
+| `/api/webhooks/stripe` | Stripe         | Plan + subscription state                       |
+| `/api/cron/reminders`  | Vercel cron    | Flush notification outbox                       |
 
 ## Tenancy & security
 

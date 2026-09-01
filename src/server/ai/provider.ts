@@ -133,7 +133,8 @@ export async function runAiText(input: {
       stopWhen: stepCountIs(input.maxSteps ?? (input.tools ? 5 : 1)),
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "AI provider request failed";
+    const message =
+      e instanceof Error ? e.message : "AI provider request failed";
     throw new UserFacingError(message);
   }
 

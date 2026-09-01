@@ -130,9 +130,9 @@ describe("outbox timing helpers", () => {
       STANDARD_RETRY_DELAY_MS,
     );
     const now = new Date("2026-08-10T12:00:00.000Z");
-    expect(nextRetryAt(OUTBOX_KINDS.BOOKING_CONFIRMATION, now).toISOString()).toBe(
-      new Date(now.getTime() + IMMEDIATE_RETRY_DELAY_MS).toISOString(),
-    );
+    expect(
+      nextRetryAt(OUTBOX_KINDS.BOOKING_CONFIRMATION, now).toISOString(),
+    ).toBe(new Date(now.getTime() + IMMEDIATE_RETRY_DELAY_MS).toISOString());
   });
 
   it("detects stale PROCESSING rows", () => {

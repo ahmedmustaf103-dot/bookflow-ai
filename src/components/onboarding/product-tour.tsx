@@ -123,7 +123,9 @@ export function ProductTour({
     if (mobile) {
       window.dispatchEvent(
         new Event(
-          step.openNav ? "bookflow:open-mobile-nav" : "bookflow:close-mobile-nav",
+          step.openNav
+            ? "bookflow:open-mobile-nav"
+            : "bookflow:close-mobile-nav",
         ),
       );
       await new Promise((r) => window.setTimeout(r, 80));
@@ -200,7 +202,8 @@ export function ProductTour({
 
   useEffect(() => {
     if (!open) return;
-    const first = tooltipRef.current?.querySelector<HTMLButtonElement>("button");
+    const first =
+      tooltipRef.current?.querySelector<HTMLButtonElement>("button");
     first?.focus();
   }, [index, open]);
 
@@ -289,10 +292,16 @@ export function ProductTour({
         <p className="text-[11px] font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">
           {copy.stepOf(index + 1, steps.length)}
         </p>
-        <h2 id={titleId} className="mt-1 text-base font-semibold text-[var(--ink)]">
+        <h2
+          id={titleId}
+          className="mt-1 text-base font-semibold text-[var(--ink)]"
+        >
           {step.title}
         </h2>
-        <p id={bodyId} className="mt-1.5 text-sm leading-relaxed text-[var(--ink-secondary)]">
+        <p
+          id={bodyId}
+          className="mt-1.5 text-sm leading-relaxed text-[var(--ink-secondary)]"
+        >
           {step.body}
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">

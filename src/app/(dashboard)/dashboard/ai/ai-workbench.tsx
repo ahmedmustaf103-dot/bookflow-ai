@@ -29,12 +29,7 @@ type AiRunPreview = {
   tokens: number;
 };
 
-type ActiveFeature =
-  | "summary"
-  | "draft"
-  | "insights"
-  | "assistant"
-  | null;
+type ActiveFeature = "summary" | "draft" | "insights" | "assistant" | null;
 
 function featureLabel(feature: string) {
   if (feature === "client_summary") return "Client summary";
@@ -125,7 +120,14 @@ export function AiWorkbench({
     feature: Exclude<ActiveFeature, null>,
     label: string,
     action: () => Promise<
-      | { ok: true; data: { text: string; tokens: number; proposal?: AiBookingProposal | null } }
+      | {
+          ok: true;
+          data: {
+            text: string;
+            tokens: number;
+            proposal?: AiBookingProposal | null;
+          };
+        }
       | { ok: false; error: string }
     >,
   ) {
@@ -202,10 +204,7 @@ export function AiWorkbench({
                 ))}
               </Select>
             </div>
-            <Button
-              type="submit"
-              disabled={pending || clients.length === 0}
-            >
+            <Button type="submit" disabled={pending || clients.length === 0}>
               {active === "summary" ? "Generating…" : "Generate summary"}
             </Button>
           </form>
@@ -254,7 +253,9 @@ export function AiWorkbench({
                 <option value="">Choose a client to send to</option>
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.email ? `${c.name} · ${c.email}` : `${c.name} (no email)`}
+                    {c.email
+                      ? `${c.name} · ${c.email}`
+                      : `${c.name} (no email)`}
                   </option>
                 ))}
               </Select>
@@ -472,11 +473,7 @@ export function AiWorkbench({
                   });
                 }}
               >
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={confirmPending}
-                >
+                <Button type="submit" size="sm" disabled={confirmPending}>
                   {confirmPending ? "Booking…" : "Confirm booking"}
                 </Button>
               </form>
@@ -501,9 +498,9 @@ export function AiWorkbench({
                     <p className="text-xs font-semibold">
                       {featureLabel(run.feature)}
                     </p>
-                    <p className="text-[11px] tabular-nums text-[var(--ink-tertiary)]">
-                      {format(new Date(run.createdAt), "dd/MM/yyyy, HH:mm:ss")} ·{" "}
-                      {run.tokens.toLocaleString("en-GB")} tok
+                    <p className="text-[11px] text-[var(--ink-tertiary)] tabular-nums">
+                      {format(new Date(run.createdAt), "dd/MM/yyyy, HH:mm:ss")}{" "}
+                      · {run.tokens.toLocaleString("en-GB")} tok
                     </p>
                   </div>
                   <p className="mt-1 line-clamp-3 text-xs text-[var(--ink-secondary)]">

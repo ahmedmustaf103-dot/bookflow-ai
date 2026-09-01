@@ -2,7 +2,10 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { acceptInviteAction } from "@/server/actions/team";
 import { requireDbUser } from "@/server/auth/session";
-import { normalizeInviteEmail, peekOrganizationInvite } from "@/server/team/team";
+import {
+  normalizeInviteEmail,
+  peekOrganizationInvite,
+} from "@/server/team/team";
 
 export const dynamic = "force-dynamic";
 

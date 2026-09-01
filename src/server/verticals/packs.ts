@@ -1,8 +1,4 @@
-export type VerticalPackId =
-  | "barber_salon"
-  | "dental"
-  | "tutors"
-  | "gyms";
+export type VerticalPackId = "barber_salon" | "dental" | "tutors" | "gyms";
 
 export type VerticalPack = {
   id: VerticalPackId;
@@ -47,7 +43,12 @@ export const VERTICAL_PACKS: Record<VerticalPackId, VerticalPack> = {
     defaultServices: [
       { name: "Haircut", durationMin: 30, priceCents: 3500, bufferAfter: 5 },
       { name: "Beard trim", durationMin: 15, priceCents: 1500 },
-      { name: "Cut & style", durationMin: 45, priceCents: 5500, bufferAfter: 5 },
+      {
+        name: "Cut & style",
+        durationMin: 45,
+        priceCents: 5500,
+        bufferAfter: 5,
+      },
     ],
     clientFormHints: {
       phoneRequired: false,

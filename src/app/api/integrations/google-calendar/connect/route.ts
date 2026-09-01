@@ -12,7 +12,9 @@ const calendarPath = "/dashboard/settings/calendar";
 export async function GET() {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   if (!isGoogleCalendarConfigured()) {
-    return NextResponse.redirect(new URL(`${calendarPath}?gcal=not_configured`, base));
+    return NextResponse.redirect(
+      new URL(`${calendarPath}?gcal=not_configured`, base),
+    );
   }
 
   const ctx = await getActiveOrganization();

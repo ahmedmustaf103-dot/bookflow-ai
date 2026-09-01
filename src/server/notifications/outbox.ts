@@ -1,10 +1,7 @@
 import "server-only";
 
 import { after } from "next/server";
-import {
-  Prisma,
-  type OrganizationPlan,
-} from "@/generated/prisma/client";
+import { Prisma, type OrganizationPlan } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import {
   planAllowsReminders,
@@ -105,10 +102,7 @@ export function isStaleProcessing(
   return updatedAt.getTime() < now.getTime() - staleMs;
 }
 
-export function nextRetryAt(
-  kind: string,
-  now = new Date(),
-): Date {
+export function nextRetryAt(kind: string, now = new Date()): Date {
   return new Date(now.getTime() + retryDelayMsForKind(kind));
 }
 
@@ -620,9 +614,9 @@ async function reclaimStaleProcessing(now = new Date()) {
   return result.count;
 }
 
-function normalizePayloadDate<T extends { startAt: Date | string; endAt?: Date | string | null }>(
-  payload: T,
-): T {
+function normalizePayloadDate<
+  T extends { startAt: Date | string; endAt?: Date | string | null },
+>(payload: T): T {
   return {
     ...payload,
     startAt:
@@ -672,10 +666,7 @@ async function dispatchOutboxItem(item: {
     }
   }
 
-  if (
-    item.kind === OUTBOX_KINDS.BOOKING_REMINDER &&
-    item.channel === "SMS"
-  ) {
+  if (item.kind === OUTBOX_KINDS.BOOKING_REMINDER && item.channel === "SMS") {
     const payload = normalizePayloadDate(
       item.payload as unknown as BookingSmsInput,
     );

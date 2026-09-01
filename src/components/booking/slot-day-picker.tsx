@@ -71,9 +71,7 @@ export function SlotDayPicker({
 
   const canPrev = Boolean(todayDate && weekStart > todayDate);
   const nextWeek = weekStart ? addUtcDaysToYmd(weekStart, 7) : "";
-  const canNext = Boolean(
-    nextWeek && horizonEnd && nextWeek <= horizonEnd,
-  );
+  const canNext = Boolean(nextWeek && horizonEnd && nextWeek <= horizonEnd);
 
   if (days.every((d) => d.slots.length === 0)) {
     return (
@@ -150,7 +148,7 @@ export function SlotDayPicker({
                       : "border border-transparent text-[var(--ink-tertiary)] opacity-40"
               }`}
             >
-              <span className="block text-[10px] uppercase tracking-wide">
+              <span className="block text-[10px] tracking-wide uppercase">
                 {isToday ? "Today" : weekdayShort(day.label)}
               </span>
               <span className="block text-sm font-semibold tabular-nums">

@@ -280,8 +280,7 @@ describe("assigned staff reschedule and cancel", () => {
   it("emails the assigned staff on cancellation", async () => {
     await enqueueBookingCancellation(staffCtx);
     const rows = create.mock.calls.map(
-      (call) =>
-        (call[0] as { data: { kind: string; toAddress: string } }).data,
+      (call) => (call[0] as { data: { kind: string; toAddress: string } }).data,
     );
     expect(rows.map((r) => r.kind).sort()).toEqual([
       OUTBOX_KINDS.BOOKING_CANCELLATION,

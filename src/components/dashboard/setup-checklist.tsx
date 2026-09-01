@@ -76,7 +76,7 @@ export function SetupChecklist({ orgId, items, bookPath }: Props) {
 
   if (requiredDone) {
     return (
-      <Surface className="mb-6 bf-page-enter">
+      <Surface className="bf-page-enter mb-6">
         <p className="text-xs font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">
           Optional
         </p>
@@ -104,7 +104,7 @@ export function SetupChecklist({ orgId, items, bookPath }: Props) {
   }
 
   return (
-    <Surface className="mb-6 bf-page-enter">
+    <Surface className="bf-page-enter mb-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">

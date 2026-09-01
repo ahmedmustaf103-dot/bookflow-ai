@@ -23,7 +23,10 @@ function BookingPreview() {
         </p>
         <div className="flex gap-2">
           {["Service", "Staff", "Time", "Details"].map((label, i) => (
-            <div key={label} className="flex flex-1 flex-col items-center gap-1">
+            <div
+              key={label}
+              className="flex flex-1 flex-col items-center gap-1"
+            >
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${
                   i < 2
@@ -40,21 +43,26 @@ function BookingPreview() {
           ))}
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {["Tue 10:00", "Tue 10:30", "Tue 11:00", "Wed 09:00", "Wed 14:00", "Thu 16:30"].map(
-            (slot, i) => (
-              <div
-                key={slot}
-                className={`rounded-md border px-2 py-2 text-center text-xs ${
-                  i === 1
-                    ? "border-[var(--accent)] bg-[var(--accent-soft)] font-medium text-[var(--accent)]"
-                    : "border-zinc-200 text-zinc-600"
-                }`}
-                style={{ animationDelay: `${120 + i * 40}ms` }}
-              >
-                {slot}
-              </div>
-            ),
-          )}
+          {[
+            "Tue 10:00",
+            "Tue 10:30",
+            "Tue 11:00",
+            "Wed 09:00",
+            "Wed 14:00",
+            "Thu 16:30",
+          ].map((slot, i) => (
+            <div
+              key={slot}
+              className={`rounded-md border px-2 py-2 text-center text-xs ${
+                i === 1
+                  ? "border-[var(--accent)] bg-[var(--accent-soft)] font-medium text-[var(--accent)]"
+                  : "border-zinc-200 text-zinc-600"
+              }`}
+              style={{ animationDelay: `${120 + i * 40}ms` }}
+            >
+              {slot}
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -101,7 +109,7 @@ const steps = [
 export default function HomePage() {
   return (
     <>
-      <section className="bf-marketing-hero relative flex min-h-[100svh] flex-col justify-end overflow-hidden pb-0 pt-24 text-white">
+      <section className="bf-marketing-hero relative flex min-h-[100svh] flex-col justify-end overflow-hidden pt-24 pb-0 text-white">
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -171,7 +179,7 @@ export default function HomePage() {
                 <h3 className="font-marketing text-xl font-semibold tracking-tight text-[var(--ink)]">
                   {item.title}
                 </h3>
-                <p className="mt-2 text-[var(--ink-secondary)] leading-relaxed">
+                <p className="mt-2 leading-relaxed text-[var(--ink-secondary)]">
                   {item.body}
                 </p>
               </li>
@@ -185,7 +193,7 @@ export default function HomePage() {
         className="relative overflow-hidden bg-[var(--bg)] py-20 sm:py-28"
       >
         <div
-          className="pointer-events-none absolute -right-20 top-10 h-72 w-72 rounded-full opacity-40 blur-3xl"
+          className="pointer-events-none absolute top-10 -right-20 h-72 w-72 rounded-full opacity-40 blur-3xl"
           style={{
             background: "radial-gradient(circle, #e8f5f0 0%, transparent 70%)",
           }}

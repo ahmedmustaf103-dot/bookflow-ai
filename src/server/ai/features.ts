@@ -86,7 +86,9 @@ export async function generateClientSummary(input: {
   const now = Date.now();
   const completed = client.bookings.filter((b) => b.status === "COMPLETED");
   const noShows = client.bookings.filter((b) => b.status === "NO_SHOW").length;
-  const cancelled = client.bookings.filter((b) => b.status === "CANCELLED").length;
+  const cancelled = client.bookings.filter(
+    (b) => b.status === "CANCELLED",
+  ).length;
   const upcoming = client.bookings
     .filter(
       (b) =>

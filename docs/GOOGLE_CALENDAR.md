@@ -8,11 +8,11 @@ Customer "Add to calendar" / ICS files are a **separate** path. They go to the c
 
 ## Barber Google Calendar
 
-| BookFlow action | Google Calendar |
-| --------------- | --------------- |
+| BookFlow action | Google Calendar                                                                     |
+| --------------- | ----------------------------------------------------------------------------------- |
 | New booking     | Create event on the assigned barber’s calendar (stable id derived from the booking) |
-| Reschedule      | Update **the same** event (PATCH stored `googleEventId`, never a second create) |
-| Cancel          | Delete that event |
+| Reschedule      | Update **the same** event (PATCH stored `googleEventId`, never a second create)     |
+| Cancel          | Delete that event                                                                   |
 
 If Google is disconnected, not configured, or returns an error, **the BookFlow booking still succeeds**. Failures are logged; there is no calendar retry queue.
 
@@ -20,11 +20,11 @@ Connecting does **not** backfill existing appointments.
 
 ## Customer ICS (email + manage page)
 
-| BookFlow action | ICS |
-| --------------- | --- |
-| New booking     | `METHOD:REQUEST`, `SEQUENCE:0`, UID `{bookingId}@bookflow.ai` |
+| BookFlow action | ICS                                                                            |
+| --------------- | ------------------------------------------------------------------------------ |
+| New booking     | `METHOD:REQUEST`, `SEQUENCE:0`, UID `{bookingId}@bookflow.ai`                  |
 | Reschedule      | Same UID, higher SEQUENCE, new DTSTART/DTEND, attached to the reschedule email |
-| Cancel          | Same UID, `METHOD:CANCEL`, attached to the cancellation email |
+| Cancel          | Same UID, `METHOD:CANCEL`, attached to the cancellation email                  |
 
 Apple Calendar / iCloud: if the customer **opens the updated or cancellation ICS**, many clients will update or remove the event. BookFlow cannot push that change into iCloud by itself.
 

@@ -8,7 +8,11 @@ import {
 } from "@/server/staff/scope";
 import { TEST_OWNER_CLERK_ID } from "@/test/constants";
 import { disconnectTestPrisma, getTestPrisma } from "@/test/prisma";
-import { resetAndSeedTestOrg, nextOpenSlotStart, type TestSeed } from "@/test/seed";
+import {
+  resetAndSeedTestOrg,
+  nextOpenSlotStart,
+  type TestSeed,
+} from "@/test/seed";
 
 describe("multi-staff isolation (DB)", () => {
   let seed: TestSeed;

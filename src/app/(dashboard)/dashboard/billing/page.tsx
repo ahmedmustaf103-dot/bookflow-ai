@@ -51,9 +51,7 @@ export default async function BillingPage({
       <PageHeader
         title="Billing"
         description={`Current plan: ${ctx.organization.plan}${
-          subscription
-            ? ` · ${subscription.status}`
-            : " · No paid plan yet"
+          subscription ? ` · ${subscription.status}` : " · No paid plan yet"
         }`}
       />
 
@@ -83,8 +81,8 @@ export default async function BillingPage({
 
       {!stripeReady ? (
         <p className="text-sm text-[var(--ink-tertiary)]">
-          Online billing isn’t set up on this BookFlow account yet. You can still
-          use the app on your current plan.
+          Online billing isn’t set up on this BookFlow account yet. You can
+          still use the app on your current plan.
         </p>
       ) : (
         <>

@@ -32,34 +32,28 @@ export default async function DashboardPage() {
   });
   const floorResourceIds = scope.all ? undefined : scope.resourceIds;
 
-  const [
-    locationCount,
-    resourceCount,
-    serviceCount,
-    analytics7,
-    floor,
-    setup,
-  ] = await Promise.all([
-    manage
-      ? ctx.db.location.count({ where: { isActive: true } })
-      : Promise.resolve(0),
-    manage
-      ? ctx.db.resource.count({ where: { isActive: true } })
-      : Promise.resolve(0),
-    manage
-      ? ctx.db.service.count({ where: { isActive: true } })
-      : Promise.resolve(0),
-    manage ? getOrgAnalytics(orgId, 7) : Promise.resolve(null),
-    getDashboardFloor(orgId, new Date(), floorResourceIds),
-    manage
-      ? getPilotSetupStatus({
-          organizationId: orgId,
-          name: ctx.organization.name,
-          logoUrl: ctx.organization.logoUrl,
-          reminderHoursBefore: ctx.organization.reminderHoursBefore,
-        })
-      : Promise.resolve(null),
-  ]);
+  const [locationCount, resourceCount, serviceCount, analytics7, floor, setup] =
+    await Promise.all([
+      manage
+        ? ctx.db.location.count({ where: { isActive: true } })
+        : Promise.resolve(0),
+      manage
+        ? ctx.db.resource.count({ where: { isActive: true } })
+        : Promise.resolve(0),
+      manage
+        ? ctx.db.service.count({ where: { isActive: true } })
+        : Promise.resolve(0),
+      manage ? getOrgAnalytics(orgId, 7) : Promise.resolve(null),
+      getDashboardFloor(orgId, new Date(), floorResourceIds),
+      manage
+        ? getPilotSetupStatus({
+            organizationId: orgId,
+            name: ctx.organization.name,
+            logoUrl: ctx.organization.logoUrl,
+            reminderHoursBefore: ctx.organization.reminderHoursBefore,
+          })
+        : Promise.resolve(null),
+    ]);
 
   const bookUrl = publicBookingUrl(ctx.organization);
   const bookPath = `/book/${ctx.organization.slug}`;

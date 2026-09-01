@@ -7,8 +7,6 @@ export async function expectNotFoundPage(page: Page) {
   ).toBeVisible();
   await expect(page.getByText("Not found", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Go home" })).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "500" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "500" })).toHaveCount(0);
   await expect(page.getByText("Internal Server Error.")).toHaveCount(0);
 }

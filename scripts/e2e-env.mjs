@@ -99,7 +99,10 @@ export function logE2eEnv(env = process.env) {
   const clerkPk = env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
   const clerkSk = env.CLERK_SECRET_KEY ?? "";
   console.log("[e2e-env] NODE_ENV", env.NODE_ENV);
-  console.log("[e2e-env] DATABASE_URL", redactDatabaseUrl(env.DATABASE_URL ?? ""));
+  console.log(
+    "[e2e-env] DATABASE_URL",
+    redactDatabaseUrl(env.DATABASE_URL ?? ""),
+  );
   console.log("[e2e-env] NEXT_PUBLIC_APP_URL", env.NEXT_PUBLIC_APP_URL);
   console.log("[e2e-env] NEXT_DIST_DIR", env.NEXT_DIST_DIR);
   console.log("[e2e-env] E2E_PORT", env.E2E_PORT);

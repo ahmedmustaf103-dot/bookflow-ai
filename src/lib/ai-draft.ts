@@ -22,7 +22,10 @@ export function parseAiDraftMessage(raw: string): {
 
   const subject =
     subjectMatch?.[1]?.trim() ||
-    body.split("\n").find((line) => line.trim())?.slice(0, 90) ||
+    body
+      .split("\n")
+      .find((line) => line.trim())
+      ?.slice(0, 90) ||
     "";
 
   return { subject, body };
@@ -36,7 +39,5 @@ export function draftBodyToHtml(body: string) {
     .replaceAll('"', "&quot;");
   const blocks = escaped.split(/\n{2,}/).filter((p) => p.trim());
   if (blocks.length === 0) return "";
-  return blocks
-    .map((p) => `<p>${p.replaceAll("\n", "<br/>")}</p>`)
-    .join("\n");
+  return blocks.map((p) => `<p>${p.replaceAll("\n", "<br/>")}</p>`).join("\n");
 }

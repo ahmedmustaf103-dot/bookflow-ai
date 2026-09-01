@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { isBookingOverlapError } from "@/server/bookings/overlap";
-import {
-  getFeatureFlags,
-  isFeatureEnabled,
-} from "@/server/flags";
+import { getFeatureFlags, isFeatureEnabled } from "@/server/flags";
 import {
   getVerticalPack,
   isVerticalPackId,

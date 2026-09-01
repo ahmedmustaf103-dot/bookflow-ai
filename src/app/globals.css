@@ -53,7 +53,9 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01" on, "cv01" on;
+  font-feature-settings:
+    "ss01" on,
+    "cv01" on;
 }
 
 .font-display {
@@ -166,7 +168,8 @@ body {
 }
 
 .font-marketing {
-  font-family: var(--font-marketing-display), ui-sans-serif, system-ui, sans-serif;
+  font-family:
+    var(--font-marketing-display), ui-sans-serif, system-ui, sans-serif;
 }
 
 @keyframes bf-marketing-rise {

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  bookingIcsUid,
-  buildBookingIcs,
-  buildConfirmationIcs,
-} from "./ics";
+import { bookingIcsUid, buildBookingIcs, buildConfirmationIcs } from "./ics";
 
 describe("buildBookingIcs", () => {
   it("builds a valid VEVENT with UTC start/end", () => {

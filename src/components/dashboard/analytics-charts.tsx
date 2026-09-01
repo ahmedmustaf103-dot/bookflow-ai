@@ -47,11 +47,18 @@ export function BookingsTrendChart({
   return (
     <div className="h-56 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <AreaChart
+          data={chartData}
+          margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+        >
           <defs>
             <linearGradient id="bfBookingsFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.02} />
+              <stop
+                offset="100%"
+                stopColor="var(--accent)"
+                stopOpacity={0.02}
+              />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -148,8 +155,8 @@ export function TopServicesChart({
           <Tooltip
             contentStyle={tooltipStyle}
             formatter={(value, name, item) => {
-              const full =
-                (item?.payload as { fullName?: string } | undefined)?.fullName;
+              const full = (item?.payload as { fullName?: string } | undefined)
+                ?.fullName;
               if (name === "revenue") {
                 return [
                   new Intl.NumberFormat("en-GB", {

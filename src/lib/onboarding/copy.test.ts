@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  BOOKING_TOUR_SLUGS,
-  isPublicDemoSlug,
-  onboardingCopy,
-} from "./copy";
+import { BOOKING_TOUR_SLUGS, isPublicDemoSlug, onboardingCopy } from "./copy";
 
 describe("onboarding copy", () => {
   it("treats live and isolated demo shops as public demos, not the e2e shop", () => {

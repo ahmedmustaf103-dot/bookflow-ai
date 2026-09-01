@@ -1,6 +1,9 @@
 "use server";
 
-import { groupSlotsByLocalDay, publicBookingHorizon } from "@/lib/booking-window";
+import {
+  groupSlotsByLocalDay,
+  publicBookingHorizon,
+} from "@/lib/booking-window";
 import type { PublicSlotDay } from "@/lib/booking-types";
 import { toSafeActionError } from "@/lib/action-errors";
 import { err, ok, type ActionResult } from "@/lib/result";

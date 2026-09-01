@@ -71,7 +71,9 @@ export function resolveAnalyticsPeriod(
 }
 
 /** The immediately preceding window of the same length. */
-export function previousAnalyticsPeriod(current: AnalyticsPeriod): AnalyticsPeriod {
+export function previousAnalyticsPeriod(
+  current: AnalyticsPeriod,
+): AnalyticsPeriod {
   const dayCount = current.days.length;
   const endDayExclusive = current.startDay;
   const startDay = shiftIsoDay(endDayExclusive, -dayCount);

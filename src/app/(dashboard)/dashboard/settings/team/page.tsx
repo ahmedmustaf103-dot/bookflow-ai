@@ -124,11 +124,7 @@ export default async function TeamSettingsPage() {
                         resetOnSuccess={false}
                         className="flex items-center"
                       >
-                        <input
-                          type="hidden"
-                          name="membershipId"
-                          value={m.id}
-                        />
+                        <input type="hidden" name="membershipId" value={m.id} />
                       </ActionForm>
                     ) : null}
                     {canRemoveTeamMember(
@@ -147,11 +143,7 @@ export default async function TeamSettingsPage() {
                         confirmMessage="Remove this person from the team? They lose dashboard access. Their staff profile and past appointments stay unless you hide them on Staff."
                         className="flex items-center"
                       >
-                        <input
-                          type="hidden"
-                          name="membershipId"
-                          value={m.id}
-                        />
+                        <input type="hidden" name="membershipId" value={m.id} />
                       </ActionForm>
                     ) : null}
                   </div>
@@ -188,7 +180,7 @@ export default async function TeamSettingsPage() {
                       ? ` · books as ${invite.resource.name}`
                       : ""}
                   </p>
-                  <p className="mt-1 break-all text-[11px] text-[var(--ink-tertiary)]">
+                  <p className="mt-1 text-[11px] break-all text-[var(--ink-tertiary)]">
                     {inviteAcceptUrl(invite.token)}
                   </p>
                 </div>
@@ -212,8 +204,8 @@ export default async function TeamSettingsPage() {
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
           Staff and admin invites create a bookable person (hours + your
           services) so they show on booking, Staff, Hours, Calendar, and
-          insights. Pick an existing staff member only if they should share
-          that calendar.
+          insights. Pick an existing staff member only if they should share that
+          calendar.
         </p>
         {assignable.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--ink-secondary)]">

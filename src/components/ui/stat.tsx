@@ -10,7 +10,7 @@ export function Stat({ label, value, hint }: Props) {
       <p className="text-xs font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">
         {label}
       </p>
-      <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums text-[var(--ink)]">
+      <p className="mt-1.5 text-2xl font-semibold tracking-tight text-[var(--ink)] tabular-nums">
         {value}
       </p>
       {hint ? (

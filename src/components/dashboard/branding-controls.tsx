@@ -37,7 +37,7 @@ export function BrandAssetUploader({
           <img
             src={currentUrl}
             alt=""
-            className="h-10 w-10 rounded-md border border-[var(--border)] object-contain bg-white"
+            className="h-10 w-10 rounded-md border border-[var(--border)] bg-white object-contain"
           />
         ) : null}
       </div>
@@ -115,12 +115,14 @@ export function CustomDomainActivate({
 
   return (
     <div className="mt-3 rounded-[var(--radius-panel)] border border-dashed border-[var(--border-strong)] bg-[var(--muted)]/40 p-3 text-xs text-[var(--ink-secondary)]">
-      <p className="font-medium text-[var(--ink)]">Connect your own website address</p>
+      <p className="font-medium text-[var(--ink)]">
+        Connect your own website address
+      </p>
       <p className="mt-1">
         Ask your web host to point{" "}
         <code className="text-[var(--ink)]">{domain}</code> at{" "}
-        <code className="text-[var(--ink)]">{appHost}</code>, then mark it
-        ready below.
+        <code className="text-[var(--ink)]">{appHost}</code>, then mark it ready
+        below.
       </p>
       <p className="mt-2 tabular-nums">
         Status: <span className="font-medium text-[var(--ink)]">{status}</span>
@@ -139,7 +141,7 @@ export function CustomDomainActivate({
                 toast(result.error, "error");
                 return;
               }
-                toast("Website address connected", "success");
+              toast("Website address connected", "success");
             });
           }}
         >

@@ -14,10 +14,10 @@ Show landing hero → cut to booking page URL.
 
 Path: `/book/bookflow`
 
-1. Pick a service  
-2. Pick staff  
-3. Pick a time (show real slots)  
-4. Enter details → confirm  
+1. Pick a service
+2. Pick staff
+3. Pick a time (show real slots)
+4. Enter details → confirm
 
 Narrate:
 
@@ -31,11 +31,11 @@ Sign in → `/dashboard`
 
 Hit in order (15–20s each):
 
-1. **Overview** — today’s picture  
-2. **Calendar / Appointments** — new booking appears  
-3. **Clients** — CRM record created  
-4. **Hours / Staff / Services** — how availability is configured  
-5. **Analytics** — revenue / staff / customer insight charts  
+1. **Overview** — today’s picture
+2. **Calendar / Appointments** — new booking appears
+3. **Clients** — CRM record created
+4. **Hours / Staff / Services** — how availability is configured
+5. **Analytics** — revenue / staff / customer insight charts
 
 Narrate:
 
@@ -43,9 +43,9 @@ Narrate:
 
 ## Act 3 — Automation + AI (2:40–3:50)
 
-1. **Settings** — reminder / follow-up / review / rebooking toggles  
-2. Mention outbox: confirmation email already queued/sent (show Resend or outbox if visible)  
-3. **AI workbench** — generate a client summary or message draft; mention token metering / plans  
+1. **Settings** — reminder / follow-up / review / rebooking toggles
+2. Mention outbox: confirmation email already queued/sent (show Resend or outbox if visible)
+3. **AI workbench** — generate a client summary or message draft; mention token metering / plans
 
 Narrate:
 
@@ -59,21 +59,21 @@ Quick montage: white-label colour/logo if set · architecture one-liner · CTA
 
 End card:
 
-- Live: bookflow-ai-isga.vercel.app  
-- Repo / portfolio link  
+- Live: bookflow-ai-isga.vercel.app
+- Repo / portfolio link
 - Your name + calendar link
 
 ## B-roll checklist
 
-- [ ] Landing first viewport  
-- [ ] Full booking wizard  
-- [ ] Dashboard calendar with booking  
-- [ ] Analytics charts  
-- [ ] AI run result  
+- [ ] Landing first viewport
+- [ ] Full booking wizard
+- [ ] Dashboard calendar with booking
+- [ ] Analytics charts
+- [ ] AI run result
 - [ ] Optional: architecture Mermaid exported from `architecture.md`
 
 ## Export
 
-- YouTube unlisted + LinkedIn native upload  
-- 15s mute cut of booking wizard for LinkedIn feed  
+- YouTube unlisted + LinkedIn native upload
+- 15s mute cut of booking wizard for LinkedIn feed
 - Thumbnail: brand wordmark + “Book · Ops · AI”

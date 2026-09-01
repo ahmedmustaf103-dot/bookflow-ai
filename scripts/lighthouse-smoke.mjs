@@ -21,9 +21,7 @@ const minScore = Number(process.env.LH_MIN_SCORE || "0.9");
 
 const urls = [`${base}/`];
 if (bookPath) {
-  urls.push(
-    `${base}${bookPath.startsWith("/") ? bookPath : `/${bookPath}`}`,
-  );
+  urls.push(`${base}${bookPath.startsWith("/") ? bookPath : `/${bookPath}`}`);
 }
 
 mkdirSync("lighthouse-reports", { recursive: true });

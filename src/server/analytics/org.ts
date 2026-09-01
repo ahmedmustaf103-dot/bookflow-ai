@@ -76,10 +76,7 @@ async function resolveCurrency(organizationId: string) {
   return service?.currency || "GBP";
 }
 
-async function statusCounts(
-  organizationId: string,
-  period: AnalyticsPeriod,
-) {
+async function statusCounts(organizationId: string, period: AnalyticsPeriod) {
   const grouped = await db.booking.groupBy({
     by: ["status"],
     where: {

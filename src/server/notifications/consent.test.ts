@@ -75,7 +75,9 @@ describe("marketing consent gate", () => {
     );
     expect(isTransactionalOutboxKind(OUTBOX_KINDS.BOOKING_REMINDER)).toBe(true);
     // Transactional path does not consult allowsMarketingSend
-    expect(isMarketingOutboxKind(OUTBOX_KINDS.BOOKING_CONFIRMATION)).toBe(false);
+    expect(isMarketingOutboxKind(OUTBOX_KINDS.BOOKING_CONFIRMATION)).toBe(
+      false,
+    );
     expect(isMarketingOutboxKind(OUTBOX_KINDS.BOOKING_CREATED)).toBe(false);
     expect(isMarketingOutboxKind(OUTBOX_KINDS.BOOKING_REMINDER)).toBe(false);
     expect(isTransactionalOutboxKind(OUTBOX_KINDS.BOOKING_CREATED)).toBe(true);

@@ -290,12 +290,12 @@ export async function pushGoogleCalendarUpsert(input: {
     }
 
     const created = (await createRes.json()) as { id?: string };
-    await persistGoogleEventId(
-      input.bookingId,
-      created.id ?? deterministic,
-    );
+    await persistGoogleEventId(input.bookingId, created.id ?? deterministic);
   } catch (e) {
-    logger.warn({ err: e, bookingId: input.bookingId }, "Google Calendar sync skipped");
+    logger.warn(
+      { err: e, bookingId: input.bookingId },
+      "Google Calendar sync skipped",
+    );
   }
 }
 

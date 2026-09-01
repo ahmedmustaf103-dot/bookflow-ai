@@ -73,7 +73,9 @@ export function isTransactionalOutboxKind(kind: string): boolean {
  * Whether a marketing message may be enqueued/sent.
  * Transactional kinds always return true (callers should not use this for them).
  */
-export function allowsMarketingSend(marketingOptIn: boolean | null | undefined) {
+export function allowsMarketingSend(
+  marketingOptIn: boolean | null | undefined,
+) {
   return marketingOptIn === true;
 }
 

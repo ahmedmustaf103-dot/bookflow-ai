@@ -37,11 +37,7 @@ type ClientRow = {
   nextService: string | null;
 };
 
-function buildHref(params: {
-  q?: string;
-  tag?: string;
-  repeat?: string;
-}) {
+function buildHref(params: { q?: string; tag?: string; repeat?: string }) {
   const sp = new URLSearchParams();
   if (params.q) sp.set("q", params.q);
   if (params.tag) sp.set("tag", params.tag);
@@ -124,7 +120,9 @@ export default async function ClientsPage({
             clientId: true,
             startAt: true,
             status: true,
-            service: { select: { priceCents: true, currency: true, name: true } },
+            service: {
+              select: { priceCents: true, currency: true, name: true },
+            },
             location: { select: { timezone: true } },
           },
           orderBy: { startAt: "desc" },
@@ -141,14 +139,15 @@ export default async function ClientsPage({
   let rows: ClientRow[] = clients.map((c) => {
     const list = byClient.get(c.id) ?? [];
     const completed = list.filter((b) => b.status === "COMPLETED");
-    const ltvCents = completed.reduce((sum, b) => sum + b.service.priceCents, 0);
+    const ltvCents = completed.reduce(
+      (sum, b) => sum + b.service.priceCents,
+      0,
+    );
     const currency =
       completed[0]?.service.currency ?? list[0]?.service.currency ?? "GBP";
 
     const past = list.filter(
-      (b) =>
-        b.startAt.getTime() < now &&
-        b.status !== "CANCELLED",
+      (b) => b.startAt.getTime() < now && b.status !== "CANCELLED",
     );
     const upcoming = list
       .filter(
@@ -256,7 +255,9 @@ export default async function ClientsPage({
       <DataTable
         rows={rows}
         rowKey={(r) => r.id}
-        emptyTitle={query || tag || repeatOnly ? "No matching clients" : "No clients yet"}
+        emptyTitle={
+          query || tag || repeatOnly ? "No matching clients" : "No clients yet"
+        }
         emptyDescription={
           query || tag || repeatOnly
             ? "Try clearing filters or a different search."
@@ -287,7 +288,8 @@ export default async function ClientsPage({
                   </span>
                 ) : null}
                 <p className="truncate text-xs text-[var(--ink-tertiary)]">
-                  {[r.email, r.phone].filter(Boolean).join(" · ") || "No contact"}
+                  {[r.email, r.phone].filter(Boolean).join(" · ") ||
+                    "No contact"}
                 </p>
               </div>
             ),
@@ -315,9 +317,7 @@ export default async function ClientsPage({
             key: "visits",
             header: "Visits",
             className: "w-20",
-            cell: (r) => (
-              <span className="tabular-nums">{r.bookingCount}</span>
-            ),
+            cell: (r) => <span className="tabular-nums">{r.bookingCount}</span>,
           },
           ...(showFinance
             ? [
@@ -340,7 +340,7 @@ export default async function ClientsPage({
             header: "Last",
             cell: (r) =>
               r.lastAt ? (
-                <span className="tabular-nums text-xs">
+                <span className="text-xs tabular-nums">
                   {formatInTimeZone(
                     r.lastAt,
                     r.lastTz ?? tzDefault,
@@ -357,7 +357,7 @@ export default async function ClientsPage({
             cell: (r) =>
               r.nextAt ? (
                 <div>
-                  <p className="tabular-nums text-xs font-medium">
+                  <p className="text-xs font-medium tabular-nums">
                     {formatInTimeZone(
                       r.nextAt,
                       r.nextTz ?? tzDefault,

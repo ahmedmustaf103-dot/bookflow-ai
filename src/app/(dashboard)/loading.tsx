@@ -2,7 +2,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardLoading() {
   return (
-    <div className="space-y-6 bf-page-enter" aria-busy="true" aria-live="polite">
+    <div
+      className="bf-page-enter space-y-6"
+      aria-busy="true"
+      aria-live="polite"
+    >
       <div className="space-y-2">
         <Skeleton className="h-6 w-44" />
         <Skeleton className="h-4 w-72" />

@@ -1,8 +1,6 @@
 /** Shared production security header definitions (also used by next.config). */
 
-export function buildContentSecurityPolicy(options?: {
-  isDev?: boolean;
-}) {
+export function buildContentSecurityPolicy(options?: { isDev?: boolean }) {
   const isDev = options?.isDev ?? process.env.NODE_ENV !== "production";
   const scriptSrc = [
     "'self'",

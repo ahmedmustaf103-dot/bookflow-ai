@@ -26,16 +26,18 @@ export function GoogleCalendarCard({
     <Surface className="max-w-lg">
       <h2 className="text-sm font-semibold">Google Calendar</h2>
       <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-        Connect your own Google account. Bookings with you go to your
-        calendar. When a customer reschedules, the same event updates; if they
-        cancel, it is removed. A Google hiccup never blocks a BookFlow booking.
-        Connecting does not copy old appointments across.
+        Connect your own Google account. Bookings with you go to your calendar.
+        When a customer reschedules, the same event updates; if they cancel, it
+        is removed. A Google hiccup never blocks a BookFlow booking. Connecting
+        does not copy old appointments across.
       </p>
       {status === "connected" ? (
         <p className="mt-2 text-sm text-[var(--accent)]">Connected.</p>
       ) : null}
       {status === "disconnected" ? (
-        <p className="mt-2 text-sm text-[var(--ink-secondary)]">Disconnected.</p>
+        <p className="mt-2 text-sm text-[var(--ink-secondary)]">
+          Disconnected.
+        </p>
       ) : null}
       {status === "error" ? (
         <p className="mt-2 text-sm text-[var(--danger)]" role="alert">

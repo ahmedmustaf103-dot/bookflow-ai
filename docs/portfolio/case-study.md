@@ -35,15 +35,15 @@ One org-scoped system that covers:
 
 Shipped in phased sprints rather than a big-bang rewrite:
 
-| Phase | Outcome |
-| ----- | ------- |
-| 0 | App shell, Clerk, env validation, logging, CI |
-| 1 | Orgs, locations, resources, services, availability engine |
-| 2 | Public booking, appointments, email, Stripe |
-| 3 | CRM, analytics, reminders/cron, audit log |
-| 4 | AI workbench + metering |
-| 5 | Exclusion constraints, Redis/cache, vertical packs, observability |
-| 6–8 | Stronger automation, dashboard insights, white-label, CSP/RLS/prod hardening |
+| Phase | Outcome                                                                      |
+| ----- | ---------------------------------------------------------------------------- |
+| 0     | App shell, Clerk, env validation, logging, CI                                |
+| 1     | Orgs, locations, resources, services, availability engine                    |
+| 2     | Public booking, appointments, email, Stripe                                  |
+| 3     | CRM, analytics, reminders/cron, audit log                                    |
+| 4     | AI workbench + metering                                                      |
+| 5     | Exclusion constraints, Redis/cache, vertical packs, observability            |
+| 6–8   | Stronger automation, dashboard insights, white-label, CSP/RLS/prod hardening |
 
 Engineering choices that matter in interviews:
 
@@ -55,13 +55,13 @@ Engineering choices that matter in interviews:
 
 ## Results
 
-| Metric | Value |
-| ------ | ----- |
+| Metric                                  | Value                 |
+| --------------------------------------- | --------------------- |
 | Time to first public booking (demo org) | [e.g. &lt; 2 minutes] |
-| Reminder delivery success (outbox SENT) | [e.g. 98%] |
-| Lighthouse / a11y smoke | [pass / score] |
-| Orgs onboarded / waitlist | [n] |
-| Bookings created in first 30 days | [n] |
+| Reminder delivery success (outbox SENT) | [e.g. 98%]            |
+| Lighthouse / a11y smoke                 | [pass / score]        |
+| Orgs onboarded / waitlist               | [n]                   |
+| Bookings created in first 30 days       | [n]                   |
 
 Qualitative:
 

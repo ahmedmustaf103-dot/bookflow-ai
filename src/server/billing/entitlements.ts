@@ -4,10 +4,7 @@ import type { OrganizationPlan, Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { getPlanLimits, type PlanLimits } from "@/server/billing/plans";
 
-export {
-  planAllowsReminders,
-  planAllowsSms,
-} from "@/server/billing/plans";
+export { planAllowsReminders, planAllowsSms } from "@/server/billing/plans";
 
 export type EntitlementCheck =
   | { ok: true; limits: PlanLimits; plan: OrganizationPlan }

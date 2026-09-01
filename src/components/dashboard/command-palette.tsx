@@ -113,7 +113,9 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
             onKeyDown={(e) => {
               if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setActive((i) => Math.min(i + 1, Math.max(results.length - 1, 0)));
+                setActive((i) =>
+                  Math.min(i + 1, Math.max(results.length - 1, 0)),
+                );
               } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setActive((i) => Math.max(i - 1, 0));

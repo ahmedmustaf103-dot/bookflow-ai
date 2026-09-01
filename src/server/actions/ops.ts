@@ -30,7 +30,8 @@ export async function updateClientAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const ctx = await getActiveOrganization();
-  if (!ctx.organization || !ctx.membership) return err("No organization selected");
+  if (!ctx.organization || !ctx.membership)
+    return err("No organization selected");
   await requireMembership(ctx.organization.id, "STAFF");
 
   const parsed = parseForm(updateClientSchema, formData);
@@ -209,9 +210,7 @@ export async function uploadBrandAssetAction(
     await db.organization.update({
       where: { id: ctx.organization.id },
       data:
-        parsed.data.kind === "logo"
-          ? { logoUrl: url }
-          : { faviconUrl: url },
+        parsed.data.kind === "logo" ? { logoUrl: url } : { faviconUrl: url },
     });
 
     await writeAuditLog({
@@ -246,9 +245,7 @@ export async function clearBrandAssetAction(
     await db.organization.update({
       where: { id: ctx.organization.id },
       data:
-        parsed.data.kind === "logo"
-          ? { logoUrl: null }
-          : { faviconUrl: null },
+        parsed.data.kind === "logo" ? { logoUrl: null } : { faviconUrl: null },
     });
     revalidatePath("/dashboard/settings");
     revalidatePath(`/book/${ctx.organization.slug}`);

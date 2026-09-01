@@ -146,9 +146,7 @@ export async function acceptInviteAction(formData: FormData): Promise<void> {
   const parsed = parseForm(acceptInviteSchema, formData);
   const token = String(formData.get("token") ?? "");
   if (!parsed.ok) {
-    redirect(
-      `/invite/${token}?error=${encodeURIComponent(parsed.error)}`,
-    );
+    redirect(`/invite/${token}?error=${encodeURIComponent(parsed.error)}`);
   }
 
   const result = await acceptOrganizationInvite({

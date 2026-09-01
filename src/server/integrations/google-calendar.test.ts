@@ -14,14 +14,19 @@ vi.mock("@/lib/logger", () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
 }));
 
-const { findUnique, connUpdate, bookingUpdate, resourceFindFirst, membershipFindFirst } =
-  vi.hoisted(() => ({
-    findUnique: vi.fn(),
-    connUpdate: vi.fn(),
-    bookingUpdate: vi.fn(),
-    resourceFindFirst: vi.fn(),
-    membershipFindFirst: vi.fn(),
-  }));
+const {
+  findUnique,
+  connUpdate,
+  bookingUpdate,
+  resourceFindFirst,
+  membershipFindFirst,
+} = vi.hoisted(() => ({
+  findUnique: vi.fn(),
+  connUpdate: vi.fn(),
+  bookingUpdate: vi.fn(),
+  resourceFindFirst: vi.fn(),
+  membershipFindFirst: vi.fn(),
+}));
 
 vi.mock("@/server/db", () => ({
   db: {
@@ -232,12 +237,18 @@ describe("Google Calendar one-way sync", () => {
   it("treats a 409 on create as the existing event and patches it", async () => {
     connectedAuth();
     const deterministic = googleEventIdForBooking("b1");
-    const fetchMock = vi.fn().mockImplementation(async (url: string, init: { method?: string }) => {
-      if (init.method === "POST") {
-        return { ok: false, status: 409, json: async () => ({}) };
-      }
-      return { ok: true, status: 200, json: async () => ({ id: deterministic }) };
-    });
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async (url: string, init: { method?: string }) => {
+        if (init.method === "POST") {
+          return { ok: false, status: 409, json: async () => ({}) };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ id: deterministic }),
+        };
+      });
     vi.stubGlobal("fetch", fetchMock);
 
     await pushGoogleCalendarUpsert({

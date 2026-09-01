@@ -96,7 +96,9 @@ export async function getSlotsForServiceResource(input: {
       status: { in: [...ACTIVE_BOOKING_STATUSES] },
       startAt: { lt: toUtc },
       endAt: { gt: fromUtc },
-      ...(input.excludeBookingId ? { id: { not: input.excludeBookingId } } : {}),
+      ...(input.excludeBookingId
+        ? { id: { not: input.excludeBookingId } }
+        : {}),
     },
     select: {
       startAt: true,

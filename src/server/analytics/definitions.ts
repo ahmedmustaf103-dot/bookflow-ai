@@ -11,12 +11,9 @@ export const ANALYTICS_METRIC_DEFINITIONS = {
     "Any appointment whose startAt falls in the selected period (all statuses).",
   bookingsTotal:
     "Count of bookings with startAt in the period (includes cancelled).",
-  bookingsCompleted:
-    "Count of COMPLETED bookings with startAt in the period.",
-  bookingsCancelled:
-    "Count of CANCELLED bookings with startAt in the period.",
-  bookingsNoShow:
-    "Count of NO_SHOW bookings with startAt in the period.",
+  bookingsCompleted: "Count of COMPLETED bookings with startAt in the period.",
+  bookingsCancelled: "Count of CANCELLED bookings with startAt in the period.",
+  bookingsNoShow: "Count of NO_SHOW bookings with startAt in the period.",
   noShowRate:
     "NO_SHOW / (COMPLETED + NO_SHOW) for bookings with startAt in the period. 0 when there are no eligible outcomes.",
   revenue:

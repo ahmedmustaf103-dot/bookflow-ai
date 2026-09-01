@@ -225,7 +225,9 @@ export async function acceptOrganizationInvite(input: {
   token: string;
   userId: string;
   userEmail: string;
-}): Promise<ActionResult<{ organizationId: string; organizationName: string }>> {
+}): Promise<
+  ActionResult<{ organizationId: string; organizationName: string }>
+> {
   const token = input.token.trim();
   if (!/^[a-f0-9]{64}$/i.test(token)) {
     return err("This invite link is not valid");

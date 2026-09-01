@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Surface } from "@/components/ui/surface";
 import { useToast } from "@/components/ui/toast";
-import type { PublicManagedBookingView, PublicSlotDay } from "@/lib/booking-types";
+import type {
+  PublicManagedBookingView,
+  PublicSlotDay,
+} from "@/lib/booking-types";
 import {
   cancelPublicManagedBookingAction,
   fetchPublicManageSlotsAction,

@@ -68,7 +68,11 @@ export default async function GoogleCalendarSettingsPage({
         description="Each barber connects their own Google account. Appointments with that person sync to their calendar."
         actions={
           isAdmin ? (
-            <ButtonLink href="/dashboard/settings" size="sm" variant="secondary">
+            <ButtonLink
+              href="/dashboard/settings"
+              size="sm"
+              variant="secondary"
+            >
               Back to settings
             </ButtonLink>
           ) : undefined

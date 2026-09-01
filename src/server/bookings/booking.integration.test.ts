@@ -2,7 +2,11 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { OUTBOX_KINDS } from "@/server/notifications/kinds";
 import { enqueueOwnerNewBooking } from "@/server/notifications/outbox";
-import { createBooking, rescheduleBooking, transitionBooking } from "@/server/bookings/service";
+import {
+  createBooking,
+  rescheduleBooking,
+  transitionBooking,
+} from "@/server/bookings/service";
 import { getSlotsForServiceResource } from "@/server/availability/slots";
 import {
   groupSlotsByLocalDay,

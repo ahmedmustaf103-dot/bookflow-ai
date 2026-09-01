@@ -122,7 +122,12 @@ async function deliver(input: {
   const resend = getResend();
   if (!resend) {
     logger.info(
-      { to: input.to, subject: input.subject, bookingId: input.bookingId, kind: input.kind },
+      {
+        to: input.to,
+        subject: input.subject,
+        bookingId: input.bookingId,
+        kind: input.kind,
+      },
       "RESEND_API_KEY missing — skipping email",
     );
     return { skipped: true };
@@ -157,13 +162,14 @@ async function deliver(input: {
   return { skipped: false };
 }
 
-function bookingIcsAttachment(
-  input: BookingEmailInput,
-  method: IcsMethod,
-) {
+function bookingIcsAttachment(input: BookingEmailInput, method: IcsMethod) {
   const startAt = asDate(input.startAt);
   const endAt = input.endAt ? asDate(input.endAt) : null;
-  if (!endAt || Number.isNaN(endAt.getTime()) || Number.isNaN(startAt.getTime())) {
+  if (
+    !endAt ||
+    Number.isNaN(endAt.getTime()) ||
+    Number.isNaN(startAt.getTime())
+  ) {
     return undefined;
   }
   try {
@@ -553,22 +559,18 @@ export async function sendStaffDraftEmail(input: {
   logoUrl?: string | null;
   brandPrimary?: string | null;
 }): Promise<SendEmailResult> {
-  const html = shell(
-    input.subject,
-    draftBodyToHtml(input.bodyText),
-    {
-      to: input.to,
-      organizationName: input.organizationName,
-      clientName: input.clientName,
-      serviceName: "",
-      resourceName: "",
-      startAt: new Date(),
-      timezone: "UTC",
-      bookingId: "staff-draft",
-      logoUrl: input.logoUrl,
-      brandPrimary: input.brandPrimary,
-    },
-  );
+  const html = shell(input.subject, draftBodyToHtml(input.bodyText), {
+    to: input.to,
+    organizationName: input.organizationName,
+    clientName: input.clientName,
+    serviceName: "",
+    resourceName: "",
+    startAt: new Date(),
+    timezone: "UTC",
+    bookingId: "staff-draft",
+    logoUrl: input.logoUrl,
+    brandPrimary: input.brandPrimary,
+  });
   return deliver({
     to: input.to,
     subject: input.subject,

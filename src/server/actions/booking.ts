@@ -169,7 +169,8 @@ export async function fetchDashboardSlotsAction(input: {
   day: string;
 }): Promise<ActionResult<Array<{ startIso: string; label: string }>>> {
   const ctx = await getActiveOrganization();
-  if (!ctx.organization || !ctx.membership) return err("No organization selected");
+  if (!ctx.organization || !ctx.membership)
+    return err("No organization selected");
   await requireMembership(ctx.organization.id, "STAFF");
 
   const parsed = dashboardSlotsSchema.safeParse(input);

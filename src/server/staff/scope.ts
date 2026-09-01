@@ -9,8 +9,7 @@ export function seesAllOrgBookings(role: MembershipRole) {
 }
 
 export type StaffResourceScope =
-  | { all: true }
-  | { all: false; resourceIds: string[] };
+  { all: true } | { all: false; resourceIds: string[] };
 
 export function bookingWhereForScope(
   scope: StaffResourceScope,

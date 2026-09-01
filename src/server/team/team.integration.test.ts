@@ -50,7 +50,9 @@ describe("team invites (DB)", () => {
       include: { services: true, rules: true },
     });
     expect(chair.organizationId).toBe(seed.organizationId);
-    expect(chair.services.map((row) => row.serviceId)).toContain(seed.serviceId);
+    expect(chair.services.map((row) => row.serviceId)).toContain(
+      seed.serviceId,
+    );
     expect(chair.rules.length).toBeGreaterThan(0);
   });
 
@@ -383,6 +385,8 @@ describe("team invites (DB)", () => {
       include: { services: true },
     });
     expect(chair.userId).toBe(user.id);
-    expect(chair.services.map((row) => row.serviceId)).toContain(seed.serviceId);
+    expect(chair.services.map((row) => row.serviceId)).toContain(
+      seed.serviceId,
+    );
   });
 });

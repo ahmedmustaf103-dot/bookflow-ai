@@ -124,14 +124,13 @@ export default async function DashboardLayout({
     slug: membership.organization.slug,
   }));
 
-  const tourKind: DashboardTourKind =
-    !ctx.organization
-      ? "none"
-      : role === "STAFF"
-        ? "staff"
-        : role === "OWNER" || role === "ADMIN"
-          ? "owner"
-          : "none";
+  const tourKind: DashboardTourKind = !ctx.organization
+    ? "none"
+    : role === "STAFF"
+      ? "staff"
+      : role === "OWNER" || role === "ADMIN"
+        ? "owner"
+        : "none";
 
   return (
     <AppClerkProvider>

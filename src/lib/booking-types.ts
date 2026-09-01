@@ -1,11 +1,7 @@
 /** Shared shapes for booking creation, rescheduling, and public slot browsing. */
 
 export type BookingStatusLabel =
-  | "PENDING"
-  | "CONFIRMED"
-  | "COMPLETED"
-  | "NO_SHOW"
-  | "CANCELLED";
+  "PENDING" | "CONFIRMED" | "COMPLETED" | "NO_SHOW" | "CANCELLED";
 
 /** Safe public payload for /book/manage/[manageToken] (no internal IDs). */
 export type PublicManagedBookingView = {

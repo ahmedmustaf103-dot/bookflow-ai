@@ -10,7 +10,10 @@ import {
   getPublicManagedBooking,
   reschedulePublicManagedBooking,
 } from "@/server/bookings/manage";
-import type { PublicManagedBookingView, PublicSlotDay } from "@/lib/booking-types";
+import type {
+  PublicManagedBookingView,
+  PublicSlotDay,
+} from "@/lib/booking-types";
 import { assertRateLimit } from "@/server/rate-limit";
 import {
   cancelPublicManagedBookingSchema,

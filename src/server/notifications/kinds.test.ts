@@ -31,9 +31,9 @@ describe("outbox kinds", () => {
   });
 
   it("builds stable booking dedupe keys", () => {
-    expect(
-      bookingDedupeKey(OUTBOX_KINDS.BOOKING_CONFIRMATION, "b1"),
-    ).toBe("BOOKING_CONFIRMATION:b1:EMAIL");
+    expect(bookingDedupeKey(OUTBOX_KINDS.BOOKING_CONFIRMATION, "b1")).toBe(
+      "BOOKING_CONFIRMATION:b1:EMAIL",
+    );
     expect(bookingDedupeKey(OUTBOX_KINDS.FOLLOW_UP, "b1")).toBe(
       "FOLLOW_UP:b1:EMAIL",
     );
@@ -55,13 +55,7 @@ describe("outbox kinds", () => {
     expect(rescheduleDedupeKey("b1", start)).toBe(
       "BOOKING_RESCHEDULED:b1:EMAIL:2026-08-10T16:00:00.000Z",
     );
-    expect(
-      staffRescheduleDedupeKey(
-        "b1",
-        "Barber@Shop.test",
-        start,
-      ),
-    ).toBe(
+    expect(staffRescheduleDedupeKey("b1", "Barber@Shop.test", start)).toBe(
       "STAFF_BOOKING_RESCHEDULED:b1:EMAIL:barber@shop.test:2026-08-10T16:00:00.000Z",
     );
     expect(staffCancelDedupeKey("b1", "Barber@Shop.test")).toBe(

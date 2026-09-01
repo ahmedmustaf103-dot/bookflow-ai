@@ -24,8 +24,10 @@ type ToastContextValue = {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const toneClass: Record<ToastTone, string> = {
-  success: "border-[var(--success)]/30 bg-[var(--success-soft)] text-[var(--success)]",
-  error: "border-[var(--danger)]/30 bg-[var(--danger-soft)] text-[var(--danger)]",
+  success:
+    "border-[var(--success)]/30 bg-[var(--success-soft)] text-[var(--success)]",
+  error:
+    "border-[var(--danger)]/30 bg-[var(--danger-soft)] text-[var(--danger)]",
   info: "border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]",
 };
 
@@ -36,11 +38,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const toast = useCallback((message: string, tone: ToastTone = "info") => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setItems((prev) => [...prev.slice(-3), { id, message, tone }]);
-    window.setTimeout(() => dismiss(id), 4000);
-  }, [dismiss]);
+  const toast = useCallback(
+    (message: string, tone: ToastTone = "info") => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      setItems((prev) => [...prev.slice(-3), { id, message, tone }]);
+      window.setTimeout(() => dismiss(id), 4000);
+    },
+    [dismiss],
+  );
 
   const value = useMemo(() => ({ toast }), [toast]);
 
@@ -55,7 +60,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {items.map((item) => (
           <div
             key={item.id}
-            className={`pointer-events-auto bf-toast-enter rounded-[var(--radius-panel)] border px-3.5 py-2.5 text-sm shadow-[var(--shadow-sm)] ${toneClass[item.tone]}`}
+            className={`bf-toast-enter pointer-events-auto rounded-[var(--radius-panel)] border px-3.5 py-2.5 text-sm shadow-[var(--shadow-sm)] ${toneClass[item.tone]}`}
             role={item.tone === "error" ? "alert" : "status"}
           >
             <div className="flex items-start justify-between gap-3">

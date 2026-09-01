@@ -38,13 +38,17 @@ export function OnboardingForm() {
       <div className="mb-5 flex items-center gap-2 text-xs text-[var(--ink-tertiary)]">
         <span
           className={
-            step === 1 ? "font-semibold text-[var(--accent)]" : "text-[var(--accent)]"
+            step === 1
+              ? "font-semibold text-[var(--accent)]"
+              : "text-[var(--accent)]"
           }
         >
           1. Business
         </span>
         <span aria-hidden>→</span>
-        <span className={step === 2 ? "font-semibold text-[var(--accent)]" : ""}>
+        <span
+          className={step === 2 ? "font-semibold text-[var(--accent)]" : ""}
+        >
           2. Confirm
         </span>
       </div>
@@ -54,7 +58,9 @@ export function OnboardingForm() {
         onSubmit={(e) => {
           e.preventDefault();
           if (step === 1) {
-            const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
+            const name = String(
+              new FormData(e.currentTarget).get("name") ?? "",
+            ).trim();
             if (name.length < 2) {
               setError("Business name must be at least 2 characters");
               return;
@@ -128,11 +134,7 @@ export function OnboardingForm() {
 
           <div>
             <Label htmlFor="biz-tz">Timezone</Label>
-            <Select
-              id="biz-tz"
-              name="timezone"
-              defaultValue="America/New_York"
-            >
+            <Select id="biz-tz" name="timezone" defaultValue="America/New_York">
               {TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
@@ -144,8 +146,8 @@ export function OnboardingForm() {
 
         {step === 2 ? (
           <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)]/50 px-3 py-3 text-sm text-[var(--ink-secondary)]">
-            We&apos;ll create your business, a main location, default hours,
-            and starter services. You can edit everything after you&apos;re in.
+            We&apos;ll create your business, a main location, default hours, and
+            starter services. You can edit everything after you&apos;re in.
           </div>
         ) : null}
 

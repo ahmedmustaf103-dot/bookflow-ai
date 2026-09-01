@@ -62,10 +62,7 @@ export default async function ManageBookingPage({
           </p>
         </header>
 
-        <ManageAppointmentClient
-          manageToken={parsed.data}
-          initial={booking}
-        />
+        <ManageAppointmentClient manageToken={parsed.data} initial={booking} />
 
         {booking.bookAgainHref ? (
           <p className="mt-6 text-center text-sm text-[var(--ink-tertiary)]">

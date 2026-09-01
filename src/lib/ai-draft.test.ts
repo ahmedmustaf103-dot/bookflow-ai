@@ -13,7 +13,9 @@ describe("parseAiDraftMessage", () => {
   });
 
   it("falls back to the first line when Subject is missing", () => {
-    const parsed = parseAiDraftMessage("Hope the colour settled well.\nSee you soon.");
+    const parsed = parseAiDraftMessage(
+      "Hope the colour settled well.\nSee you soon.",
+    );
     expect(parsed.subject).toBe("Hope the colour settled well.");
     expect(parsed.body).toContain("See you soon.");
   });
