@@ -78,12 +78,12 @@ export default async function AvailabilityPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Hours"
-        description="Weekly availability templates per resource. Slot preview uses the pure availability engine."
+        description="Set weekly hours for each staff member. A preview of times customers can book is shown below."
       />
 
       {resources.length === 0 ? (
         <EmptyState
-          title="No staff resources"
+          title="No staff members"
           description="Add a staff member first, then set their weekly hours here."
           action={
             <ButtonLink href="/dashboard/staff" size="sm" variant="primary">

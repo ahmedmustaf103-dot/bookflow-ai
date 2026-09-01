@@ -102,9 +102,8 @@ export function AiWorkbench({
       <Surface className="p-5">
         <h2 className="text-sm font-semibold">AI not configured</h2>
         <p className="mt-2 text-sm text-[var(--ink-secondary)]">
-          Add <code>OPENAI_API_KEY</code> or{" "}
-          <code>GOOGLE_GENERATIVE_AI_API_KEY</code> to <code>.env.local</code>,
-          then restart the app.
+          AI isn’t available on this BookFlow account yet. Contact BookFlow if
+          you need it.
         </p>
       </Surface>
     );

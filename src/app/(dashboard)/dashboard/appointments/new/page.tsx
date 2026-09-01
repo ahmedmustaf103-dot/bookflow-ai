@@ -47,7 +47,7 @@ export default async function NewAppointmentPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="New appointment"
-        description="Walk-in or phone booking. Uses the same availability engine as the public page."
+        description="Walk-in or phone booking. Uses the same hours as your public booking page."
         actions={
           <ButtonLink
             href="/dashboard/appointments"
@@ -64,7 +64,7 @@ export default async function NewAppointmentPage() {
           title="Nothing to book yet"
           description={
             !scope.all && scope.resourceIds.length === 0
-              ? "Ask the owner to assign your login to a chair on Staff first."
+              ? "Ask the owner to add you as a staff member first."
               : "Add an active service linked to active staff first."
           }
           action={

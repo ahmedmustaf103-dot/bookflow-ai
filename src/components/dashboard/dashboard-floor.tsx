@@ -48,7 +48,7 @@ export function DashboardFloor({
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="flex flex-col gap-4">
-        <Surface className="relative overflow-hidden pl-5">
+        <Surface className="relative overflow-hidden pl-5" data-tour="staff-appointment-actions">
           <span
             className="absolute inset-y-0 left-0 w-1 bg-[var(--accent)]"
             aria-hidden
@@ -116,7 +116,7 @@ export function DashboardFloor({
           ) : (
             <EmptyState
               className="py-8"
-              title="No one in the chair"
+              title="No one being served right now"
               description="Upcoming visits show below. Share your booking link if the day is empty."
               action={
                 <ButtonLink href={bookPath} size="sm" variant="secondary">
@@ -170,7 +170,7 @@ export function DashboardFloor({
         {recentlyCompleted.length === 0 ? (
           <p className="mt-2 text-sm text-[var(--ink-tertiary)]">
             Completed visits today will show here, then follow-up and review
-            automations can run.
+            messages can go out.
           </p>
         ) : (
           <ul className="mt-2 divide-y divide-[var(--border)]">
@@ -207,7 +207,7 @@ export function DashboardFloor({
                 href="/dashboard/clients"
                 className="text-[var(--accent)] hover:underline"
               >
-                Client CRM →
+                Customers →
               </Link>
             </li>
           ) : null}

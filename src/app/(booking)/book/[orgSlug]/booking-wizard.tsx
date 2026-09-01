@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { SlotDayPicker } from "@/components/booking/slot-day-picker";
+import { BookingTour } from "@/components/onboarding/booking-tour";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Surface } from "@/components/ui/surface";
 import { useToast } from "@/components/ui/toast";
 import { fireConfetti } from "@/lib/confetti";
+import {
+  bookingTourStorageKey,
+  browserStorage,
+  markTourCompleted,
+} from "@/lib/onboarding/tour-storage";
 import { createPublicBookingAction } from "@/server/actions/booking";
 import { fetchPublicSlotsAction } from "@/server/actions/public-slots";
 import type { PublicSlotDay } from "@/lib/booking-types";
@@ -123,15 +129,18 @@ export function PublicBookingWizard({
   organizationName,
   services,
   resources,
+  guidedTour = false,
 }: {
   organizationId: string;
   organizationName: string;
   services: Service[];
   resources: Resource[];
+  guidedTour?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const detailsRef = useRef<HTMLElement>(null);
+  const tourLiveRef = useRef(false);
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [resourceId, setResourceId] = useState("");
   const [startAt, setStartAt] = useState("");
@@ -211,6 +220,20 @@ export function PublicBookingWizard({
     }
   }, [progress, editing]);
 
+  const onTourStep = useCallback((index: number) => {
+    tourLiveRef.current = true;
+    if (index <= 2) {
+      setEditing((index + 1) as Step);
+      return;
+    }
+    setEditing(4);
+  }, []);
+
+  const onTourDismiss = useCallback(() => {
+    tourLiveRef.current = false;
+    setEditing(null);
+  }, []);
+
   if (doneId) {
     return (
       <Surface className="bf-page-enter p-6 sm:p-8">
@@ -249,6 +272,13 @@ export function PublicBookingWizard({
 
   return (
     <Surface className="bf-page-enter p-5 sm:p-8">
+      {guidedTour ? (
+        <BookingTour
+          enabled
+          onStepChange={onTourStep}
+          onDismiss={onTourDismiss}
+        />
+      ) : null}
       <StepRail active={progress} />
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -281,7 +311,7 @@ export function PublicBookingWizard({
 
       <div className="flex flex-col gap-8">
         {activePanel === 1 ? (
-          <section>
+          <section data-tour="booking-service">
             <h2 className="text-xs font-semibold tracking-wide text-[var(--ink-tertiary)] uppercase">
               1. Service
             </h2>
@@ -300,7 +330,7 @@ export function PublicBookingWizard({
                     setServiceId(s.id);
                     setResourceId("");
                     setStartAt("");
-                    setEditing(null);
+                    setEditing(tourLiveRef.current ? 2 : null);
                   }}
                   className={tileClass(s.id === serviceId)}
                 >
@@ -321,7 +351,7 @@ export function PublicBookingWizard({
         ) : null}
 
         {activePanel === 2 ? (
-          <section>
+          <section data-tour="booking-staff">
             <h2 className="text-xs font-semibold tracking-wide text-[var(--ink-tertiary)] uppercase">
               2. Staff
             </h2>
@@ -344,7 +374,7 @@ export function PublicBookingWizard({
                     onClick={() => {
                       setResourceId(r.id);
                       setStartAt("");
-                      setEditing(null);
+                      setEditing(tourLiveRef.current ? 3 : null);
                     }}
                     className={`bf-row-hover rounded-[var(--radius-control)] px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
                       r.id === activeResourceId
@@ -361,7 +391,7 @@ export function PublicBookingWizard({
         ) : null}
 
         {activePanel === 3 ? (
-          <section>
+          <section data-tour="booking-time">
             <h2 className="text-xs font-semibold tracking-wide text-[var(--ink-tertiary)] uppercase">
               3. Time
             </h2>
@@ -396,7 +426,7 @@ export function PublicBookingWizard({
         ) : null}
 
         {activePanel === 4 ? (
-          <section ref={detailsRef}>
+          <section ref={detailsRef} data-tour="booking-details">
             <h2 className="text-xs font-semibold tracking-wide text-[var(--ink-tertiary)] uppercase">
               4. Your details
             </h2>
@@ -424,6 +454,9 @@ export function PublicBookingWizard({
                   }
                   setDoneId(result.data.bookingId);
                   toast("Booking confirmed", "success");
+                  if (guidedTour) {
+                    markTourCompleted(bookingTourStorageKey(), browserStorage());
+                  }
                   if (result.data.isFirstBooking) {
                     fireConfetti();
                   }
@@ -477,6 +510,7 @@ export function PublicBookingWizard({
               ) : null}
               <Button
                 type="submit"
+                data-tour="booking-confirm"
                 disabled={pending || !startAt || slotsLoading}
               >
                 {pending ? "Booking…" : "Confirm booking"}

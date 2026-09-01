@@ -118,7 +118,7 @@ export async function createOrganizationInvite(input: {
       },
       select: { id: true },
     });
-    if (!resource) return err("Staff chair not found");
+    if (!resource) return err("Staff member not found");
     resourceId = resource.id;
   } else if (input.role === "STAFF" || input.role === "ADMIN") {
     const chair = await provisionBookableStaff({

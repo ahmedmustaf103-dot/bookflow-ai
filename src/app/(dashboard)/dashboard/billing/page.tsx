@@ -52,8 +52,8 @@ export default async function BillingPage({
         title="Billing"
         description={`Current plan: ${ctx.organization.plan}${
           subscription
-            ? ` · Stripe ${subscription.status}`
-            : " · No Stripe subscription"
+            ? ` · ${subscription.status}`
+            : " · No paid plan yet"
         }`}
       />
 
@@ -69,8 +69,7 @@ export default async function BillingPage({
       {params.success ? (
         <Surface className="border-[var(--accent)] bg-[var(--accent-soft)]">
           <p className="text-sm text-[var(--ink)]">
-            Checkout completed — subscription syncs via webhook within a few
-            seconds.
+            Checkout completed — your plan will update in a few seconds.
           </p>
         </Surface>
       ) : null}
@@ -84,8 +83,8 @@ export default async function BillingPage({
 
       {!stripeReady ? (
         <p className="text-sm text-[var(--ink-tertiary)]">
-          Add <code>STRIPE_SECRET_KEY</code> and price IDs to{" "}
-          <code>.env.local</code> to enable Checkout.
+          Online billing isn’t set up on this BookFlow account yet. You can still
+          use the app on your current plan.
         </p>
       ) : (
         <>
@@ -109,7 +108,7 @@ export default async function BillingPage({
                   </p>
                 ) : (
                   <p className="mt-4 text-xs text-[var(--ink-tertiary)]">
-                    Price ID not configured
+                    This plan isn’t available to subscribe yet
                   </p>
                 )}
               </Surface>

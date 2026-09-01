@@ -135,7 +135,7 @@ export default async function AppointmentsPage({
           scope.all
             ? "Day, week, and month views. On a phone, use the agenda list. Drag bookings on desktop to reschedule."
             : scope.resourceIds.length === 0
-              ? "Ask the owner to assign your login to a chair on Staff so appointments show here."
+              ? "Ask the owner to add you as a staff member so your appointments show here."
               : "Your appointments. Open one to complete, cancel, or reschedule."
         }
         actions={
@@ -165,8 +165,8 @@ export default async function AppointmentsPage({
 
       {!scope.all && scope.resourceIds.length === 0 ? (
         <EmptyState
-          title="No chair assigned"
-          description="The owner can assign your login to a bookable chair under Staff. Until then, this calendar stays empty."
+          title="Not on the booking page yet"
+          description="The owner can add you as a staff member under Staff. Until then, this calendar stays empty."
         />
       ) : (
         <CalendarBoard

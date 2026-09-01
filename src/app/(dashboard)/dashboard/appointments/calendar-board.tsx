@@ -211,7 +211,7 @@ export function CalendarBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3" data-tour="staff-appointment-actions">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="inline-flex w-full items-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-0.5 sm:w-auto">

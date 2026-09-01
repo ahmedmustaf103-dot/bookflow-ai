@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 
 import { PublicBookingWizard } from "@/app/(booking)/book/[orgSlug]/booking-wizard";
 import { brandCssVars } from "@/lib/branding";
+import { isPublicDemoSlug, onboardingCopy } from "@/lib/onboarding/copy";
 import { db } from "@/server/db";
 
 export async function PublicBookingExperience({
@@ -90,6 +91,14 @@ export async function PublicBookingExperience({
           <p className="mt-2 text-sm text-[var(--ink-secondary)]">
             Pick a service, choose who you&apos;d like, and confirm a time.
           </p>
+          {isPublicDemoSlug(org.slug) ? (
+            <p className="mt-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)]/60 px-3 py-2 text-sm text-[var(--ink-secondary)]">
+              <span className="font-medium text-[var(--ink)]">
+                {onboardingCopy.demoBanner.title}.
+              </span>{" "}
+              {onboardingCopy.demoBanner.body}
+            </p>
+          ) : null}
         </header>
 
         {services.length === 0 ? (
@@ -100,6 +109,7 @@ export async function PublicBookingExperience({
           <PublicBookingWizard
             organizationId={org.id}
             organizationName={org.name}
+            guidedTour={isPublicDemoSlug(org.slug)}
             services={services.map((s) => ({
               id: s.id,
               name: s.name,

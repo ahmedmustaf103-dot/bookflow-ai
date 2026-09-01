@@ -11,10 +11,23 @@ import {
   OrgSwitcher,
   type DashboardOrgOption,
 } from "@/components/dashboard/org-switcher";
+import {
+  DashboardTour,
+  type DashboardTourKind,
+} from "@/components/onboarding/dashboard-tour";
 import { Kbd } from "@/components/ui/kbd";
 import { ToastEventBridge, ToastProvider } from "@/components/ui/toast";
 
 export type NavItem = { href: string; label: string; group: "operate" | "setup" };
+
+const NAV_TOUR_TARGET: Record<string, string> = {
+  "/dashboard/settings": "owner-business",
+  "/dashboard/services": "owner-services",
+  "/dashboard/staff": "owner-staff",
+  "/dashboard/availability": "owner-hours",
+  "/dashboard/appointments": "nav-calendar",
+  "/dashboard/clients": "nav-customers",
+};
 
 function NavLinks({
   items,
@@ -45,6 +58,7 @@ function NavLinks({
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
+                  data-tour={NAV_TOUR_TARGET[item.href]}
                   onClick={onNavigate}
                   className={`relative flex min-h-11 items-center rounded-[var(--radius-control)] px-2.5 py-2 text-[15px] transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none md:min-h-0 md:py-1.5 md:text-[13px] ${
                     active
@@ -81,12 +95,14 @@ export function DashboardShell({
   currentOrgId,
   orgs = [],
   nav,
+  tourKind = "none",
   children,
 }: {
   orgName?: string | null;
   currentOrgId?: string | null;
   orgs?: DashboardOrgOption[];
   nav: NavItem[];
+  tourKind?: DashboardTourKind;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -95,6 +111,21 @@ export function DashboardShell({
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    function openNav() {
+      setOpen(true);
+    }
+    function closeNav() {
+      setOpen(false);
+    }
+    window.addEventListener("bookflow:open-mobile-nav", openNav);
+    window.addEventListener("bookflow:close-mobile-nav", closeNav);
+    return () => {
+      window.removeEventListener("bookflow:open-mobile-nav", openNav);
+      window.removeEventListener("bookflow:close-mobile-nav", closeNav);
+    };
+  }, []);
 
   const flatNav = nav.map(({ href, label }) => ({ href, label }));
   const demoOrgId = orgs.find((org) => org.slug === "bookflow-demo")?.id ?? null;
@@ -159,6 +190,7 @@ export function DashboardShell({
                 className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border)] px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
                 aria-expanded={open}
                 aria-controls="mobile-nav"
+                data-tour="mobile-menu"
                 onClick={() => setOpen((v) => !v)}
               >
                 Menu
@@ -190,6 +222,7 @@ export function DashboardShell({
       </div>
 
       {nav.length > 0 ? <CommandPalette nav={flatNav} /> : null}
+      <DashboardTour kind={tourKind} orgId={currentOrgId ?? null} />
     </div>
     </ToastProvider>
   );

@@ -106,7 +106,7 @@ export default async function TeamSettingsPage() {
                       {chairs.length > 0
                         ? `On booking as ${chairs.join(", ")}`
                         : m.role === "OWNER"
-                          ? "Owner login — add a chair if they take bookings"
+                          ? "Owner login — add them as staff if they take bookings"
                           : "Not on the booking page yet"}
                     </p>
                   </div>
@@ -144,7 +144,7 @@ export default async function TeamSettingsPage() {
                         submitSize="sm"
                         successMessage="Removed from team"
                         resetOnSuccess={false}
-                        confirmMessage="Remove this person from the team? They lose dashboard access. Their chair and past appointments stay unless you hide the chair on Staff."
+                        confirmMessage="Remove this person from the team? They lose dashboard access. Their staff profile and past appointments stay unless you hide them on Staff."
                         className="flex items-center"
                       >
                         <input
@@ -166,8 +166,7 @@ export default async function TeamSettingsPage() {
         <h2 className="text-sm font-semibold">Pending invites</h2>
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
           If the email does not arrive, copy the link below and send it
-          yourself. Resend must have a verified domain to email anyone other
-          than the account owner.
+          yourself.
         </p>
         {invites.length === 0 ? (
           <p className="mt-2 text-sm text-[var(--ink-tertiary)]">
@@ -186,7 +185,7 @@ export default async function TeamSettingsPage() {
                     {invite.role} · expires{" "}
                     {invite.expiresAt.toISOString().slice(0, 10)}
                     {invite.resource
-                      ? ` · chair ${invite.resource.name}`
+                      ? ` · books as ${invite.resource.name}`
                       : ""}
                   </p>
                   <p className="mt-1 break-all text-[11px] text-[var(--ink-tertiary)]">
@@ -213,7 +212,8 @@ export default async function TeamSettingsPage() {
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
           Staff and admin invites create a bookable person (hours + your
           services) so they show on booking, Staff, Hours, Calendar, and
-          Analytics. Pick an existing chair only if they should share one.
+          insights. Pick an existing staff member only if they should share
+          that calendar.
         </p>
         {assignable.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--ink-secondary)]">
@@ -253,9 +253,9 @@ export default async function TeamSettingsPage() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="invite-chair">Chair</Label>
+              <Label htmlFor="invite-chair">Staff member</Label>
               <Select id="invite-chair" name="resourceId" defaultValue="">
-                <option value="">Create a new chair for them</option>
+                <option value="">Create a new staff member for them</option>
                 {resources.map((resource) => (
                   <option key={resource.id} value={resource.id}>
                     {resource.name}

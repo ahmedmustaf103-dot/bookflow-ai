@@ -115,11 +115,12 @@ export function CustomDomainActivate({
 
   return (
     <div className="mt-3 rounded-[var(--radius-panel)] border border-dashed border-[var(--border-strong)] bg-[var(--muted)]/40 p-3 text-xs text-[var(--ink-secondary)]">
-      <p className="font-medium text-[var(--ink)]">DNS setup</p>
+      <p className="font-medium text-[var(--ink)]">Connect your own website address</p>
       <p className="mt-1">
-        Create a CNAME for <code className="text-[var(--ink)]">{domain}</code>{" "}
-        pointing to <code className="text-[var(--ink)]">{appHost}</code>, then
-        mark active when DNS is ready.
+        Ask your web host to point{" "}
+        <code className="text-[var(--ink)]">{domain}</code> at{" "}
+        <code className="text-[var(--ink)]">{appHost}</code>, then mark it
+        ready below.
       </p>
       <p className="mt-2 tabular-nums">
         Status: <span className="font-medium text-[var(--ink)]">{status}</span>
@@ -138,7 +139,7 @@ export function CustomDomainActivate({
                 toast(result.error, "error");
                 return;
               }
-              toast("Custom domain activated", "success");
+                toast("Website address connected", "success");
             });
           }}
         >

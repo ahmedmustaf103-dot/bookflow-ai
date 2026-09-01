@@ -52,9 +52,9 @@ export default async function SettingsPage() {
       />
 
       <Surface className="max-w-lg">
-        <h2 className="text-sm font-semibold">White-label branding</h2>
+        <h2 className="text-sm font-semibold">Your booking page look</h2>
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-          Logo, colours, and favicon appear on your public booking page and
+          Logo, colours, and browser icon appear on your public booking page and
           customer emails.
         </p>
         <div className="mt-4 flex flex-col gap-3">
@@ -65,14 +65,14 @@ export default async function SettingsPage() {
           />
           <BrandAssetUploader
             kind="favicon"
-            label="Favicon"
+            label="Browser icon"
             currentUrl={org.faviconUrl}
           />
         </div>
       </Surface>
 
       <Surface className="max-w-lg">
-        <h2 className="text-sm font-semibold">Organization</h2>
+        <h2 className="text-sm font-semibold">Business</h2>
         <ActionForm
           action={updateOrganizationSettingsAction}
           submitLabel="Save settings"
@@ -87,7 +87,7 @@ export default async function SettingsPage() {
             defaultValue={org.brandPrimary ?? DEFAULT_BRAND_PRIMARY}
           />
           <div>
-            <Label htmlFor="org-custom-domain">Custom domain (optional)</Label>
+            <Label htmlFor="org-custom-domain">Your own website address (optional)</Label>
             <Input
               id="org-custom-domain"
               name="customDomain"
@@ -126,7 +126,7 @@ export default async function SettingsPage() {
             />
             <p className="mt-1.5 text-xs text-[var(--ink-tertiary)]">
               {planAllowsReminders(org.plan)
-                ? "Email reminders enqueue on new bookings (Growth/Business/Trial). SMS reminders require Growth/Business plus Twilio."
+                ? "Email reminders are sent for new bookings on Growth, Business, and Trial. Text reminders need Growth or Business plus phone messaging."
                 : "Email reminders require Growth or Business (Trial still gets email for testing)."}
             </p>
           </div>
@@ -142,8 +142,8 @@ export default async function SettingsPage() {
           <div className="mt-2 border-t border-[var(--border)] pt-4">
             <h3 className="text-sm font-semibold">Customer automation</h3>
             <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-              Messages queue in the outbox with retries. Nothing sends without a
-              client email (and Twilio for SMS reminders).
+              Confirmations, reminders, and follow-ups send automatically when
+              a customer has an email on file.
             </p>
           </div>
 
@@ -220,21 +220,22 @@ export default async function SettingsPage() {
       </Surface>
 
       <Surface className="max-w-lg">
-        <h2 className="text-sm font-semibold">Public booking URL</h2>
+        <h2 className="text-sm font-semibold">Your booking link</h2>
         <p className="mt-2 break-all text-sm text-[var(--accent)]">{bookUrl}</p>
         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-          Slug path: /book/{org.slug}
+          Give this link to customers so they can book online
           {org.customDomainStatus === "ACTIVE" && org.customDomain
-            ? ` · live on ${org.customDomain}`
+            ? ` · also live at ${org.customDomain}`
             : ""}
+          .
         </p>
       </Surface>
 
       <Surface className="max-w-lg">
         <h2 className="text-sm font-semibold">Google Calendar</h2>
         <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-          Each barber connects their own Google account. Bookings on their
-          chair go to their calendar.
+          Each barber connects their own Google account. Bookings with that
+          person go to their calendar.
         </p>
         <div className="mt-4">
           <ButtonLink
@@ -248,9 +249,9 @@ export default async function SettingsPage() {
       </Surface>
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold">Recent audit log</h2>
+        <h2 className="mb-3 text-sm font-semibold">Recent activity</h2>
         {recentAudit.length === 0 ? (
-          <EmptyState title="No audited actions yet" />
+          <EmptyState title="No activity yet" />
         ) : (
           <Surface padding="none" className="overflow-hidden">
             <ul className="divide-y divide-[var(--border)] text-sm">
@@ -258,9 +259,7 @@ export default async function SettingsPage() {
                 <li key={row.id} className="px-4 py-3">
                   <p className="font-medium">{row.action}</p>
                   <p className="text-xs text-[var(--ink-tertiary)]">
-                    {row.createdAt.toISOString()}
-                    {row.entityType ? ` · ${row.entityType}` : ""}
-                    {row.entityId ? `:${row.entityId.slice(0, 8)}` : ""}
+                    {row.createdAt.toLocaleString()}
                   </p>
                 </li>
               ))}

@@ -5,6 +5,7 @@ import {
   DashboardShell,
   type NavItem,
 } from "@/components/dashboard/dashboard-shell";
+import type { DashboardTourKind } from "@/components/onboarding/dashboard-tour";
 import { getActiveOrganization } from "@/server/tenant/context";
 import { getVerticalPack } from "@/server/verticals/packs";
 import type { MembershipRole } from "@/generated/prisma/client";
@@ -123,6 +124,15 @@ export default async function DashboardLayout({
     slug: membership.organization.slug,
   }));
 
+  const tourKind: DashboardTourKind =
+    !ctx.organization
+      ? "none"
+      : role === "STAFF"
+        ? "staff"
+        : role === "OWNER" || role === "ADMIN"
+          ? "owner"
+          : "none";
+
   return (
     <AppClerkProvider>
       <DashboardShell
@@ -130,6 +140,7 @@ export default async function DashboardLayout({
         currentOrgId={ctx.organization?.id ?? null}
         orgs={orgs}
         nav={nav}
+        tourKind={tourKind}
       >
         {children}
       </DashboardShell>

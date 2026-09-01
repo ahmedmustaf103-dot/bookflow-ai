@@ -34,7 +34,7 @@ export const VERTICAL_PACKS: Record<VerticalPackId, VerticalPack> = {
   barber_salon: {
     id: "barber_salon",
     label: "Barber / Salon",
-    description: "Cuts, color, and chair-based appointments",
+    description: "Cuts, colour, and salon appointments",
     terminology: {
       resource: "Staff",
       resources: "Staff",
@@ -57,7 +57,7 @@ export const VERTICAL_PACKS: Record<VerticalPackId, VerticalPack> = {
   dental: {
     id: "dental",
     label: "Dental",
-    description: "Hygiene, exams, and chair time",
+    description: "Hygiene, exams, and appointments",
     terminology: {
       resource: "Provider",
       resources: "Providers",

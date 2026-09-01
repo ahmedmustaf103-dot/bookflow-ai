@@ -107,8 +107,7 @@ export default function MarketingLayout({
               BookFlow AI
             </p>
             <p className="text-sm text-[var(--ink-secondary)]">
-              © {new Date().getFullYear()} · Multi-tenant booking, automation,
-              and AI
+              Online booking, reminders, and AI
             </p>
             <div className="flex gap-4 text-sm text-[var(--ink-secondary)]">
               <Link href="/sign-up" className="hover:text-[var(--ink)]">

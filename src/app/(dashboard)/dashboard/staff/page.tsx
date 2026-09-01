@@ -25,17 +25,17 @@ export default async function StaffPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Staff & resources"
-        description="Bookable people and chairs. New staff are added to your services and hours automatically. Uncheck Active on Edit to hide them from booking — past appointments stay."
+        title="Staff"
+        description="Barbers, stylists, and team members customers can book. New staff are added to your services and hours automatically. Uncheck Active on Edit to hide them from booking — past appointments stay."
       />
 
       {resources.length === 0 ? (
         <EmptyState
-          title="No staff or resources yet"
-          description="Add the people or chairs customers can book. Inactive staff stay on this list and keep existing appointments, but they will not appear on the public page."
+          title="No staff yet"
+          description="Add the people customers can book. Inactive staff stay on this list and keep existing appointments, but they will not appear on the public page."
           action={
             <ButtonLink href="#add-resource" variant="primary" size="sm">
-              Add resource
+              Add staff member
             </ButtonLink>
           }
         />
@@ -88,7 +88,7 @@ export default async function StaffPage() {
         </p>
         <ActionForm
           action={createResourceAction}
-          submitLabel="Add resource"
+          submitLabel="Add staff member"
           className="mt-4 flex flex-col gap-3"
         >
           <div>
@@ -97,7 +97,7 @@ export default async function StaffPage() {
               id="resource-name"
               name="name"
               required
-              placeholder="Chair 2"
+              placeholder="Jordan"
             />
           </div>
           <div>

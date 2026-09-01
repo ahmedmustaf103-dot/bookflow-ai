@@ -17,6 +17,7 @@ const ready = {
 describe("pilot setup checklist", () => {
   it("marks required items done without Google Calendar", () => {
     const items = buildPilotSetupItems(ready);
+    expect(items.find((i) => i.id === "email")?.label).toBe("Customer emails");
     expect(items.find((i) => i.id === "google")?.optional).toBe(true);
     expect(items.find((i) => i.id === "google")?.done).toBe(false);
     expect(requiredSetupComplete(items)).toBe(true);

@@ -144,7 +144,7 @@ export function OnboardingForm() {
 
         {step === 2 ? (
           <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)]/50 px-3 py-3 text-sm text-[var(--ink-secondary)]">
-            We&apos;ll create your organization, a main location, default hours,
+            We&apos;ll create your business, a main location, default hours,
             and starter services. You can edit everything after you&apos;re in.
           </div>
         ) : null}

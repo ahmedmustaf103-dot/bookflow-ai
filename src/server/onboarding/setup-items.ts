@@ -62,7 +62,7 @@ export function buildPilotSetupItems(input: {
     },
     {
       id: "email",
-      label: "Email sending (Resend)",
+      label: "Customer emails",
       href: "/dashboard/settings",
       done: input.emailConfigured,
     },

@@ -71,7 +71,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={ctx.organization.name}
-        description={`Welcome${ctx.user.firstName ? `, ${ctx.user.firstName}` : ""}. Plan ${ctx.organization.plan}.`}
+        description={`Welcome${ctx.user.firstName ? `, ${ctx.user.firstName}` : ""}. You're on the ${ctx.organization.plan.charAt(0)}${ctx.organization.plan.slice(1).toLowerCase()} plan.`}
         actions={
           <>
             {staffPlus ? (
@@ -116,14 +116,18 @@ export default async function DashboardPage() {
       ) : null}
 
       {manage ? (
-        <Surface padding="md">
+        <Surface padding="md" data-tour="owner-booking-link">
           <p className="mb-2 text-xs font-medium tracking-wide text-[var(--ink-tertiary)] uppercase">
-            Public booking link
+            Your booking link
+          </p>
+          <p className="mb-2 text-sm text-[var(--ink-secondary)]">
+            Give this link to your customers so they can book appointments
+            online.
           </p>
           <OverviewCopyLink
             orgId={ctx.organization.id}
             value={bookUrl}
-            label="Public booking link"
+            label="Your booking link"
           />
         </Surface>
       ) : null}
@@ -189,7 +193,7 @@ export default async function DashboardPage() {
               href: "/dashboard/locations",
             },
             {
-              label: "Staff / resources",
+              label: "Staff",
               value: resourceCount,
               href: "/dashboard/staff",
             },
@@ -226,7 +230,7 @@ export default async function DashboardPage() {
                 scope.all
                   ? "On the calendar"
                   : scope.resourceIds.length === 0
-                    ? "Ask the owner to assign your login to a chair"
+                    ? "Ask the owner to add you as a staff member"
                     : "Your appointments"
               }
             />

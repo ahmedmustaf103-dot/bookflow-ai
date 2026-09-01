@@ -26,10 +26,10 @@ export function GoogleCalendarCard({
     <Surface className="max-w-lg">
       <h2 className="text-sm font-semibold">Google Calendar</h2>
       <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-        Connect your own Google account. Bookings on your chair go to your
-        calendar. Reschedules update the same event; cancellations remove it.
-        Google never blocks a BookFlow booking if sync fails. Connecting does
-        not backfill past appointments.
+        Connect your own Google account. Bookings with you go to your
+        calendar. When a customer reschedules, the same event updates; if they
+        cancel, it is removed. A Google hiccup never blocks a BookFlow booking.
+        Connecting does not copy old appointments across.
       </p>
       {status === "connected" ? (
         <p className="mt-2 text-sm text-[var(--accent)]">Connected.</p>
@@ -44,15 +44,15 @@ export function GoogleCalendarCard({
       ) : null}
       {status === "not_configured" ? (
         <p className="mt-2 text-sm text-[var(--danger)]" role="alert">
-          Add GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET to
-          the environment first.
+          Google Calendar isn’t available on this BookFlow account yet. Contact
+          BookFlow if you need it connected.
         </p>
       ) : null}
 
       {!configured ? (
         <p className="mt-3 text-xs text-[var(--ink-tertiary)]">
-          Google Calendar sync is not configured on this server. See
-          .env.example for OAuth setup.
+          Google Calendar isn’t connected for this account yet. Contact BookFlow
+          if you need it.
         </p>
       ) : myConnection ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">

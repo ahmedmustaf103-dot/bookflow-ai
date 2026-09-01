@@ -65,7 +65,7 @@ export default async function GoogleCalendarSettingsPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Google Calendar"
-        description="Each barber connects their own Google account. Appointments on their chair sync to that calendar."
+        description="Each barber connects their own Google account. Appointments with that person sync to their calendar."
         actions={
           isAdmin ? (
             <ButtonLink href="/dashboard/settings" size="sm" variant="secondary">

@@ -70,7 +70,7 @@ export default async function ServicesPage() {
                     <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
                       {s.resources.length > 0
                         ? s.resources.map((sr) => sr.resource.name).join(", ")
-                        : "No resources assigned"}
+                        : "No staff assigned"}
                     </p>
                   </div>
                   <ButtonLink

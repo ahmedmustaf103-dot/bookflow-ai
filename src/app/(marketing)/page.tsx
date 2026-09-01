@@ -64,32 +64,32 @@ function BookingPreview() {
 const capabilities = [
   {
     title: "Public booking that respects real hours",
-    body: "Service, staff, and open slots from your availability rules — not a static embed.",
+    body: "Service, staff, and open times from your real hours — not a static booking button.",
   },
   {
     title: "Ops dashboard for the whole shop",
-    body: "Calendar, clients, staff, services, hours, and analytics in one org-scoped workspace.",
+    body: "Calendar, customers, staff, services, hours, and insights — all in one place for your business.",
   },
   {
     title: "Automation that actually sends",
-    body: "Confirmations, reminders, follow-ups, review asks, and rebooking nudges via a durable outbox.",
+    body: "Confirmations, reminders, follow-ups, review asks, and rebooking nudges that actually send.",
   },
   {
     title: "AI with plan limits built in",
-    body: "Summaries, drafts, insights, and a booking assistant — metered so margins stay sane.",
+    body: "Summaries, drafts, insights, and a booking assistant — with fair usage so costs stay predictable.",
   },
 ];
 
 const steps = [
   {
     n: "01",
-    title: "Stand up your shop",
+    title: "Set up your shop",
     body: "Onboard locations, staff, services, and weekly hours in minutes.",
   },
   {
     n: "02",
     title: "Share your booking link",
-    body: "Customers book on /book/your-slug — or your custom domain when DNS is ready.",
+    body: "Give this link to your customers so they can book appointments online.",
   },
   {
     n: "03",
@@ -158,8 +158,8 @@ export default function HomePage() {
             One system from the booking link to the back office
           </h2>
           <p className="mt-3 max-w-xl text-[var(--ink-secondary)]">
-            Built as multi-tenant SaaS — not a single-shop script — so branding,
-            plans, and data stay isolated per organization.
+            Built for real shops — your branding, plan, and customer data stay
+            yours.
           </p>
           <ul className="mt-14 grid gap-10 sm:grid-cols-2">
             {capabilities.map((item, i) => (
@@ -195,8 +195,8 @@ export default function HomePage() {
             Live in three moves
           </h2>
           <p className="mt-3 max-w-lg text-[var(--ink-secondary)]">
-            From empty org to accepting appointments without a developer on
-            call.
+            From a new business to accepting appointments, without needing a
+            developer.
           </p>
           <ol className="mt-14 grid gap-8 md:grid-cols-3">
             {steps.map((step) => (
@@ -223,8 +223,8 @@ export default function HomePage() {
               See a real booking end to end
             </h2>
             <p className="mt-3 text-white/70">
-              Open the demo shop, pick a service, and take a slot — then start
-              your own organization free.
+              Open the demo shop, pick a service, and take a time — then start
+              your own business free.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

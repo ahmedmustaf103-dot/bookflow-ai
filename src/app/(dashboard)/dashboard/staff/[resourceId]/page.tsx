@@ -101,7 +101,7 @@ export default async function EditStaffPage({
               name="userId"
               defaultValue={resource.userId ?? ""}
             >
-              <option value="">Not linked — chair only</option>
+              <option value="">Not linked — booking profile only</option>
               {members.map((m) => {
                 const name = [m.user.firstName, m.user.lastName]
                   .filter(Boolean)
