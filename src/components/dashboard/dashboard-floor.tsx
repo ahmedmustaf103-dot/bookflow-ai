@@ -120,7 +120,7 @@ export function DashboardFloor({
             <EmptyState
               className="py-8"
               title="No one being served right now"
-              description="Upcoming visits show below. Share your booking link if the day is empty."
+              description="Upcoming visits show below. Send your booking link if the day is empty."
               action={
                 <ButtonLink href={bookPath} size="sm" variant="secondary">
                   Booking page

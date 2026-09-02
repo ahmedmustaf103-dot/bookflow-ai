@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Surface } from "@/components/ui/surface";
 import { useToast } from "@/components/ui/toast";
 import { fireConfetti } from "@/lib/confetti";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 import {
   bookingTourStorageKey,
   browserStorage,
@@ -42,26 +43,26 @@ type Resource = {
   serviceIds: string[];
 };
 
-type Step = 1 | 2 | 3 | 4;
+type RailStep = 1 | 2 | 3 | 4 | 5;
+type Panel = 1 | 2 | 3 | 4;
 
-function money(cents: number, currency: string) {
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency,
-  }).format(cents / 100);
-}
+const WIZARD_STEPS = onboardingCopy.bookingWizard.steps;
 
-const STEP_LABELS = ["Service", "Staff", "Time", "Details"] as const;
-
-function StepRail({ active }: { active: Step }) {
+function StepRail({ current }: { current: RailStep }) {
   return (
-    <ol className="mb-6 flex items-center gap-1" aria-label="Booking steps">
-      {STEP_LABELS.map((label, i) => {
-        const n = (i + 1) as Step;
-        const isActive = n === active;
-        const isDone = n < active;
+    <ol
+      className="mb-6 flex min-w-0 items-center gap-0.5"
+      aria-label="Booking steps"
+    >
+      {WIZARD_STEPS.map((step, i) => {
+        const n = (i + 1) as RailStep;
+        const isActive = n === current;
+        const isDone = n < current;
         return (
-          <li key={label} className="flex flex-1 items-center gap-1">
+          <li
+            key={step.id}
+            className="flex min-w-0 flex-1 items-center gap-0.5 sm:gap-1"
+          >
             <div
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors ${
                 isActive
@@ -74,18 +75,18 @@ function StepRail({ active }: { active: Step }) {
               {isDone ? "✓" : n}
             </div>
             <span
-              className={`hidden text-xs sm:inline ${
+              className={`hidden truncate text-[11px] sm:inline ${
                 isActive
                   ? "font-medium text-[var(--ink)]"
                   : "text-[var(--ink-tertiary)]"
               }`}
             >
-              {label}
+              {step.rail}
             </span>
-            {i < STEP_LABELS.length - 1 ? (
+            {i < WIZARD_STEPS.length - 1 ? (
               <span
-                className={`mx-1 h-px flex-1 transition-colors ${
-                  isDone ? "bg-[var(--accent)]" : "bg-[var(--border)]"
+                className={`mx-0.5 h-px min-w-1 flex-1 sm:mx-1 ${
+                  n < current ? "bg-[var(--accent)]" : "bg-[var(--border)]"
                 }`}
                 aria-hidden
               />
@@ -95,6 +96,13 @@ function StepRail({ active }: { active: Step }) {
       })}
     </ol>
   );
+}
+
+function money(cents: number, currency: string) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency,
+  }).format(cents / 100);
 }
 
 function Chip({
@@ -136,19 +144,19 @@ export function PublicBookingWizard({
   organizationName,
   services,
   resources,
-  guidedTour = false,
+  isDemo = false,
 }: {
   organizationId: string;
   organizationName: string;
   services: Service[];
   resources: Resource[];
-  guidedTour?: boolean;
+  isDemo?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const detailsRef = useRef<HTMLElement>(null);
   const tourLiveRef = useRef(false);
-  const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
+  const [serviceId, setServiceId] = useState("");
   const [resourceId, setResourceId] = useState("");
   const [startAt, setStartAt] = useState("");
   const [slots, setSlots] = useState<PublicSlotDay[]>([]);
@@ -156,20 +164,20 @@ export function PublicBookingWizard({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [doneId, setDoneId] = useState<string | null>(null);
-  /** Which completed step is being re-edited; null = follow natural progress */
-  const [editing, setEditing] = useState<Step | null>(null);
+  /** Which step is being viewed; null = follow natural progress */
+  const [editing, setEditing] = useState<RailStep | null>(null);
+  const [tourRestartKey, setTourRestartKey] = useState(0);
 
+  const copy = onboardingCopy.bookingWizard;
   const service = services.find((s) => s.id === serviceId) ?? null;
   const filteredResources = useMemo(
     () => resources.filter((r) => r.serviceIds.includes(serviceId)),
     [resources, serviceId],
   );
-  const activeResourceId =
-    filteredResources.find((r) => r.id === resourceId)?.id ??
-    filteredResources[0]?.id ??
-    "";
-  const activeResource =
-    filteredResources.find((r) => r.id === activeResourceId) ?? null;
+  const selectedResourceId =
+    filteredResources.find((r) => r.id === resourceId)?.id ?? "";
+  const selectedResource =
+    filteredResources.find((r) => r.id === selectedResourceId) ?? null;
   const selectedSlot =
     slots
       .flatMap((day) =>
@@ -180,18 +188,19 @@ export function PublicBookingWizard({
       )
       .find((s) => s.startIso === startAt) ?? null;
 
-  const progress: Step = !serviceId
+  const progress: RailStep = !serviceId
     ? 1
-    : !activeResourceId
+    : !selectedResourceId
       ? 2
       : !startAt
         ? 3
         : 4;
 
-  const activePanel: Step = editing ?? progress;
+  const railCurrent: RailStep = editing ?? progress;
+  const activePanel: Panel = railCurrent === 5 ? 4 : (railCurrent as Panel);
 
   useEffect(() => {
-    if (!serviceId || !activeResourceId) {
+    if (!serviceId || !selectedResourceId) {
       setSlots([]);
       return;
     }
@@ -201,7 +210,7 @@ export function PublicBookingWizard({
     void fetchPublicSlotsAction({
       organizationId,
       serviceId,
-      resourceId: activeResourceId,
+      resourceId: selectedResourceId,
     }).then((result) => {
       if (cancelled) return;
       setSlotsLoading(false);
@@ -216,7 +225,7 @@ export function PublicBookingWizard({
     return () => {
       cancelled = true;
     };
-  }, [organizationId, serviceId, activeResourceId]);
+  }, [organizationId, serviceId, selectedResourceId]);
 
   useEffect(() => {
     if (progress === 4 && editing === null) {
@@ -229,11 +238,7 @@ export function PublicBookingWizard({
 
   const onTourStep = useCallback((index: number) => {
     tourLiveRef.current = true;
-    if (index <= 2) {
-      setEditing((index + 1) as Step);
-      return;
-    }
-    setEditing(4);
+    setEditing((index + 1) as RailStep);
   }, []);
 
   const onTourDismiss = useCallback(() => {
@@ -265,6 +270,8 @@ export function PublicBookingWizard({
             variant="secondary"
             onClick={() => {
               setDoneId(null);
+              setServiceId("");
+              setResourceId("");
               setStartAt("");
               setEditing(null);
               router.refresh();
@@ -278,15 +285,34 @@ export function PublicBookingWizard({
   }
 
   return (
-    <Surface className="bf-page-enter p-5 sm:p-8">
-      {guidedTour ? (
-        <BookingTour
-          enabled
-          onStepChange={onTourStep}
-          onDismiss={onTourDismiss}
-        />
-      ) : null}
-      <StepRail active={progress} />
+    <Surface className="bf-page-enter min-w-0 overflow-x-hidden p-5 sm:p-8">
+      <BookingTour
+        enabled
+        persist={!isDemo}
+        organizationId={organizationId}
+        restartKey={tourRestartKey}
+        onStepChange={onTourStep}
+        onDismiss={onTourDismiss}
+      />
+      <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
+        <p className="min-w-0 text-xs text-[var(--ink-tertiary)] sm:text-sm">
+          {copy.steps[railCurrent - 1]?.title}
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="min-h-11 shrink-0 sm:h-8"
+          onClick={() => {
+            tourLiveRef.current = true;
+            setEditing(1);
+            setTourRestartKey((key) => key + 1);
+          }}
+        >
+          {onboardingCopy.common.showGuide}
+        </Button>
+      </div>
+      <StepRail current={railCurrent} />
 
       <div className="mb-6 flex flex-wrap gap-2">
         {service && progress > 1 && activePanel !== 1 ? (
@@ -296,10 +322,10 @@ export function PublicBookingWizard({
             onEdit={() => setEditing(1)}
           />
         ) : null}
-        {activeResource && progress > 2 && activePanel !== 2 ? (
+        {selectedResource && progress > 2 && activePanel !== 2 ? (
           <Chip
             label="Staff"
-            value={activeResource.name}
+            value={selectedResource.name}
             onEdit={() => setEditing(2)}
           />
         ) : null}
@@ -318,9 +344,9 @@ export function PublicBookingWizard({
 
       <div className="flex flex-col gap-8">
         {activePanel === 1 ? (
-          <section data-tour="booking-service">
+          <section data-tour="booking-service" className="scroll-mt-24">
             <h2 className="text-xs font-semibold tracking-wide text-[var(--ink-tertiary)] uppercase">
-              1. Service
+              1. {copy.steps[0].title}
             </h2>
             <div
               className="mt-3 grid gap-2"
@@ -339,10 +365,12 @@ export function PublicBookingWizard({
                     setStartAt("");
                     setEditing(tourLiveRef.current ? 2 : null);
                   }}
-                  className={tileClass(s.id === serviceId)}
+                  className={`${tileClass(s.id === serviceId)} min-h-11`}
                 >
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm font-medium">{s.name}</span>
+                    <span className="min-w-0 text-sm font-medium break-words">
+                      {s.name}
+                    </span>
                     <span className="text-sm text-[var(--ink-secondary)] tabular-nums">
                       {money(s.priceCents, s.currency)}
                     </span>
@@ -358,13 +386,17 @@ export function PublicBookingWizard({
         ) : null}
 
         {activePanel === 2 ? (
-          <section data-tour="booking-staff">
+          <section data-tour="booking-staff" className="scroll-mt-24">
             <h2 className="text-xs font-semibold tracking-wide text-[var(--ink-tertiary)] uppercase">
-              2. Staff
+              2. {copy.steps[1].title}
             </h2>
-            {filteredResources.length === 0 ? (
+            {!serviceId ? (
               <p className="mt-3 text-sm text-[var(--ink-secondary)]">
-                No staff assigned to this service yet.
+                {copy.chooseServiceFirst}
+              </p>
+            ) : filteredResources.length === 0 ? (
+              <p className="mt-3 text-sm text-[var(--ink-secondary)]">
+                {copy.emptyStaff}
               </p>
             ) : (
               <div
@@ -377,14 +409,14 @@ export function PublicBookingWizard({
                     key={r.id}
                     type="button"
                     role="radio"
-                    aria-checked={r.id === activeResourceId}
+                    aria-checked={r.id === resourceId}
                     onClick={() => {
                       setResourceId(r.id);
                       setStartAt("");
                       setEditing(tourLiveRef.current ? 3 : null);
                     }}
-                    className={`bf-row-hover rounded-[var(--radius-control)] px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
-                      r.id === activeResourceId
+                    className={`bf-row-hover min-h-11 rounded-[var(--radius-control)] px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none ${
+                      r.id === resourceId
                         ? "bg-[var(--accent)] text-white"
                         : "border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--muted)]"
                     }`}
@@ -398,11 +430,15 @@ export function PublicBookingWizard({
         ) : null}
 
         {activePanel === 3 ? (
-          <section data-tour="booking-time">
+          <section data-tour="booking-time" className="scroll-mt-24">
             <h2 className="text-xs font-semibold tracking-wide text-[var(--ink-tertiary)] uppercase">
-              3. Time
+              3. {copy.steps[2].title}
             </h2>
-            {slotsLoading ? (
+            {!serviceId || !selectedResourceId ? (
+              <p className="mt-3 text-sm text-[var(--ink-secondary)]">
+                {copy.chooseServiceFirst}
+              </p>
+            ) : slotsLoading ? (
               <div
                 className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"
                 aria-busy
@@ -424,7 +460,9 @@ export function PublicBookingWizard({
                 value={startAt}
                 onChange={(startIso) => {
                   setStartAt(startIso);
-                  if (startIso) setEditing(null);
+                  if (startIso) {
+                    setEditing(tourLiveRef.current ? 4 : null);
+                  }
                 }}
                 emptyMessage="No open slots in the next 4 weeks."
               />
@@ -433,22 +471,28 @@ export function PublicBookingWizard({
         ) : null}
 
         {activePanel === 4 ? (
-          <section ref={detailsRef} data-tour="booking-details">
+          <section
+            ref={detailsRef}
+            data-tour="booking-details"
+            className="scroll-mt-24"
+          >
             <h2 className="text-xs font-semibold tracking-wide text-[var(--ink-tertiary)] uppercase">
-              4. Your details
+              {railCurrent === 5
+                ? `5. ${copy.steps[4].title}`
+                : `4. ${copy.steps[3].title}`}
             </h2>
             <form
               className="mt-3 flex max-w-md flex-col gap-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (!service || !activeResourceId || !startAt) {
-                  setError("Pick a service, person, and time first");
+                if (!service || !selectedResourceId || !startAt) {
+                  setError(copy.pickFirst);
                   return;
                 }
                 const formData = new FormData(e.currentTarget);
                 formData.set("organizationId", organizationId);
                 formData.set("serviceId", serviceId);
-                formData.set("resourceId", activeResourceId);
+                formData.set("resourceId", selectedResourceId);
                 formData.set("startAt", startAt);
                 formData.set("idempotencyKey", crypto.randomUUID());
                 setError(null);
@@ -461,9 +505,9 @@ export function PublicBookingWizard({
                   }
                   setDoneId(result.data.bookingId);
                   toast("Booking confirmed", "success");
-                  if (guidedTour) {
+                  if (!isDemo) {
                     markTourCompleted(
-                      bookingTourStorageKey(),
+                      bookingTourStorageKey(organizationId),
                       browserStorage(),
                     );
                   }

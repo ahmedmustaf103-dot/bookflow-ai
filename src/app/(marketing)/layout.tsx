@@ -113,7 +113,7 @@ export default function MarketingLayout({
               <Link href="/sign-up" className="hover:text-[var(--ink)]">
                 Start free
               </Link>
-              <Link href="/book/bookflow" className="hover:text-[var(--ink)]">
+              <Link href="/book/bookflow-demo" className="hover:text-[var(--ink)]">
                 Live demo
               </Link>
             </div>

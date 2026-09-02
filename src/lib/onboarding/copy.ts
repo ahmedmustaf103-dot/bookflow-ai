@@ -5,7 +5,7 @@
 
 export const DEFAULT_LOCALE = "en" as const;
 
-export const BOOKING_TOUR_SLUGS = ["bookflow", "bookflow-demo"] as const;
+export const BOOKING_TOUR_SLUGS = ["bookflow-demo"] as const;
 
 export type TourStepDef = {
   id: string;
@@ -26,42 +26,105 @@ const en = {
     next: "Next",
     done: "Got it",
     close: "Close tour",
+    showGuide: "How it works",
     stepOf: (current: number, total: number) => `Step ${current} of ${total}`,
   },
-  demoBanner: {
-    title: "This is a demo",
-    body: "Book an appointment the way a customer would — then you’ll get a confirmation you can manage.",
+  demoIntro: {
+    kicker: "Try a booking yourself",
+    body: "See how a customer books an appointment with your business.",
+    path: "Choose a service → Choose your barber → Pick a time → Enter your details → Confirm",
+  },
+  bookingPage: {
+    intro: "Choose a service, then who you’d like, then a time.",
+  },
+  bookingWizard: {
+    steps: [
+      { id: "service", rail: "Service", title: "Choose a service" },
+      { id: "staff", rail: "Staff", title: "Choose who you’d like" },
+      { id: "time", rail: "Time", title: "Choose a date and time" },
+      { id: "details", rail: "Details", title: "Your details" },
+      { id: "confirm", rail: "Confirm", title: "Confirm booking" },
+    ],
+    emptyStaff: "No one is available for this service yet.",
+    chooseServiceFirst: "Choose a service first, then pick who you’d like.",
+    pickFirst: "Pick a service, who you’d like, and a time first.",
+  },
+  marketing: {
+    heroBody:
+      "Online booking for barbers, salons, clinics, and other appointment businesses.",
+    productHeading: "Everything you need to take bookings",
+    productIntro:
+      "Your customers book online. You manage the day from one place.",
+    howHeading: "How BookFlow works",
+    howIntro: "Set up your business, share a link, and manage appointments.",
+    steps: [
+      {
+        n: "01",
+        title: "Set up your business",
+        body: "Add your services, staff and opening hours.",
+      },
+      {
+        n: "02",
+        title: "Share your booking link",
+        body: "Send the link to customers so they can book online.",
+      },
+      {
+        n: "03",
+        title: "Manage your appointments",
+        body: "See bookings, customers and staff in one place.",
+      },
+    ],
+    capabilities: [
+      {
+        title: "Online booking that follows your hours",
+        body: "Customers pick a service, choose who they’d like, and take a time that is actually free.",
+      },
+      {
+        title: "One place to run the shop",
+        body: "See the calendar, customers, staff, services, and hours together.",
+      },
+      {
+        title: "Messages that go out on time",
+        body: "Confirmations, reminders, follow-ups, and review requests send automatically.",
+      },
+      {
+        title: "Optional AI help",
+        body: "Drafts and summaries when you want them, with clear plan limits.",
+      },
+    ],
+    ctaHeading: "Try a booking yourself",
+    ctaBody: "See how a customer books — then start your own business free.",
   },
   bookingTour: {
     steps: [
       {
         id: "service",
         title: "Choose a service",
-        body: "Tap the haircut or treatment you want. You can change this later if you need to.",
+        body: "Tap the service you want.",
         target: '[data-tour="booking-service"]',
       },
       {
         id: "staff",
-        title: "Choose a staff member",
-        body: "Pick who you’d like to see — a barber, stylist, or whoever is available.",
+        title: "Choose who you’d like",
+        body: "Pick the barber, stylist, or team member you’d like to see.",
         target: '[data-tour="booking-staff"]',
       },
       {
         id: "time",
         title: "Choose a date and time",
-        body: "Select a day, then an open time that works for you.",
+        body: "Select a day, then a time that works for you.",
         target: '[data-tour="booking-time"]',
       },
       {
         id: "details",
         title: "Enter your details",
-        body: "Add your name and email so the business can send your confirmation.",
+        body: "Add your name and email so the shop can send your confirmation.",
         target: '[data-tour="booking-details"]',
       },
       {
         id: "confirm",
-        title: "Confirm the appointment",
-        body: "When you’re ready, confirm. You’ll get a booking confirmation and a link to manage it.",
+        title: "Confirm your booking",
+        body: "Tap confirm when you’re ready. You’ll get a confirmation you can manage.",
         target: '[data-tour="booking-confirm"]',
       },
     ] satisfies TourStepDef[],
@@ -71,7 +134,7 @@ const en = {
       {
         id: "business",
         title: "Business",
-        body: "Set up your business information, look, and booking page.",
+        body: "Set up your business information.",
         target: '[data-tour="owner-business"]',
         href: "/dashboard/settings",
         openNav: true,
@@ -103,7 +166,7 @@ const en = {
       {
         id: "booking-link",
         title: "Booking link",
-        body: "Share this link with customers so they can book online.",
+        body: "Send this link to customers so they can book online.",
         target: '[data-tour="owner-booking-link"]',
         href: "/dashboard",
         openNav: false,

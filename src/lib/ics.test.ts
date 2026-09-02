@@ -55,18 +55,18 @@ describe("buildBookingIcs", () => {
   it("builds a confirmation ICS with business, staff, and manage link", () => {
     const ics = buildConfirmationIcs({
       bookingId: "b1",
-      organizationName: "Mustaf Barbers",
+      organizationName: "Atelier Hale",
       serviceName: "Skin fade",
       resourceName: "Jamie",
       startAt: new Date("2026-07-23T09:00:00.000Z"),
       endAt: new Date("2026-07-23T09:45:00.000Z"),
       manageUrl: "https://app.test/book/manage/tok",
     });
-    expect(ics).toContain("SUMMARY:Skin fade at Mustaf Barbers");
+    expect(ics).toContain("SUMMARY:Skin fade at Atelier Hale");
     expect(ics).toContain(
       "DESCRIPTION:With Jamie\\nManage: https://app.test/book/manage/tok",
     );
-    expect(ics).toContain("LOCATION:Mustaf Barbers");
+    expect(ics).toContain("LOCATION:Atelier Hale");
     expect(ics).toContain(`UID:${bookingIcsUid("b1")}`);
     expect(ics).toContain("METHOD:REQUEST");
   });

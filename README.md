@@ -2,7 +2,7 @@
 
 **Multi-tenant booking OS for service businesses** — public booking, ops dashboard, automation, and AI on one stack.
 
-[Live demo](https://bookflow-ai-isga.vercel.app) · [Book an appointment](https://bookflow-ai-isga.vercel.app/book/bookflow) · [Portfolio pack](./docs/portfolio/README.md) · [Go-live checklist](./GO_LIVE.md)
+[Live demo](https://bookflow-ai-isga.vercel.app) · [Book an appointment](https://bookflow-ai-isga.vercel.app/book/bookflow-demo) · [Portfolio pack](./docs/portfolio/README.md) · [Go-live checklist](./GO_LIVE.md)
 
 Screenshots: capture with [`docs/portfolio/screenshots.md`](./docs/portfolio/screenshots.md), then drop them into `docs/portfolio/screenshots/`.
 

@@ -63,7 +63,14 @@ export default async function StaffPage() {
                     </span>
                   </div>
                   <p className="text-xs text-[var(--ink-tertiary)]">
-                    {r.type} · {r.location.name}
+                    {r.type === "STAFF"
+                      ? "Staff"
+                      : r.type === "ROOM"
+                        ? "Room"
+                        : r.type === "EQUIPMENT"
+                          ? "Equipment"
+                          : "Other"}{" "}
+                    · {r.location.name}
                   </p>
                 </div>
                 <ButtonLink

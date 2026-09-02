@@ -8,10 +8,16 @@ import { bookingTourStorageKey } from "@/lib/onboarding/tour-storage";
 
 export function BookingTour({
   enabled,
+  persist,
+  organizationId,
+  restartKey = 0,
   onStepChange,
   onDismiss,
 }: {
   enabled: boolean;
+  persist: boolean;
+  organizationId?: string;
+  restartKey?: number;
   onStepChange?: (index: number) => void;
   onDismiss?: () => void;
 }) {
@@ -24,9 +30,11 @@ export function BookingTour({
 
   return (
     <ProductTour
-      storageKey={bookingTourStorageKey()}
+      storageKey={bookingTourStorageKey(persist ? organizationId : undefined)}
       steps={onboardingCopy.bookingTour.steps}
       enabled={enabled}
+      persist={persist}
+      restartKey={restartKey}
       onStepChange={handleStep}
       onDismiss={onDismiss}
     />

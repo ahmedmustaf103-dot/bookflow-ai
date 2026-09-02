@@ -1,4 +1,5 @@
 import { ButtonLink } from "@/components/ui/button";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 
 function BookingPreview() {
   return (
@@ -10,8 +11,8 @@ function BookingPreview() {
         <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
         <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
         <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
-        <span className="ml-3 text-[11px] tracking-wide text-zinc-400">
-          bookflow.app/book/your-shop
+        <span className="ml-3 truncate text-[11px] tracking-wide text-zinc-400">
+          your booking page
         </span>
       </div>
       <div className="space-y-4 p-5 sm:p-6">
@@ -22,25 +23,27 @@ function BookingPreview() {
           Your shop name
         </p>
         <div className="flex gap-2">
-          {["Service", "Staff", "Time", "Details"].map((label, i) => (
-            <div
-              key={label}
-              className="flex flex-1 flex-col items-center gap-1"
-            >
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${
-                  i < 2
-                    ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                    : i === 2
+          {["Service", "Staff", "Time", "Details", "Confirm"].map(
+            (label, i) => (
+              <div
+                key={label}
+                className="flex min-w-0 flex-1 flex-col items-center gap-1"
+              >
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${
+                    i === 0
                       ? "bg-[var(--accent)] text-white"
                       : "bg-zinc-100 text-zinc-400"
-                }`}
-              >
-                {i < 2 ? "✓" : i + 1}
-              </span>
-              <span className="text-[10px] text-zinc-500">{label}</span>
-            </div>
-          ))}
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <span className="w-full truncate text-center text-[10px] text-zinc-500">
+                  {label}
+                </span>
+              </div>
+            ),
+          )}
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -69,42 +72,8 @@ function BookingPreview() {
   );
 }
 
-const capabilities = [
-  {
-    title: "Public booking that respects real hours",
-    body: "Service, staff, and open times from your real hours — not a static booking button.",
-  },
-  {
-    title: "Ops dashboard for the whole shop",
-    body: "Calendar, customers, staff, services, hours, and insights — all in one place for your business.",
-  },
-  {
-    title: "Automation that actually sends",
-    body: "Confirmations, reminders, follow-ups, review asks, and rebooking nudges that actually send.",
-  },
-  {
-    title: "AI with plan limits built in",
-    body: "Summaries, drafts, insights, and a booking assistant — with fair usage so costs stay predictable.",
-  },
-];
-
-const steps = [
-  {
-    n: "01",
-    title: "Set up your shop",
-    body: "Onboard locations, staff, services, and weekly hours in minutes.",
-  },
-  {
-    n: "02",
-    title: "Share your booking link",
-    body: "Give this link to your customers so they can book appointments online.",
-  },
-  {
-    n: "03",
-    title: "Run the day",
-    body: "See the calendar fill, messages go out, and AI help with follow-ups.",
-  },
-];
+const capabilities = onboardingCopy.marketing.capabilities;
+const steps = onboardingCopy.marketing.steps;
 
 export default function HomePage() {
   return (
@@ -131,8 +100,7 @@ export default function HomePage() {
               BookFlow AI
             </h1>
             <p className="mt-5 max-w-md text-lg leading-relaxed text-white/80">
-              Booking and shop ops for barbers, salons, and appointment
-              businesses — with automation and AI on the same system.
+              {onboardingCopy.marketing.heroBody}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink
@@ -143,7 +111,7 @@ export default function HomePage() {
                 Start free
               </ButtonLink>
               <ButtonLink
-                href="/book/bookflow"
+                href="/book/bookflow-demo"
                 variant="ghost"
                 className="h-11 px-5 text-white hover:bg-white/10 hover:text-white"
               >
@@ -163,11 +131,10 @@ export default function HomePage() {
       >
         <div className="mx-auto max-w-6xl px-6">
           <h2 className="font-marketing max-w-2xl text-3xl font-bold tracking-tight text-[var(--ink)] sm:text-4xl">
-            One system from the booking link to the back office
+            {onboardingCopy.marketing.productHeading}
           </h2>
           <p className="mt-3 max-w-xl text-[var(--ink-secondary)]">
-            Built for real shops — your branding, plan, and customer data stay
-            yours.
+            {onboardingCopy.marketing.productIntro}
           </p>
           <ul className="mt-14 grid gap-10 sm:grid-cols-2">
             {capabilities.map((item, i) => (
@@ -200,11 +167,10 @@ export default function HomePage() {
         />
         <div className="relative mx-auto max-w-6xl px-6">
           <h2 className="font-marketing text-3xl font-bold tracking-tight text-[var(--ink)] sm:text-4xl">
-            Live in three moves
+            {onboardingCopy.marketing.howHeading}
           </h2>
           <p className="mt-3 max-w-lg text-[var(--ink-secondary)]">
-            From a new business to accepting appointments, without needing a
-            developer.
+            {onboardingCopy.marketing.howIntro}
           </p>
           <ol className="mt-14 grid gap-8 md:grid-cols-3">
             {steps.map((step) => (
@@ -228,16 +194,15 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-xl">
             <h2 className="font-marketing text-3xl font-bold tracking-tight sm:text-4xl">
-              See a real booking end to end
+              {onboardingCopy.marketing.ctaHeading}
             </h2>
             <p className="mt-3 text-white/70">
-              Open the demo shop, pick a service, and take a time — then start
-              your own business free.
+              {onboardingCopy.marketing.ctaBody}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <ButtonLink
-              href="/book/bookflow"
+              href="/book/bookflow-demo"
               variant="secondary"
               className="h-11 border-0 bg-white px-5 !text-zinc-900 hover:bg-zinc-100 hover:!text-zinc-900"
             >

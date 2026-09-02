@@ -53,7 +53,15 @@ export default async function EditStaffPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title={`Edit ${resource.name}`}
-        description={`${resource.type} at ${resource.location.name}. Existing appointments stay assigned to this person.`}
+        description={`${
+          resource.type === "STAFF"
+            ? "Staff"
+            : resource.type === "ROOM"
+              ? "Room"
+              : resource.type === "EQUIPMENT"
+                ? "Equipment"
+                : "Other"
+        } at ${resource.location.name}. Existing appointments stay assigned to this person.`}
         actions={
           <ButtonLink href="/dashboard/staff" size="sm" variant="secondary">
             Back to staff

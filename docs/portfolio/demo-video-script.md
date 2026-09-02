@@ -12,7 +12,7 @@ Show landing hero → cut to booking page URL.
 
 ## Act 1 — Customer books in under a minute (0:20–1:20)
 
-Path: `/book/bookflow`
+Path: `/book/bookflow-demo`
 
 1. Pick a service
 2. Pick staff

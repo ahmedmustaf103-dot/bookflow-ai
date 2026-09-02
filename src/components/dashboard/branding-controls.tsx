@@ -125,7 +125,14 @@ export function CustomDomainActivate({
         below.
       </p>
       <p className="mt-2 tabular-nums">
-        Status: <span className="font-medium text-[var(--ink)]">{status}</span>
+        Status:{" "}
+        <span className="font-medium text-[var(--ink)]">
+          {status === "ACTIVE"
+            ? "Connected"
+            : status === "FAILED"
+              ? "Needs attention"
+              : "Waiting to connect"}
+        </span>
       </p>
       <div className="mt-3 flex gap-2">
         <Button
@@ -145,7 +152,7 @@ export function CustomDomainActivate({
             });
           }}
         >
-          Mark active
+          Mark as connected
         </Button>
         {status === "ACTIVE" ? (
           <Button
@@ -161,7 +168,7 @@ export function CustomDomainActivate({
                   toast(result.error, "error");
                   return;
                 }
-                toast("Domain set back to pending", "success");
+                toast("Website address disconnected", "success");
               });
             }}
           >

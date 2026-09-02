@@ -24,7 +24,7 @@ I built **BookFlow AI** — a multi-tenant booking and operations platform for b
 **Try it**
 
 - App: https://bookflow-ai-isga.vercel.app
-- Book a demo appointment: https://bookflow-ai-isga.vercel.app/book/bookflow
+- Book a demo appointment: https://bookflow-ai-isga.vercel.app/book/bookflow-demo
 
 If you run a service business — or you build for ones — I’m looking for [pilot shops / freelance clients / feedback]. Happy to do a 20-minute walkthrough.
 

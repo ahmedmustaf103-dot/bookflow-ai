@@ -1,7 +1,7 @@
 export const TOUR_DONE_VALUE = "1";
 
-export function bookingTourStorageKey() {
-  return "bf_tour_booking_v1";
+export function bookingTourStorageKey(orgId?: string) {
+  return orgId ? `bf_tour_booking_v1_${orgId}` : "bf_tour_booking_v1";
 }
 
 export function ownerTourStorageKey(orgId: string) {

@@ -6,7 +6,7 @@
 
 **Product:** BookFlow AI — multi-tenant booking and operations platform for service businesses.  
 **Live:** https://bookflow-ai-isga.vercel.app  
-**Demo booking:** https://bookflow-ai-isga.vercel.app/book/bookflow  
+**Demo booking:** https://bookflow-ai-isga.vercel.app/book/bookflow-demo  
 **Role:** Solo builder / full-stack engineer  
 **Stack:** Next.js 15, React 19, TypeScript, Prisma 7, PostgreSQL, Clerk, Stripe, Resend, Twilio, Vercel AI SDK, Upstash Redis
 

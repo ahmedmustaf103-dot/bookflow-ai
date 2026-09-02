@@ -17,6 +17,7 @@ import {
 } from "@/components/onboarding/dashboard-tour";
 import { Kbd } from "@/components/ui/kbd";
 import { ToastEventBridge, ToastProvider } from "@/components/ui/toast";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 
 export type NavItem = {
   href: string;
@@ -175,6 +176,17 @@ export function DashboardShell({
                 <Kbd>K</Kbd>
               </span>
             </button>
+            {tourKind !== "none" ? (
+              <button
+                type="button"
+                className="mb-3 flex min-h-11 w-full items-center rounded-[var(--radius-control)] px-2.5 py-1.5 text-xs text-[var(--ink-tertiary)] hover:bg-[var(--muted)] md:min-h-0"
+                onClick={() => {
+                  window.dispatchEvent(new Event("bookflow:restart-tour"));
+                }}
+              >
+                {onboardingCopy.common.showGuide}
+              </button>
+            ) : null}
             <div className="flex items-center gap-2 px-0.5">
               <UserButton />
               <span className="text-xs text-[var(--ink-tertiary)]">
@@ -220,6 +232,20 @@ export function DashboardShell({
                 pathname={pathname}
                 onNavigate={() => setOpen(false)}
               />
+              {tourKind !== "none" ? (
+                <div className="border-t border-[var(--border)] px-2 py-2">
+                  <button
+                    type="button"
+                    className="flex min-h-11 w-full items-center rounded-[var(--radius-control)] px-2.5 py-2 text-[15px] text-[var(--ink-secondary)] hover:bg-[var(--muted)]"
+                    onClick={() => {
+                      setOpen(false);
+                      window.dispatchEvent(new Event("bookflow:restart-tour"));
+                    }}
+                  >
+                    {onboardingCopy.common.showGuide}
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

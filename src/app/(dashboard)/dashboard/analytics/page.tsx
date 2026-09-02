@@ -204,7 +204,7 @@ export default async function AnalyticsPage() {
             <div>
               <h2 className="text-sm font-semibold">Staff insights</h2>
               <p className="mt-0.5 text-xs text-[var(--ink-tertiary)]">
-                Load and no-shows by resource
+                Load and no-shows by staff
               </p>
             </div>
             <Link
@@ -355,7 +355,7 @@ export default async function AnalyticsPage() {
               </span>
             </li>
             <li className="flex justify-between gap-3">
-              <span>Staff / resources</span>
+              <span>Staff</span>
               <span className="tabular-nums">
                 {resourceCount}
                 {limits.resources != null ? ` / ${limits.resources}` : " / ∞"}

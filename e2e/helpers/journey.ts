@@ -11,6 +11,17 @@ export function uniqueEmail(prefix = "jordan") {
   return `${prefix}+${Date.now()}@example.test`;
 }
 
+export async function dismissBookingTourIfPresent(page: Page) {
+  const skip = page.getByRole("button", { name: /^Skip$/ });
+  try {
+    await skip.waitFor({ state: "visible", timeout: 4000 });
+    await skip.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  } catch {
+    // First-time guide not shown (already completed in this browser).
+  }
+}
+
 export async function completePublicBooking(
   page: Page,
   input?: { email?: string; name?: string; marketingOptIn?: boolean },
@@ -22,27 +33,17 @@ export async function completePublicBooking(
   await expect(
     page.getByRole("heading", { name: TEST_ORG_NAME }),
   ).toBeVisible();
+  await dismissBookingTourIfPresent(page);
 
   const serviceGroup = page.getByRole("radiogroup", { name: "Service" });
-  if (await serviceGroup.isVisible().catch(() => false)) {
-    await serviceGroup
-      .getByRole("radio", { name: new RegExp(TEST_SERVICE_NAME) })
-      .click();
-  } else {
-    const serviceChip = page.getByRole("button", { name: /Service/i });
-    if (await serviceChip.isVisible().catch(() => false)) {
-      await serviceChip.click();
-      await page
-        .getByRole("radiogroup", { name: "Service" })
-        .getByRole("radio", { name: new RegExp(TEST_SERVICE_NAME) })
-        .click();
-    }
-  }
+  await expect(serviceGroup).toBeVisible();
+  await serviceGroup
+    .getByRole("radio", { name: new RegExp(TEST_SERVICE_NAME) })
+    .click();
 
   const staffGroup = page.getByRole("radiogroup", { name: "Staff" });
-  if (await staffGroup.isVisible().catch(() => false)) {
-    await staffGroup.getByRole("radio", { name: TEST_STAFF_NAME }).click();
-  }
+  await expect(staffGroup).toBeVisible();
+  await staffGroup.getByRole("radio", { name: TEST_STAFF_NAME }).click();
 
   const timeGroup = page.getByRole("radiogroup", { name: "Appointment time" });
   await expect(timeGroup).toBeVisible({ timeout: 20_000 });

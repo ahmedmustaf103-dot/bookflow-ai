@@ -20,7 +20,7 @@ Related: [OPERATOR.md](./OPERATOR.md) (cron, Resend, FAILED rows), [GOOGLE_CALEN
 12. **Test reminder** — See OPERATOR.md: either wait until `scheduledFor`, or move a **test** outbox row’s `scheduledFor` into the past and hit cron with `CRON_SECRET`.
 13. **Test cancellation** — Manage link in the confirmation email → cancel. Slot should free. Google event should disappear if connected.
 14. **Test rescheduling** — Manage link → new slot. Confirmation of the new time. Google event should move if connected.
-15. **Share the public booking link** — Copy from the dashboard. Do not share `/book/bookflow` unless that shop is the one you mean.
+15. **Share the public booking link** — Copy from the dashboard. The public demo is `/book/bookflow-demo` (Atelier Hale).
 
 ## Team logins
 

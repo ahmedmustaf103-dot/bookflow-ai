@@ -21,6 +21,7 @@ function memoryStorage(initial: Record<string, string> = {}) {
 describe("tour storage", () => {
   it("namespaces owner and staff keys per business", () => {
     expect(bookingTourStorageKey()).toBe("bf_tour_booking_v1");
+    expect(bookingTourStorageKey("org_1")).toBe("bf_tour_booking_v1_org_1");
     expect(ownerTourStorageKey("org_1")).toBe("bf_tour_owner_v1_org_1");
     expect(staffTourStorageKey("org_1")).toBe("bf_tour_staff_v1_org_1");
     expect(ownerTourStorageKey("org_1")).not.toBe(staffTourStorageKey("org_1"));

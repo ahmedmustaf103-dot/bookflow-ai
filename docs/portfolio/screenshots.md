@@ -11,8 +11,8 @@ Use a clean Chrome profile, 1440×900 or 1600×1000, light mode, hide bookmarks 
 | #   | Filename                   | URL                       | Notes                             |
 | --- | -------------------------- | ------------------------- | --------------------------------- |
 | 1   | `01-landing.png`           | `/`                       | Full first viewport — brand + CTA |
-| 2   | `02-booking-service.png`   | `/book/bookflow`          | Step 1 services                   |
-| 3   | `03-booking-time.png`      | `/book/bookflow`          | Step 3 with visible slots         |
+| 2   | `02-booking-service.png`   | `/book/bookflow-demo`     | Step 1 services                   |
+| 3   | `03-booking-time.png`      | `/book/bookflow-demo`     | Step 3 with visible slots         |
 | 4   | `04-booking-confirmed.png` | after submit              | Success state                     |
 | 5   | `05-dashboard.png`         | `/dashboard`              | Overview                          |
 | 6   | `06-appointments.png`      | `/dashboard/appointments` | Calendar/board with bookings      |

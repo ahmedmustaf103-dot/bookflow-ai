@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 import { TEST_MANAGE_TOKEN, TEST_ORG_SLUG } from "../src/test/constants";
+import { dismissBookingTourIfPresent } from "./helpers/journey";
 
 async function expectNoSeriousViolations(page: Page) {
   const results = await new AxeBuilder({ page })
@@ -33,6 +34,7 @@ test.describe("accessibility", () => {
     await expect(
       page.getByRole("heading", { name: "E2E Test Shop" }),
     ).toBeVisible();
+    await dismissBookingTourIfPresent(page);
     await expectNoSeriousViolations(page);
   });
 

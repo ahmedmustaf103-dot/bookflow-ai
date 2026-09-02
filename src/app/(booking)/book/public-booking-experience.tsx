@@ -23,10 +23,12 @@ export async function PublicBookingExperience({
           <img
             src={org.logoUrl}
             alt={org.name}
-            className="mb-4 h-10 w-auto object-contain"
+            className="mb-4 h-10 w-auto max-w-full object-contain"
           />
         ) : null}
-        <h1 className="text-xl font-semibold tracking-tight">{org.name}</h1>
+        <h1 className="text-xl font-semibold tracking-tight break-words">
+          {org.name}
+        </h1>
         <p className="mt-3 text-sm text-[var(--ink-secondary)]">
           Online booking is temporarily unavailable. Please contact the business
           directly.
@@ -68,37 +70,45 @@ export async function PublicBookingExperience({
 
   const resources = [...resourcesMap.values()];
   const theme = brandCssVars(org.brandPrimary) as CSSProperties;
+  const isDemo = isPublicDemoSlug(org.slug);
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]" style={theme}>
+    <div
+      className="min-h-screen overflow-x-hidden bg-[var(--bg)]"
+      style={theme}
+    >
       <div className="mx-auto max-w-xl px-4 py-10 sm:px-6 sm:py-14">
-        <header className="mb-8">
+        <header className="mb-8 min-w-0">
           {org.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={org.logoUrl}
               alt={org.name}
-              className="mb-4 h-12 w-auto max-w-[220px] object-contain"
+              className="mb-4 h-12 w-auto max-w-[min(220px,100%)] object-contain"
             />
           ) : (
             <p className="text-[11px] font-medium tracking-[0.14em] text-[var(--accent)] uppercase">
               Online booking
             </p>
           )}
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink)] sm:text-3xl">
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight break-words text-[var(--ink)] sm:text-3xl">
             {org.name}
           </h1>
-          <p className="mt-2 text-sm text-[var(--ink-secondary)]">
-            Pick a service, choose who you&apos;d like, and confirm a time.
-          </p>
-          {isPublicDemoSlug(org.slug) ? (
-            <p className="mt-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)]/60 px-3 py-2 text-sm text-[var(--ink-secondary)]">
-              <span className="font-medium text-[var(--ink)]">
-                {onboardingCopy.demoBanner.title}.
-              </span>{" "}
-              {onboardingCopy.demoBanner.body}
+          {isDemo ? (
+            <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)]/60 px-3 py-3 text-sm text-[var(--ink-secondary)]">
+              <p className="font-medium text-[var(--ink)]">
+                {onboardingCopy.demoIntro.kicker}
+              </p>
+              <p className="mt-1">{onboardingCopy.demoIntro.body}</p>
+              <p className="mt-2 text-xs leading-relaxed text-[var(--ink-tertiary)]">
+                {onboardingCopy.demoIntro.path}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-[var(--ink-secondary)]">
+              {onboardingCopy.bookingPage.intro}
             </p>
-          ) : null}
+          )}
         </header>
 
         {services.length === 0 ? (
@@ -109,7 +119,7 @@ export async function PublicBookingExperience({
           <PublicBookingWizard
             organizationId={org.id}
             organizationName={org.name}
-            guidedTour={isPublicDemoSlug(org.slug)}
+            isDemo={isDemo}
             services={services.map((s) => ({
               id: s.id,
               name: s.name,

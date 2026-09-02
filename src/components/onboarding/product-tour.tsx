@@ -65,12 +65,16 @@ export function ProductTour({
   storageKey,
   steps,
   enabled,
+  persist = true,
+  restartKey = 0,
   onStepChange,
   onDismiss,
 }: {
   storageKey: string;
   steps: readonly ProductTourStep[];
   enabled: boolean;
+  persist?: boolean;
+  restartKey?: number;
   onStepChange?: (index: number) => void;
   onDismiss?: () => void;
 }) {
@@ -86,18 +90,27 @@ export function ProductTour({
   const [tooltipPos, setTooltipPos] = useState({ top: 80, left: 16 });
 
   const finish = useCallback(() => {
-    markTourCompleted(storageKey, browserStorage());
+    if (persist) {
+      markTourCompleted(storageKey, browserStorage());
+    }
     setOpen(false);
     onDismiss?.();
-  }, [onDismiss, storageKey]);
+  }, [onDismiss, persist, storageKey]);
 
   useEffect(() => {
     setMounted(true);
-    if (!enabled) return;
-    if (isTourCompleted(storageKey, browserStorage())) return;
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !enabled) return;
+    const alreadyDone =
+      persist &&
+      restartKey === 0 &&
+      isTourCompleted(storageKey, browserStorage());
+    if (alreadyDone) return;
     setOpen(true);
     setIndex(0);
-  }, [enabled, storageKey]);
+  }, [enabled, mounted, persist, restartKey, storageKey]);
 
   useEffect(() => {
     if (!open) return;
@@ -188,8 +201,31 @@ export function ProductTour({
     if (hole) {
       const below = hole.top + hole.height + TOOLTIP_GAP;
       const above = hole.top - th - TOOLTIP_GAP;
-      top = below + th + VIEW_PAD <= vh ? below : Math.max(VIEW_PAD, above);
+      const belowFits = below + th + VIEW_PAD <= vh;
+      const aboveFits = above >= VIEW_PAD;
+      const preferAbove = hole.top + hole.height / 2 > vh * 0.55;
+      if (preferAbove && aboveFits) {
+        top = above;
+      } else if (belowFits) {
+        top = below;
+      } else if (aboveFits) {
+        top = above;
+      } else {
+        top = VIEW_PAD;
+      }
       left = hole.left + hole.width / 2 - tw / 2;
+      const overlaps = (tipTop: number, tipLeft: number) =>
+        tipTop < hole.top + hole.height &&
+        tipTop + th > hole.top &&
+        tipLeft < hole.left + hole.width &&
+        tipLeft + tw > hole.left;
+      if (overlaps(top, left)) {
+        const candidates = [above, below, VIEW_PAD, vh - th - VIEW_PAD].filter(
+          (y) => y >= VIEW_PAD && y + th + VIEW_PAD <= vh + 0.5,
+        );
+        const next = candidates.find((y) => !overlaps(y, left));
+        top = next ?? VIEW_PAD;
+      }
     } else {
       top = Math.max(VIEW_PAD, (vh - th) / 2);
       left = Math.max(VIEW_PAD, (vw - tw) / 2);
@@ -311,7 +347,7 @@ export function ProductTour({
             size="sm"
             className="min-h-11 sm:h-8"
             onClick={finish}
-            aria-label={copy.close}
+            aria-label={copy.skip}
           >
             {copy.skip}
           </Button>
