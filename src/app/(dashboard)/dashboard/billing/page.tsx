@@ -2,8 +2,10 @@ import {
   openBillingPortalAction,
   startCheckoutAction,
 } from "@/server/actions/booking";
+import { DemoUnavailable } from "@/components/dashboard/demo-unavailable";
 import { getStripe } from "@/server/billing/stripe";
 import { env } from "@/lib/env";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 import { db } from "@/server/db";
 import { requireOrgRole } from "@/server/tenant/context";
 import { Button } from "@/components/ui/button";
@@ -64,6 +66,10 @@ export default async function BillingPage({
         </Surface>
       ) : null}
 
+      {ctx.isDemo ? (
+        <DemoUnavailable title={onboardingCopy.tryDemo.unavailableBilling} />
+      ) : null}
+
       {params.success ? (
         <Surface className="border-[var(--accent)] bg-[var(--accent-soft)]">
           <p className="text-sm text-[var(--ink)]">
@@ -79,7 +85,7 @@ export default async function BillingPage({
         </Surface>
       ) : null}
 
-      {!stripeReady ? (
+      {ctx.isDemo ? null : !stripeReady ? (
         <p className="text-sm text-[var(--ink-tertiary)]">
           Online billing isn’t set up on this BookFlow account yet. You can
           still use the app on your current plan.

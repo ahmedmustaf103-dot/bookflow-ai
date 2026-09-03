@@ -1,12 +1,16 @@
+import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 
 import { AppClerkProvider } from "@/components/providers/clerk-provider";
+import { clerkKeysArePlaceholders } from "@/lib/clerk-placeholders";
+import { getOptionalClerkUserId } from "@/server/auth/clerk-id";
 import {
   DashboardShell,
   type NavItem,
 } from "@/components/dashboard/dashboard-shell";
 import type { DashboardTourKind } from "@/components/onboarding/dashboard-tour";
 import { getActiveOrganization } from "@/server/tenant/context";
+import { isDemoGuest } from "@/server/demo/session";
 import { getVerticalPack } from "@/server/verticals/packs";
 import type { MembershipRole } from "@/generated/prisma/client";
 
@@ -22,7 +26,13 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await auth.protect();
+  const userId = await getOptionalClerkUserId();
+  if (!userId && !(await isDemoGuest())) {
+    if (clerkKeysArePlaceholders()) {
+      redirect("/sign-in");
+    }
+    await auth.protect();
+  }
 
   const ctx = await getActiveOrganization();
   const pack = getVerticalPack(
@@ -140,6 +150,7 @@ export default async function DashboardLayout({
         orgs={orgs}
         nav={nav}
         tourKind={tourKind}
+        isDemo={ctx.isDemo}
       >
         {children}
       </DashboardShell>

@@ -2,12 +2,32 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { clerkKeysArePlaceholders } from "@/lib/clerk-placeholders";
+import {
+  DEMO_COOKIE_NAME,
+  demoCookieSecure,
+  demoSigningSecret,
+  verifyDemoToken,
+} from "@/lib/demo/token";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/onboarding(.*)",
   "/invite(.*)",
 ]);
+
+async function hasValidDemoCookie(req: NextRequest) {
+  return verifyDemoToken(
+    demoSigningSecret(),
+    req.cookies.get(DEMO_COOKIE_NAME)?.value,
+  );
+}
+
+async function allowDemoDashboard(req: NextRequest) {
+  return (
+    req.nextUrl.pathname.startsWith("/dashboard") &&
+    (await hasValidDemoCookie(req))
+  );
+}
 
 function appHostname() {
   try {
@@ -22,6 +42,7 @@ function appHostname() {
 function shouldSkipHostRewrite(pathname: string) {
   return (
     pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/demo") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/sign-") ||
     pathname.startsWith("/onboarding") ||
@@ -29,6 +50,17 @@ function shouldSkipHostRewrite(pathname: string) {
     pathname.startsWith("/book/manage") ||
     pathname.startsWith("/_next")
   );
+}
+
+function clearDemoCookie(res: NextResponse) {
+  res.cookies.set(DEMO_COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: demoCookieSecure(),
+    maxAge: 0,
+  });
+  return res;
 }
 
 function applyCustomDomainRewrite(req: NextRequest) {
@@ -52,8 +84,8 @@ function applyCustomDomainRewrite(req: NextRequest) {
   return undefined;
 }
 
-function isolatedTestMiddleware(req: NextRequest) {
-  if (isProtectedRoute(req)) {
+async function isolatedTestMiddleware(req: NextRequest) {
+  if (isProtectedRoute(req) && !(await allowDemoDashboard(req))) {
     const signIn = new URL("/sign-in", req.url);
     signIn.searchParams.set(
       "redirect_url",
@@ -67,10 +99,22 @@ function isolatedTestMiddleware(req: NextRequest) {
 export default clerkKeysArePlaceholders()
   ? isolatedTestMiddleware
   : clerkMiddleware(async (auth, req) => {
+      const { userId } = await auth();
+      let res: NextResponse;
       if (isProtectedRoute(req)) {
-        await auth.protect();
+        if (!userId && (await allowDemoDashboard(req))) {
+          res = applyCustomDomainRewrite(req) ?? NextResponse.next();
+        } else {
+          await auth.protect();
+          res = applyCustomDomainRewrite(req) ?? NextResponse.next();
+        }
+      } else {
+        res = applyCustomDomainRewrite(req) ?? NextResponse.next();
       }
-      return applyCustomDomainRewrite(req);
+      if (userId && req.cookies.get(DEMO_COOKIE_NAME)) {
+        return clearDemoCookie(res);
+      }
+      return res;
     });
 
 export const config = {

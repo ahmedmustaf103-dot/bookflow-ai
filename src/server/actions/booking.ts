@@ -26,6 +26,8 @@ import {
   assertStaffCanAccessResource,
 } from "@/server/staff/scope";
 import { getActiveOrganization } from "@/server/tenant/context";
+import { rejectIfDemo } from "@/server/demo/guard";
+import { isDemoGuest } from "@/server/demo/session";
 import {
   checkoutSchema,
   dashboardBookingSchema,
@@ -88,6 +90,8 @@ export async function createPublicBookingAction(
 export async function createDashboardBookingAction(
   formData: FormData,
 ): Promise<ActionResult<{ bookingId: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
     return err("No organization selected");
@@ -228,6 +232,8 @@ export async function fetchDashboardSlotsAction(input: {
 export async function transitionBookingAction(
   formData: FormData,
 ): Promise<ActionResult> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
     return err("No organization selected");
@@ -273,6 +279,8 @@ export async function transitionBookingAction(
 export async function rescheduleBookingAction(
   formData: FormData,
 ): Promise<ActionResult<{ bookingId: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
     return err("No organization selected");
@@ -318,6 +326,9 @@ export async function rescheduleBookingAction(
 }
 
 export async function startCheckoutAction(formData: FormData): Promise<void> {
+  if (await isDemoGuest()) {
+    redirect("/dashboard/billing");
+  }
   const ctx = await getActiveOrganization();
   if (!ctx.organization) {
     throw new Error("No organization");
@@ -364,6 +375,9 @@ export async function startCheckoutAction(formData: FormData): Promise<void> {
 }
 
 export async function openBillingPortalAction(): Promise<void> {
+  if (await isDemoGuest()) {
+    redirect("/dashboard/billing");
+  }
   const ctx = await getActiveOrganization();
   if (!ctx.organization) {
     throw new Error("No organization");

@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 
 import type { MembershipRole } from "@/generated/prisma/client";
 import { db } from "@/server/db";
+import { getOptionalClerkUserId } from "@/server/auth/clerk-id";
 import { getMembershipsForUser, requireDbUser } from "@/server/auth/session";
+import { isDemoGuest, loadDemoGuestContext } from "@/server/demo/session";
 import { tenantDb } from "@/server/db/tenant";
 
 const ROLE_RANK: Record<MembershipRole, number> = {
@@ -18,11 +20,31 @@ const ROLE_RANK: Record<MembershipRole, number> = {
 export const ORG_COOKIE = "bf_org_id";
 
 export async function getActiveOrganization() {
+  const userId = await getOptionalClerkUserId();
+
+  if (!userId) {
+    const demo = await loadDemoGuestContext();
+    if (demo) return demo;
+    return {
+      isDemo: false as const,
+      user: null,
+      memberships: [],
+      organization: null,
+      membership: null,
+    };
+  }
+
   const user = await requireDbUser();
   const memberships = await getMembershipsForUser(user.id);
 
   if (memberships.length === 0) {
-    return { user, memberships, organization: null, membership: null };
+    return {
+      isDemo: false as const,
+      user,
+      memberships,
+      organization: null,
+      membership: null,
+    };
   }
 
   const jar = await cookies();
@@ -32,6 +54,7 @@ export async function getActiveOrganization() {
     memberships.find((m) => m.organizationId === preferredId) ?? memberships[0];
 
   return {
+    isDemo: false as const,
     user,
     memberships,
     organization: selected.organization,
@@ -41,11 +64,15 @@ export async function getActiveOrganization() {
 
 export async function requireOrgOrRedirect() {
   const ctx = await getActiveOrganization();
-  if (!ctx.organization || !ctx.membership) {
+  if (!ctx.organization || !ctx.membership || !ctx.user) {
+    if (ctx.isDemo || (await isDemoGuest())) redirect("/demo");
+    if (!ctx.user) redirect("/sign-in");
     redirect("/onboarding");
   }
   return {
     ...ctx,
+    isDemo: ctx.isDemo,
+    user: ctx.user,
     organization: ctx.organization,
     membership: ctx.membership,
     db: tenantDb(ctx.organization.id),

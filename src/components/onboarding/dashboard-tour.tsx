@@ -14,9 +14,11 @@ export type DashboardTourKind = "owner" | "staff" | "none";
 export function DashboardTour({
   kind,
   orgId,
+  persist = true,
 }: {
   kind: DashboardTourKind;
   orgId: string | null;
+  persist?: boolean;
 }) {
   const [restartKey, setRestartKey] = useState(0);
 
@@ -38,6 +40,7 @@ export function DashboardTour({
         storageKey={ownerTourStorageKey(orgId)}
         steps={onboardingCopy.ownerTour.steps}
         enabled
+        persist={persist}
         restartKey={restartKey}
       />
     );
@@ -48,6 +51,7 @@ export function DashboardTour({
       storageKey={staffTourStorageKey(orgId)}
       steps={onboardingCopy.staffTour.steps}
       enabled
+      persist={persist}
       restartKey={restartKey}
     />
   );

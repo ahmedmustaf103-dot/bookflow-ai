@@ -29,6 +29,30 @@ const en = {
     showGuide: "How it works",
     stepOf: (current: number, total: number) => `Step ${current} of ${total}`,
   },
+  tryDemo: {
+    nav: "Try the Demo",
+    kicker: "Explore BookFlow as a real business owner.",
+    title: "Explore the BookFlow demo",
+    body: "You can explore a sample business and see how BookFlow works. No setup required.",
+    continue: "Continue to Demo",
+    book: "Try a booking",
+    unavailable: "This feature is unavailable in the demo.",
+    missingShop: "The sample business isn’t available right now. Try a booking instead.",
+    signedInTitle: "You’re already signed in",
+    signedInBody:
+      "The sample business is for visitors who aren’t signed in, so it never mixes with your real shop. Open a private window to try the demo, or go to your dashboard.",
+    dashboard: "Go to dashboard",
+    bannerTitle: "Demo mode",
+    bannerBody:
+      "You’re exploring a sample business. Your changes won’t affect a real business.",
+    exit: "Exit Demo",
+    backHome: "Back to BookFlow",
+    unavailableBilling: "Billing is unavailable in the demo.",
+    unavailableGoogle: "Google Calendar connection is unavailable in the demo.",
+    unavailableTeam: "Inviting people is unavailable in the demo.",
+    unavailableAi: "AI is unavailable in the demo.",
+    unavailableEdit: "Editing is unavailable in the demo.",
+  },
   demoIntro: {
     kicker: "Try a booking yourself",
     body: "See how a customer books an appointment with your business.",
@@ -92,8 +116,8 @@ const en = {
         body: "Drafts and summaries when you want them, with clear plan limits.",
       },
     ],
-    ctaHeading: "Try a booking yourself",
-    ctaBody: "See how a customer books — then start your own business free.",
+    ctaHeading: "See BookFlow for yourself",
+    ctaBody: "Explore a sample shop, or try a booking as a customer.",
   },
   bookingTour: {
     steps: [

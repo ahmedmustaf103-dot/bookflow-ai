@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/forms/action-form";
+import { DemoUnavailable } from "@/components/dashboard/demo-unavailable";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
@@ -18,9 +19,11 @@ import {
 } from "@/server/team/roles";
 import { inviteAcceptUrl } from "@/server/team/team";
 import { requireOrgRole } from "@/server/tenant/context";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 
 export default async function TeamSettingsPage() {
   const ctx = await requireOrgRole("ADMIN");
+  const readOnly = ctx.isDemo;
   const actorRole = ctx.membership.role;
   const assignable = INVITEABLE_ROLES.filter((role) =>
     canAssignInviteRole(actorRole, role),
@@ -114,7 +117,7 @@ export default async function TeamSettingsPage() {
                     <span className="inline-flex items-center rounded-md bg-[var(--muted)] px-2 py-0.5 text-[11px] font-medium tracking-wide text-[var(--ink-secondary)] uppercase">
                       {m.role}
                     </span>
-                    {chairs.length === 0 && m.role !== "VIEWER" ? (
+                    {chairs.length === 0 && m.role !== "VIEWER" && !readOnly ? (
                       <ActionForm
                         action={provisionChairForMemberAction}
                         submitLabel="Add to booking"
@@ -127,7 +130,8 @@ export default async function TeamSettingsPage() {
                         <input type="hidden" name="membershipId" value={m.id} />
                       </ActionForm>
                     ) : null}
-                    {canRemoveTeamMember(
+                    {!readOnly &&
+                    canRemoveTeamMember(
                       actorRole,
                       m.role,
                       ctx.user.id,
@@ -184,24 +188,29 @@ export default async function TeamSettingsPage() {
                     {inviteAcceptUrl(invite.token)}
                   </p>
                 </div>
-                <ActionForm
-                  action={revokeInviteAction}
-                  submitLabel="Revoke"
-                  successMessage="Invite revoked"
-                  resetOnSuccess={false}
-                  className="flex items-center"
-                >
-                  <input type="hidden" name="inviteId" value={invite.id} />
-                </ActionForm>
+                {!readOnly ? (
+                  <ActionForm
+                    action={revokeInviteAction}
+                    submitLabel="Revoke"
+                    successMessage="Invite revoked"
+                    resetOnSuccess={false}
+                    className="flex items-center"
+                  >
+                    <input type="hidden" name="inviteId" value={invite.id} />
+                  </ActionForm>
+                ) : null}
               </li>
             ))}
           </ul>
         )}
       </Surface>
 
-      <Surface className="max-w-lg">
-        <h2 className="text-sm font-semibold">Invite member</h2>
-        <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
+      {readOnly ? (
+        <DemoUnavailable title={onboardingCopy.tryDemo.unavailableTeam} />
+      ) : (
+        <Surface className="max-w-lg">
+          <h2 className="text-sm font-semibold">Invite member</h2>
+          <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
           Staff and admin invites create a bookable person (hours + your
           services) so they show on booking, Staff, Hours, Calendar, and
           insights. Pick an existing staff member only if they should share that
@@ -258,7 +267,8 @@ export default async function TeamSettingsPage() {
             </div>
           </ActionForm>
         )}
-      </Surface>
+        </Surface>
+      )}
     </div>
   );
 }

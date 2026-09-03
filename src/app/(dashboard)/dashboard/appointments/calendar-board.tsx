@@ -89,6 +89,7 @@ export function CalendarBoard({
   resources,
   bookings,
   newAppointmentHref = "/dashboard/appointments/new",
+  readOnly = false,
 }: {
   day: string;
   view: View;
@@ -97,6 +98,7 @@ export function CalendarBoard({
   resources: Array<{ id: string; name: string }>;
   bookings: CalendarBooking[];
   newAppointmentHref?: string;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -124,7 +126,7 @@ export function CalendarBoard({
   }
 
   function onDropToSlot(dateStr: string, minuteOfDay: number) {
-    if (!draggingId) return;
+    if (readOnly || !draggingId) return;
     const booking = bookings.find((b) => b.id === draggingId);
     if (!booking || !canDrag(booking.status)) return;
 
@@ -157,6 +159,7 @@ export function CalendarBoard({
     dateStr: string,
     timeStr: string,
   ) {
+    if (readOnly) return;
     const [h, m] = timeStr.split(":").map(Number);
     const minuteOfDay = (h ?? 0) * 60 + (m ?? 0);
     const snapped = Math.round(minuteOfDay / SNAP_MIN) * SNAP_MIN;
@@ -335,6 +338,7 @@ export function CalendarBoard({
           selectedId={selectedId}
           onSelect={setSelectedId}
           newAppointmentHref={newAppointmentHref}
+          readOnly={readOnly}
         />
         {selected ? (
           <BookingDetail
@@ -343,14 +347,17 @@ export function CalendarBoard({
             onClose={() => setSelectedId(null)}
             onReschedule={onReschedule}
             showDragHint={false}
+            readOnly={readOnly}
           />
         ) : null}
-        <ButtonLink
-          href={newAppointmentHref}
-          className="min-h-12 w-full text-base"
-        >
-          Walk-in / new appointment
-        </ButtonLink>
+        {!readOnly ? (
+          <ButtonLink
+            href={newAppointmentHref}
+            className="min-h-12 w-full text-base"
+          >
+            Walk-in / new appointment
+          </ButtonLink>
+        ) : null}
       </div>
 
       <div className="hidden md:block">
@@ -375,6 +382,7 @@ export function CalendarBoard({
             onDragStart={setDraggingId}
             onDropToSlot={onDropToSlot}
             compact
+            allowDrag={!readOnly}
           />
         ) : (
           <TimeGrid
@@ -387,6 +395,7 @@ export function CalendarBoard({
             onSelect={setSelectedId}
             onDragStart={setDraggingId}
             onDropToSlot={onDropToSlot}
+            allowDrag={!readOnly}
           />
         )}
         {selected ? (
@@ -396,7 +405,8 @@ export function CalendarBoard({
               pending={pending}
               onClose={() => setSelectedId(null)}
               onReschedule={onReschedule}
-              showDragHint={canDrag(selected.status)}
+              showDragHint={!readOnly && canDrag(selected.status)}
+              readOnly={readOnly}
             />
           </div>
         ) : null}
@@ -473,6 +483,7 @@ function DayAgenda({
   selectedId,
   onSelect,
   newAppointmentHref,
+  readOnly = false,
 }: {
   day: string;
   timezone: string;
@@ -480,6 +491,7 @@ function DayAgenda({
   selectedId: string | null;
   onSelect: (id: string) => void;
   newAppointmentHref: string;
+  readOnly?: boolean;
 }) {
   const now = Date.now();
   const nextUp = bookings.find((b) => new Date(b.endAt).getTime() > now);
@@ -499,15 +511,19 @@ function DayAgenda({
         <div className="px-4 py-8 text-center">
           <p className="text-sm font-medium">Nothing booked this day</p>
           <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-            Add a walk-in or share the booking page.
+            {readOnly
+              ? "No appointments on this day."
+              : "Add a walk-in or share the booking page."}
           </p>
-          <ButtonLink
-            href={newAppointmentHref}
-            size="sm"
-            className="mt-4 min-h-11"
-          >
-            New appointment
-          </ButtonLink>
+          {!readOnly ? (
+            <ButtonLink
+              href={newAppointmentHref}
+              size="sm"
+              className="mt-4 min-h-11"
+            >
+              New appointment
+            </ButtonLink>
+          ) : null}
         </div>
       ) : (
         <ul className="divide-y divide-[var(--border)]">
@@ -568,6 +584,7 @@ function BookingDetail({
   onClose,
   onReschedule,
   showDragHint,
+  readOnly = false,
 }: {
   booking: CalendarBooking;
   pending: boolean;
@@ -578,6 +595,7 @@ function BookingDetail({
     timeStr: string,
   ) => void;
   showDragHint: boolean;
+  readOnly?: boolean;
 }) {
   const tz = booking.timezone;
   const dateValue = formatInTimeZone(
@@ -609,14 +627,16 @@ function BookingDetail({
         <StatusPill status={booking.status} />
       </div>
 
-      <div className="mt-4">
-        <AppointmentActions
-          bookingId={booking.id}
-          status={booking.status as BookingStatus}
-        />
-      </div>
+      {!readOnly ? (
+        <div className="mt-4">
+          <AppointmentActions
+            bookingId={booking.id}
+            status={booking.status as BookingStatus}
+          />
+        </div>
+      ) : null}
 
-      {canDrag(booking.status) ? (
+      {!readOnly && canDrag(booking.status) ? (
         <form
           className="mt-4 flex flex-col gap-3 border-t border-[var(--border)] pt-4"
           onSubmit={(e) => {
@@ -697,6 +717,7 @@ function TimeGrid({
   onDragStart,
   onDropToSlot,
   compact,
+  allowDrag = true,
 }: {
   days: Date[];
   hours: number[];
@@ -708,6 +729,7 @@ function TimeGrid({
   onDragStart: (id: string | null) => void;
   onDropToSlot: (dateStr: string, minuteOfDay: number) => void;
   compact?: boolean;
+  allowDrag?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-[var(--radius-panel)] border border-[var(--border)] bg-[var(--surface)]">
@@ -784,7 +806,7 @@ function TimeGrid({
                 const top = (startMin - HOUR_START * 60) * PX_PER_MIN;
                 const height = Math.max((endMin - startMin) * PX_PER_MIN, 22);
                 const selected = selectedId === b.id;
-                const draggable = canDrag(b.status);
+                const draggable = allowDrag && canDrag(b.status);
                 return (
                   <button
                     key={b.id}

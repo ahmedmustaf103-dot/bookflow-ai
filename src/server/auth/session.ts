@@ -4,6 +4,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 
 import type { MembershipRole } from "@/generated/prisma/client";
 import { db } from "@/server/db";
+import { loadDemoGuestContext } from "@/server/demo/session";
 import { upsertUserFromClerk } from "@/server/users/sync";
 
 const ROLE_RANK: Record<MembershipRole, number> = {
@@ -60,6 +61,21 @@ export async function requireMembership(
   organizationId: string,
   minRole: MembershipRole = "VIEWER",
 ) {
+  const demo = await loadDemoGuestContext();
+  if (demo) {
+    if (demo.organization.id !== organizationId) {
+      throw new Error("Forbidden");
+    }
+    if (ROLE_RANK.OWNER < ROLE_RANK[minRole]) {
+      throw new Error("Forbidden");
+    }
+    return {
+      user: demo.user,
+      membership: demo.membership,
+      organization: demo.organization,
+    };
+  }
+
   const user = await requireDbUser();
 
   const membership = await db.membership.findUnique({

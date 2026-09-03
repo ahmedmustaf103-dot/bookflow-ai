@@ -17,6 +17,7 @@ import {
   resolveStaffResourceScope,
 } from "@/server/staff/scope";
 import { getActiveOrganization } from "@/server/tenant/context";
+import { rejectIfDemo } from "@/server/demo/guard";
 import {
   activateCustomDomainSchema,
   createManualClientSchema,
@@ -29,6 +30,8 @@ import {
 export async function updateClientAction(
   formData: FormData,
 ): Promise<ActionResult> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership)
     return err("No organization selected");
@@ -106,6 +109,8 @@ export async function updateClientAction(
 export async function updateOrganizationSettingsAction(
   formData: FormData,
 ): Promise<ActionResult> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
@@ -188,6 +193,8 @@ export async function updateOrganizationSettingsAction(
 export async function uploadBrandAssetAction(
   formData: FormData,
 ): Promise<ActionResult<{ url: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
@@ -234,6 +241,8 @@ export async function uploadBrandAssetAction(
 export async function clearBrandAssetAction(
   formData: FormData,
 ): Promise<ActionResult> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
@@ -258,6 +267,8 @@ export async function clearBrandAssetAction(
 export async function activateCustomDomainAction(
   formData: FormData,
 ): Promise<ActionResult> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
@@ -302,6 +313,8 @@ export async function activateCustomDomainAction(
 export async function createManualClientAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "STAFF");

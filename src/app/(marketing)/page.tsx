@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { ButtonLink } from "@/components/ui/button";
 import { onboardingCopy } from "@/lib/onboarding/copy";
 
@@ -104,20 +106,28 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink
-                href="/sign-up"
+                href="/demo"
                 variant="secondary"
                 className="h-11 border-0 bg-white px-5 !text-zinc-900 hover:bg-zinc-100 hover:!text-zinc-900"
               >
-                Start free
+                {onboardingCopy.tryDemo.nav}
               </ButtonLink>
               <ButtonLink
-                href="/book/bookflow-demo"
+                href="/sign-up"
                 variant="ghost"
                 className="h-11 px-5 text-white hover:bg-white/10 hover:text-white"
               >
-                Try live booking
+                Start free
               </ButtonLink>
             </div>
+            <p className="mt-4 text-sm text-white/70">
+              <Link
+                href="/book/bookflow-demo"
+                className="underline underline-offset-4"
+              >
+                Or try a booking as a customer
+              </Link>
+            </p>
           </div>
           <div className="bf-marketing-hero-visual px-2 sm:px-6 lg:px-0">
             <BookingPreview />
@@ -202,11 +212,11 @@ export default function HomePage() {
           </div>
           <div className="flex flex-wrap gap-3">
             <ButtonLink
-              href="/book/bookflow-demo"
+              href="/demo"
               variant="secondary"
               className="h-11 border-0 bg-white px-5 !text-zinc-900 hover:bg-zinc-100 hover:!text-zinc-900"
             >
-              Open demo booking
+              {onboardingCopy.tryDemo.nav}
             </ButtonLink>
             <ButtonLink
               href="/sign-up"

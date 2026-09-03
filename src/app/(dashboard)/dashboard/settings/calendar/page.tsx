@@ -1,6 +1,8 @@
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { DemoUnavailable } from "@/components/dashboard/demo-unavailable";
 import { GoogleCalendarCard } from "@/components/dashboard/google-calendar-card";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 import { db } from "@/server/db";
 import { isGoogleCalendarConfigured } from "@/server/integrations/google-calendar";
 import { requireOrgRole } from "@/server/tenant/context";
@@ -78,12 +80,16 @@ export default async function GoogleCalendarSettingsPage({
           ) : undefined
         }
       />
-      <GoogleCalendarCard
-        configured={configured}
-        status={gcal}
-        myConnection={myConnection}
-        teamConnections={isAdmin ? teamConnections : undefined}
-      />
+      {ctx.isDemo ? (
+        <DemoUnavailable title={onboardingCopy.tryDemo.unavailableGoogle} />
+      ) : (
+        <GoogleCalendarCard
+          configured={configured}
+          status={gcal}
+          myConnection={myConnection}
+          teamConnections={isAdmin ? teamConnections : undefined}
+        />
+      )}
     </div>
   );
 }

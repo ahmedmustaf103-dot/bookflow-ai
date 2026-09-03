@@ -19,6 +19,7 @@ function run(cmd, args) {
 }
 
 await run("node", ["scripts/test-db.mjs", "prepare"]);
+await run("npx", ["tsx", "scripts/seed-demo.ts"]);
 
 if (process.env.E2E_SKIP_BUILD !== "1") {
   await run("npx", ["next", "build"]);

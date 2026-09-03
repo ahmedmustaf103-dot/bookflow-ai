@@ -20,6 +20,8 @@ import {
   removeTeamMember,
   revokeOrganizationInvite,
 } from "@/server/team/team";
+import { rejectIfDemo } from "@/server/demo/guard";
+import { isDemoGuest } from "@/server/demo/session";
 import {
   getActiveOrganization,
   setActiveOrganizationId,
@@ -28,6 +30,8 @@ import {
 export async function inviteTeamMemberAction(
   formData: FormData,
 ): Promise<ActionResult<{ inviteId: string; acceptUrl: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
     return err("No organization selected");
@@ -76,6 +80,8 @@ function revalidateStaffSurfaces() {
 export async function removeTeamMemberAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
     return err("No organization selected");
@@ -98,6 +104,8 @@ export async function removeTeamMemberAction(
 export async function provisionChairForMemberAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
     return err("No organization selected");
@@ -120,6 +128,8 @@ export async function provisionChairForMemberAction(
 export async function revokeInviteAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
     return err("No organization selected");
@@ -142,6 +152,9 @@ export async function revokeInviteAction(
 }
 
 export async function acceptInviteAction(formData: FormData): Promise<void> {
+  if (await isDemoGuest()) {
+    redirect("/demo");
+  }
   const user = await requireDbUser();
   const parsed = parseForm(acceptInviteSchema, formData);
   const token = String(formData.get("token") ?? "");

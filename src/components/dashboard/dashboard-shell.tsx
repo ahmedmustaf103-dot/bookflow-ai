@@ -15,9 +15,11 @@ import {
   DashboardTour,
   type DashboardTourKind,
 } from "@/components/onboarding/dashboard-tour";
+import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { ToastEventBridge, ToastProvider } from "@/components/ui/toast";
 import { onboardingCopy } from "@/lib/onboarding/copy";
+import { exitDemoAction } from "@/server/actions/demo";
 
 export type NavItem = {
   href: string;
@@ -101,6 +103,7 @@ export function DashboardShell({
   orgs = [],
   nav,
   tourKind = "none",
+  isDemo = false,
   children,
 }: {
   orgName?: string | null;
@@ -108,6 +111,7 @@ export function DashboardShell({
   orgs?: DashboardOrgOption[];
   nav: NavItem[];
   tourKind?: DashboardTourKind;
+  isDemo?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -140,7 +144,7 @@ export function DashboardShell({
     <ToastProvider>
       <ToastEventBridge />
       <EnsureDemoShop
-        demoOrgId={demoOrgId}
+        demoOrgId={isDemo ? null : demoOrgId}
         currentOrgId={currentOrgId ?? null}
       />
       <div className="flex min-h-screen bg-[var(--bg)]">
@@ -154,7 +158,7 @@ export function DashboardShell({
               BookFlow AI
             </Link>
           </div>
-          {orgs.length > 0 ? (
+          {orgs.length > 0 && !isDemo ? (
             <OrgSwitcher orgs={orgs} currentOrgId={currentOrgId ?? null} />
           ) : orgName ? (
             <p className="truncate border-b border-[var(--border)] px-4 py-2.5 text-xs text-[var(--ink-tertiary)]">
@@ -188,10 +192,25 @@ export function DashboardShell({
               </button>
             ) : null}
             <div className="flex items-center gap-2 px-0.5">
-              <UserButton />
-              <span className="text-xs text-[var(--ink-tertiary)]">
-                Account
-              </span>
+              {isDemo ? (
+                <form action={exitDemoAction} className="w-full">
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    size="sm"
+                    className="min-h-11 w-full sm:h-8"
+                  >
+                    {onboardingCopy.tryDemo.exit}
+                  </Button>
+                </form>
+              ) : (
+                <>
+                  <UserButton />
+                  <span className="text-xs text-[var(--ink-tertiary)]">
+                    Account
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </aside>
@@ -215,7 +234,20 @@ export function DashboardShell({
                   Menu
                 </button>
               ) : null}
-              <UserButton />
+              {isDemo ? (
+                <form action={exitDemoAction}>
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    size="sm"
+                    className="min-h-11"
+                  >
+                    {onboardingCopy.tryDemo.exit}
+                  </Button>
+                </form>
+              ) : (
+                <UserButton />
+              )}
             </div>
           </header>
 
@@ -224,7 +256,7 @@ export function DashboardShell({
               id="mobile-nav"
               className="border-b border-[var(--border)] bg-[var(--surface)] md:hidden"
             >
-              {orgs.length > 1 ? (
+              {orgs.length > 1 && !isDemo ? (
                 <OrgSwitcher orgs={orgs} currentOrgId={currentOrgId ?? null} />
               ) : null}
               <NavLinks
@@ -250,12 +282,26 @@ export function DashboardShell({
           ) : null}
 
           <main className="bf-page-enter mx-auto w-full max-w-[1200px] min-w-0 flex-1 px-4 py-5 sm:px-6 sm:py-6">
+            {isDemo ? (
+              <div className="mb-4 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--muted)]/70 px-3 py-2.5 sm:px-4">
+                <p className="text-[11px] font-semibold tracking-wide text-[var(--accent)] uppercase">
+                  {onboardingCopy.tryDemo.bannerTitle}
+                </p>
+                <p className="mt-0.5 text-sm text-[var(--ink-secondary)]">
+                  {onboardingCopy.tryDemo.bannerBody}
+                </p>
+              </div>
+            ) : null}
             {children}
           </main>
         </div>
 
         {nav.length > 0 ? <CommandPalette nav={flatNav} /> : null}
-        <DashboardTour kind={tourKind} orgId={currentOrgId ?? null} />
+        <DashboardTour
+          kind={tourKind}
+          orgId={currentOrgId ?? null}
+          persist={!isDemo}
+        />
       </div>
     </ToastProvider>
   );

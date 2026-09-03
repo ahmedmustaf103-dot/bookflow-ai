@@ -13,6 +13,7 @@ import { invalidateSlotsForResource } from "@/server/cache/slots";
 import { createOrganization } from "@/server/organizations/create";
 import { db } from "@/server/db";
 import { tenantDb } from "@/server/db/tenant";
+import { rejectIfDemo } from "@/server/demo/guard";
 import {
   getActiveOrganization,
   setActiveOrganizationId,
@@ -33,6 +34,8 @@ import {
 } from "@/server/catalog/catalog";
 
 export async function createOrganizationAction(formData: FormData) {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const parsed = parseForm(createOrganizationSchema, formData);
   if (!parsed.ok) return err(parsed.error);
 
@@ -46,6 +49,8 @@ export async function createOrganizationAction(formData: FormData) {
 export async function switchOrganizationAction(
   organizationId: string,
 ): Promise<ActionResult> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   await requireMembership(organizationId, "VIEWER");
   await setActiveOrganizationId(organizationId);
   revalidatePath("/dashboard");
@@ -55,6 +60,8 @@ export async function switchOrganizationAction(
 export async function createLocationAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization || !ctx.membership) {
     return err("No organization selected");
@@ -94,6 +101,8 @@ export async function createLocationAction(
 export async function createResourceAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
@@ -122,6 +131,8 @@ export async function createResourceAction(
 export async function createServiceAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
@@ -179,6 +190,8 @@ export async function createServiceAction(
 export async function updateServiceAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
@@ -217,6 +230,8 @@ export async function updateServiceAction(
 export async function updateResourceAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");
@@ -257,6 +272,8 @@ export async function updateResourceAction(
 export async function updateAvailabilityRulesAction(
   formData: FormData,
 ): Promise<ActionResult> {
+  const blocked = await rejectIfDemo();
+  if (blocked) return blocked;
   const ctx = await getActiveOrganization();
   if (!ctx.organization) return err("No organization selected");
   await requireMembership(ctx.organization.id, "ADMIN");

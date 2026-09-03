@@ -141,13 +141,15 @@ export default async function AppointmentsPage({
         actions={
           scope.all || scope.resourceIds.length > 0 ? (
             <>
-              <ButtonLink
-                href="/dashboard/appointments/new"
-                size="sm"
-                className="min-h-11 w-full sm:h-8 sm:w-auto"
-              >
-                New appointment
-              </ButtonLink>
+              {ctx.isDemo ? null : (
+                <ButtonLink
+                  href="/dashboard/appointments/new"
+                  size="sm"
+                  className="min-h-11 w-full sm:h-8 sm:w-auto"
+                >
+                  New appointment
+                </ButtonLink>
+              )}
               {scope.all ? (
                 <ButtonLink
                   href={`/book/${ctx.organization.slug}`}
@@ -177,6 +179,7 @@ export default async function AppointmentsPage({
           resources={resources}
           bookings={calendarBookings}
           newAppointmentHref="/dashboard/appointments/new"
+          readOnly={ctx.isDemo}
         />
       )}
     </div>

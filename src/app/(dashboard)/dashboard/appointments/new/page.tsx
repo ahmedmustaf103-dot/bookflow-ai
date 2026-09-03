@@ -1,10 +1,12 @@
 import { formatInTimeZone } from "date-fns-tz";
 
 import { NewAppointmentForm } from "./new-appointment-form";
+import { DemoUnavailable } from "@/components/dashboard/demo-unavailable";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Surface } from "@/components/ui/surface";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 import { resolveStaffResourceScope } from "@/server/staff/scope";
 import { requireOrgRole } from "@/server/tenant/context";
 
@@ -59,7 +61,9 @@ export default async function NewAppointmentPage() {
         }
       />
 
-      {bookableServices.length === 0 || staff.length === 0 ? (
+      {ctx.isDemo ? (
+        <DemoUnavailable title={onboardingCopy.tryDemo.unavailableEdit} />
+      ) : bookableServices.length === 0 || staff.length === 0 ? (
         <EmptyState
           title="Nothing to book yet"
           description={

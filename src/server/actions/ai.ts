@@ -19,6 +19,7 @@ import { parseAiDraftMessage } from "@/lib/ai-draft";
 import { db } from "@/server/db";
 import { writeAuditLog } from "@/server/billing/entitlements";
 import { getActiveOrganization } from "@/server/tenant/context";
+import { rejectIfDemo } from "@/server/demo/guard";
 import { assertRateLimit } from "@/server/rate-limit";
 import {
   bookingAssistantSchema,
@@ -48,6 +49,8 @@ export async function clientSummaryAction(
   formData: FormData,
 ): Promise<ActionResult<{ text: string; tokens: number }>> {
   try {
+    const blocked = await rejectIfDemo();
+    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
@@ -82,6 +85,8 @@ export async function messageDraftAction(
   formData: FormData,
 ): Promise<ActionResult<{ text: string; tokens: number }>> {
   try {
+    const blocked = await rejectIfDemo();
+    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
@@ -118,6 +123,8 @@ export async function insightDigestAction(
   formData: FormData,
 ): Promise<ActionResult<{ text: string; tokens: number }>> {
   try {
+    const blocked = await rejectIfDemo();
+    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
@@ -156,6 +163,8 @@ export async function bookingAssistantAction(formData: FormData): Promise<
   }>
 > {
   try {
+    const blocked = await rejectIfDemo();
+    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
@@ -200,6 +209,8 @@ export async function confirmAiBookingProposalAction(
   formData: FormData,
 ): Promise<ActionResult<{ bookingId: string }>> {
   try {
+    const blocked = await rejectIfDemo();
+    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
@@ -257,6 +268,8 @@ export async function sendAiDraftAction(
   formData: FormData,
 ): Promise<ActionResult<{ skipped: boolean }>> {
   try {
+    const blocked = await rejectIfDemo();
+    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");

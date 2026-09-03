@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireMembership } from "@/server/auth/session";
+import { isDemoGuest } from "@/server/demo/session";
 import {
   buildGoogleCalendarAuthUrl,
   isGoogleCalendarConfigured,
@@ -11,6 +12,9 @@ const calendarPath = "/dashboard/settings/calendar";
 
 export async function GET() {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  if (await isDemoGuest()) {
+    return NextResponse.redirect(new URL(calendarPath, base));
+  }
   if (!isGoogleCalendarConfigured()) {
     return NextResponse.redirect(
       new URL(`${calendarPath}?gcal=not_configured`, base),

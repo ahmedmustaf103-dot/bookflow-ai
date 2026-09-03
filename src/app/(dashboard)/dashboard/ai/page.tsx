@@ -1,5 +1,7 @@
 import { PageHeader } from "@/components/ui/page-header";
+import { DemoUnavailable } from "@/components/dashboard/demo-unavailable";
 import { AiWorkbench } from "./ai-workbench";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 import { getConfiguredProvider } from "@/server/ai/provider";
 import { getPlanLimits, planAllowsAi } from "@/server/billing/plans";
 import { requireOrgRole } from "@/server/tenant/context";
@@ -53,23 +55,27 @@ export default async function AiPage({
         description="Time-saving assists for staff: client briefs, message drafts, insights, and booking recommendations. AI never books or sends until you confirm."
       />
 
-      <AiWorkbench
-        clients={clients}
-        providerReady={Boolean(getConfiguredProvider())}
-        planAllowsAi={allowsAi}
-        planLabel={ctx.organization.plan}
-        tokensUsed={tokensUsed}
-        tokensLimit={limits.aiTokensPerMonth}
-        initialClientId={params.clientId}
-        initialIntent={params.intent}
-        recentRuns={recentRuns.map((r) => ({
-          id: r.id,
-          feature: r.feature,
-          createdAt: r.createdAt.toISOString(),
-          outputPreview: r.outputPreview,
-          tokens: r.tokensIn + r.tokensOut,
-        }))}
-      />
+      {ctx.isDemo ? (
+        <DemoUnavailable title={onboardingCopy.tryDemo.unavailableAi} />
+      ) : (
+        <AiWorkbench
+          clients={clients}
+          providerReady={Boolean(getConfiguredProvider())}
+          planAllowsAi={allowsAi}
+          planLabel={ctx.organization.plan}
+          tokensUsed={tokensUsed}
+          tokensLimit={limits.aiTokensPerMonth}
+          initialClientId={params.clientId}
+          initialIntent={params.intent}
+          recentRuns={recentRuns.map((r) => ({
+            id: r.id,
+            feature: r.feature,
+            createdAt: r.createdAt.toISOString(),
+            outputPreview: r.outputPreview,
+            tokens: r.tokensIn + r.tokensOut,
+          }))}
+        />
+      )}
     </div>
   );
 }

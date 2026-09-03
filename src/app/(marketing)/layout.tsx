@@ -5,6 +5,7 @@ import { Syne } from "next/font/google";
 import { AppClerkProvider } from "@/components/providers/clerk-provider";
 import { ButtonLink } from "@/components/ui/button";
 import { clerkPublishableKeyIsPlaceholder } from "@/lib/clerk-placeholders";
+import { onboardingCopy } from "@/lib/onboarding/copy";
 
 const syne = Syne({
   subsets: ["latin"],
@@ -84,6 +85,12 @@ export default function MarketingLayout({
               BookFlow AI
             </Link>
             <nav className="flex items-center gap-3">
+              <Link
+                href="/demo"
+                className="rounded-md px-3 py-2 text-sm font-medium text-white hover:bg-white/10"
+              >
+                {onboardingCopy.tryDemo.nav}
+              </Link>
               <a
                 href="#product"
                 className="hidden rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white sm:inline"
@@ -110,11 +117,14 @@ export default function MarketingLayout({
               Online booking, reminders, and AI
             </p>
             <div className="flex gap-4 text-sm text-[var(--ink-secondary)]">
+              <Link href="/demo" className="hover:text-[var(--ink)]">
+                {onboardingCopy.tryDemo.nav}
+              </Link>
               <Link href="/sign-up" className="hover:text-[var(--ink)]">
                 Start free
               </Link>
               <Link href="/book/bookflow-demo" className="hover:text-[var(--ink)]">
-                Live demo
+                Try a booking
               </Link>
             </div>
           </div>

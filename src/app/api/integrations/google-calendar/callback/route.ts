@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { env } from "@/lib/env";
 import { db } from "@/server/db";
+import { isDemoGuest } from "@/server/demo/session";
 import {
   exchangeGoogleCalendarCode,
   fetchGoogleAccountEmail,
@@ -13,6 +14,9 @@ const calendarPath = "/dashboard/settings/calendar";
 
 export async function GET(request: Request) {
   const base = env.NEXT_PUBLIC_APP_URL;
+  if (await isDemoGuest()) {
+    return NextResponse.redirect(`${base}${calendarPath}`);
+  }
   if (!isGoogleCalendarConfigured()) {
     return NextResponse.redirect(`${base}${calendarPath}?gcal=not_configured`);
   }
