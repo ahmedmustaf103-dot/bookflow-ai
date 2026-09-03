@@ -48,7 +48,13 @@ type Panel = 1 | 2 | 3 | 4;
 
 const WIZARD_STEPS = onboardingCopy.bookingWizard.steps;
 
-function StepRail({ current }: { current: RailStep }) {
+function StepRail({
+  current,
+  completedUpTo,
+}: {
+  current: RailStep;
+  completedUpTo: RailStep | 0;
+}) {
   return (
     <ol
       className="mb-6 flex min-w-0 items-center gap-0.5"
@@ -57,7 +63,7 @@ function StepRail({ current }: { current: RailStep }) {
       {WIZARD_STEPS.map((step, i) => {
         const n = (i + 1) as RailStep;
         const isActive = n === current;
-        const isDone = n < current;
+        const isDone = n <= completedUpTo && n !== current;
         return (
           <li
             key={step.id}
@@ -86,7 +92,9 @@ function StepRail({ current }: { current: RailStep }) {
             {i < WIZARD_STEPS.length - 1 ? (
               <span
                 className={`mx-0.5 h-px min-w-1 flex-1 sm:mx-1 ${
-                  n < current ? "bg-[var(--accent)]" : "bg-[var(--border)]"
+                  n <= completedUpTo
+                    ? "bg-[var(--accent)]"
+                    : "bg-[var(--border)]"
                 }`}
                 aria-hidden
               />
@@ -312,7 +320,10 @@ export function PublicBookingWizard({
           {onboardingCopy.common.showGuide}
         </Button>
       </div>
-      <StepRail current={railCurrent} />
+      <StepRail
+        current={railCurrent}
+        completedUpTo={progress === 1 ? 0 : ((progress - 1) as RailStep)}
+      />
 
       <div className="mb-6 flex flex-wrap gap-2">
         {service && progress > 1 && activePanel !== 1 ? (
