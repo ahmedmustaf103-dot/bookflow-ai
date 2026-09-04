@@ -133,10 +133,33 @@ export async function resetAndSeedDemoOrg(
 
   const staffIds = new Map<string, string>();
   for (const staff of DEMO_STAFF) {
+    const user = await db.user.upsert({
+      where: { clerkUserId: staff.clerkUserId },
+      update: {
+        email: staff.email,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+      },
+      create: {
+        clerkUserId: staff.clerkUserId,
+        email: staff.email,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+      },
+    });
+    await db.membership.create({
+      data: {
+        organizationId: org.id,
+        userId: user.id,
+        role: "STAFF",
+        status: "ACTIVE",
+      },
+    });
     const resource = await db.resource.create({
       data: {
         organizationId: org.id,
         locationId,
+        userId: user.id,
         name: staff.name,
         type: "STAFF",
         rules: {
@@ -166,7 +189,10 @@ export async function resetAndSeedDemoOrg(
       },
     });
     serviceIds.set(service.key, created.id);
-    for (const resourceId of staffIds.values()) {
+    for (const staff of DEMO_STAFF) {
+      if (!staff.services.includes(service.key)) continue;
+      const resourceId = staffIds.get(staff.key);
+      if (!resourceId) continue;
       await db.serviceResource.create({
         data: { serviceId: created.id, resourceId },
       });

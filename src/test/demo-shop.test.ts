@@ -32,7 +32,7 @@ describe("demo shop planner", () => {
   });
 
   it("uses clearly fictional contacts", () => {
-    expect(DEMO_CLIENTS.length).toBeGreaterThanOrEqual(6);
+    expect(DEMO_CLIENTS.length).toBeGreaterThanOrEqual(15);
     for (const client of DEMO_CLIENTS) {
       expect(client.email.endsWith(`@${DEMO_EMAIL_DOMAIN}`)).toBe(true);
       expect(client.name).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}/i);
@@ -64,12 +64,12 @@ describe("demo shop planner", () => {
     expect(statuses.has("NO_SHOW")).toBe(true);
     expect(statuses.has("PENDING")).toBe(true);
 
-    expect(new Set(plan.map((b) => b.staffKey)).size).toBe(2);
+    expect(new Set(plan.map((b) => b.staffKey)).size).toBe(4);
     expect(new Set(plan.map((b) => b.serviceKey)).size).toBeGreaterThanOrEqual(
-      4,
+      6,
     );
     expect(new Set(plan.map((b) => b.clientKey)).size).toBeGreaterThanOrEqual(
-      6,
+      12,
     );
 
     const completed = plan.filter((b) => b.status === "COMPLETED");
@@ -81,8 +81,18 @@ describe("demo shop planner", () => {
       plan.filter((b) => b.status === "NO_SHOW").length,
     ).toBeGreaterThanOrEqual(2);
 
-    const returning = plan.filter((b) => b.clientKey === "james");
-    expect(returning.length).toBeGreaterThanOrEqual(2);
+    const alex = plan.filter((b) => b.clientKey === "alex");
+    expect(alex.length).toBeGreaterThanOrEqual(5);
+    expect(alex.filter((b) => b.serviceKey === "fade").length).toBeGreaterThanOrEqual(
+      5,
+    );
+    expect(alex.every((b) => b.staffKey === "james")).toBe(true);
+
+    const theo = plan.filter((b) => b.clientKey === "theo");
+    expect(theo.length).toBeGreaterThanOrEqual(3);
+    expect(
+      theo.filter((b) => b.serviceKey === "combo").length,
+    ).toBeGreaterThanOrEqual(3);
   });
 
   it("places a current booking and later upcoming work on a weekday afternoon", () => {
@@ -121,12 +131,30 @@ describe("demo shop planner", () => {
     expect(
       plan.some(
         (b) =>
-          b.staffKey === "maya" &&
+          b.staffKey === "adam" &&
           isoDayInZone(b.startAt, DEMO_TIMEZONE) === today,
       ),
     ).toBe(false);
-    expect(DEMO_STAFF.find((s) => s.key === "maya")?.weekdays.includes(1)).toBe(
+    expect(DEMO_STAFF.find((s) => s.key === "adam")?.weekdays.includes(1)).toBe(
       false,
+    );
+  });
+
+  it("keeps Sunday looking like a working day", () => {
+    const sunday = new Date("2026-08-16T12:00:00.000Z");
+    const plan = planDemoBookings(sunday);
+    const today = isoDayInZone(sunday, DEMO_TIMEZONE);
+    expect(weekdaySun0(today, DEMO_TIMEZONE)).toBe(0);
+    const todays = plan.filter(
+      (b) =>
+        isoDayInZone(b.startAt, DEMO_TIMEZONE) === today &&
+        (b.status === "CONFIRMED" ||
+          b.status === "PENDING" ||
+          b.status === "COMPLETED"),
+    );
+    expect(todays.length).toBeGreaterThanOrEqual(5);
+    expect(new Set(todays.map((b) => b.staffKey)).size).toBeGreaterThanOrEqual(
+      2,
     );
   });
 

@@ -33,6 +33,26 @@ test.describe("try the demo", () => {
     await page.goto("/dashboard/appointments");
     await skipTourIfPresent(page);
     await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
+    await expect(page.getByRole("option", { name: "James Carter" })).toHaveCount(
+      1,
+    );
+    await expect(page.getByRole("button", { name: /Alex Morgan/ })).toBeVisible();
+
+    await page.goto("/dashboard/clients");
+    await skipTourIfPresent(page);
+    await expect(page.getByText("Alex Morgan")).toBeVisible();
+
+    await page.goto("/dashboard/ai");
+    await skipTourIfPresent(page);
+    await expect(page.getByText("Demo AI")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Client summary" })).toBeVisible();
+    await expect(page.getByText("AI is unavailable")).toHaveCount(0);
+
+    await page.goto("/dashboard/settings/calendar");
+    await skipTourIfPresent(page);
+    await expect(
+      page.getByText("Connect your own Google Calendar to sync appointments."),
+    ).toBeVisible();
 
     await page.goto("/dashboard/billing");
     await skipTourIfPresent(page);
@@ -58,6 +78,44 @@ test.describe("try the demo", () => {
     await expect(
       page.getByRole("heading", { name: "BookFlow AI" }),
     ).toBeVisible();
+  });
+
+  test("public demo booking starts on service, not staff", async ({ page }) => {
+    await page.goto("/book/bookflow-demo");
+    await skipTourIfPresent(page);
+    await expect(
+      page.getByRole("heading", { name: /Choose a service/ }),
+    ).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Skin Fade/ })).toBeVisible();
+    await expect(page.getByText("James Carter")).toHaveCount(0);
+
+    const rail = page.getByRole("list", { name: "Booking steps" });
+    await expect(rail.getByText("✓")).toHaveCount(0);
+
+    await page.getByRole("radio", { name: /Skin Fade/ }).click();
+    await expect(
+      page.getByRole("heading", { name: /Choose who you’d like/ }),
+    ).toBeVisible();
+    await expect(page.getByText("James Carter").first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Choose a date and time/ }),
+    ).toHaveCount(0);
+  });
+
+  test("demo AI shows a sample customer summary", async ({ page }) => {
+    await page.goto("/demo");
+    await page.getByRole("button", { name: "Continue to Demo" }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await skipTourIfPresent(page);
+    await page.goto("/dashboard/ai");
+    await skipTourIfPresent(page);
+    await page.getByRole("button", { name: "Generate summary" }).click();
+    await expect(
+      page.getByPlaceholder("Results appear here. Edit drafts before sending to clients."),
+    ).toHaveValue(/Alex Morgan has visited/, { timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Send to client" })).toHaveCount(
+      0,
+    );
   });
 
   test("dashboard stays signed-out without a demo session", async ({ page }) => {

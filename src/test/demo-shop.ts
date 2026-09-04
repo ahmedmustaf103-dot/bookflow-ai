@@ -26,9 +26,14 @@ export const DEMO_FORBIDDEN_SLUGS = [
 ] as const;
 
 export type DemoServiceKey =
-  "haircut" | "fade" | "beard" | "signature" | "combo";
+  | "fade"
+  | "haircut"
+  | "combo"
+  | "beard"
+  | "kids"
+  | "restyle";
 
-export type DemoStaffKey = "jordan" | "maya";
+export type DemoStaffKey = "james" | "adam" | "omar" | "daniel";
 
 export const DEMO_SERVICES: Array<{
   key: DemoServiceKey;
@@ -39,43 +44,51 @@ export const DEMO_SERVICES: Array<{
   currency: "GBP";
 }> = [
   {
-    key: "haircut",
-    name: "Precision cut",
-    durationMin: 30,
-    bufferAfter: 5,
-    priceCents: 3800,
-    currency: "GBP",
-  },
-  {
     key: "fade",
-    name: "Skin fade",
-    durationMin: 45,
-    bufferAfter: 5,
-    priceCents: 4200,
-    currency: "GBP",
-  },
-  {
-    key: "beard",
-    name: "Beard sculpt",
+    name: "Skin Fade",
     durationMin: 30,
-    bufferAfter: 0,
-    priceCents: 2400,
+    bufferAfter: 5,
+    priceCents: 2500,
     currency: "GBP",
   },
   {
-    key: "signature",
-    name: "Signature cut & finish",
-    durationMin: 45,
+    key: "haircut",
+    name: "Haircut",
+    durationMin: 30,
     bufferAfter: 5,
-    priceCents: 5500,
+    priceCents: 2200,
     currency: "GBP",
   },
   {
     key: "combo",
-    name: "Cut & beard",
+    name: "Haircut & Beard",
+    durationMin: 45,
+    bufferAfter: 5,
+    priceCents: 3200,
+    currency: "GBP",
+  },
+  {
+    key: "beard",
+    name: "Beard Trim",
+    durationMin: 20,
+    bufferAfter: 0,
+    priceCents: 1500,
+    currency: "GBP",
+  },
+  {
+    key: "kids",
+    name: "Kids Haircut",
+    durationMin: 30,
+    bufferAfter: 5,
+    priceCents: 1800,
+    currency: "GBP",
+  },
+  {
+    key: "restyle",
+    name: "Full Restyle",
     durationMin: 60,
     bufferAfter: 10,
-    priceCents: 6200,
+    priceCents: 3500,
     currency: "GBP",
   },
 ];
@@ -84,23 +97,62 @@ export const DEMO_SERVICES: Array<{
 export const DEMO_STAFF: Array<{
   key: DemoStaffKey;
   name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  clerkUserId: string;
   weekdays: number[];
   startMin: number;
   endMin: number;
+  services: DemoServiceKey[];
 }> = [
   {
-    key: "jordan",
-    name: "Jordan Hale",
+    key: "james",
+    name: "James Carter",
+    firstName: "James",
+    lastName: "Carter",
+    email: "james.carter@example.test",
+    clerkUserId: "demo-seed-staff-james-carter",
     weekdays: [0, 1, 2, 3, 4, 5, 6],
     startMin: 9 * 60,
     endMin: 18 * 60,
+    services: ["fade", "haircut", "combo", "beard", "kids", "restyle"],
   },
   {
-    key: "maya",
-    name: "Maya Chen",
-    weekdays: [2, 3, 4, 5, 6],
+    key: "adam",
+    name: "Adam Lewis",
+    firstName: "Adam",
+    lastName: "Lewis",
+    email: "adam.lewis@example.test",
+    clerkUserId: "demo-seed-staff-adam-lewis",
+    weekdays: [0, 2, 3, 4, 5, 6],
+    startMin: 9 * 60,
+    endMin: 18 * 60,
+    services: ["fade", "haircut", "combo", "beard", "kids"],
+  },
+  {
+    key: "omar",
+    name: "Omar Hassan",
+    firstName: "Omar",
+    lastName: "Hassan",
+    email: "omar.hassan@example.test",
+    clerkUserId: "demo-seed-staff-omar-hassan",
+    weekdays: [1, 2, 3, 4, 5],
+    startMin: 9 * 60,
+    endMin: 17 * 60,
+    services: ["fade", "haircut", "combo", "beard", "restyle"],
+  },
+  {
+    key: "daniel",
+    name: "Daniel Khan",
+    firstName: "Daniel",
+    lastName: "Khan",
+    email: "daniel.khan@example.test",
+    clerkUserId: "demo-seed-staff-daniel-khan",
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
     startMin: 10 * 60,
     endMin: 18 * 60,
+    services: ["fade", "haircut", "combo", "beard", "kids"],
   },
 ];
 
@@ -112,18 +164,27 @@ export const DEMO_CLIENTS: Array<{
   notes: string | null;
   tags: string[];
   marketingOptIn: boolean;
-  /** How many local days before "now" this client record was created. */
   createdDaysAgo: number;
 }> = [
   {
-    key: "james",
-    name: "James Okonkwo",
-    email: "james.okonkwo@example.test",
-    phone: "+447700900101",
-    notes: "Prefers a mid fade, no clipper on the crown.",
+    key: "alex",
+    name: "Alex Morgan",
+    email: "alex.morgan@example.test",
+    phone: "+447700900201",
+    notes: "Usually books a skin fade with James. Prefers afternoons.",
     tags: ["regular", "fade"],
     marketingOptIn: true,
     createdDaysAgo: 180,
+  },
+  {
+    key: "theo",
+    name: "Theo Bennett",
+    email: "theo.bennett@example.test",
+    phone: "+447700900202",
+    notes: "Usually books Haircut & Beard with Adam.",
+    tags: ["regular"],
+    marketingOptIn: true,
+    createdDaysAgo: 120,
   },
   {
     key: "sofia",
@@ -150,8 +211,8 @@ export const DEMO_CLIENTS: Array<{
     name: "Amira Hassan",
     email: "amira.hassan@example.test",
     phone: null,
-    notes: null,
     tags: ["colour"],
+    notes: null,
     marketingOptIn: true,
     createdDaysAgo: 40,
   },
@@ -170,7 +231,7 @@ export const DEMO_CLIENTS: Array<{
     name: "Priya Shah",
     email: "priya.shah@example.test",
     phone: "+447700900105",
-    notes: "Usually books Jordan.",
+    notes: "Usually books James.",
     tags: ["regular"],
     marketingOptIn: true,
     createdDaysAgo: 90,
@@ -194,6 +255,116 @@ export const DEMO_CLIENTS: Array<{
     tags: ["regular"],
     marketingOptIn: true,
     createdDaysAgo: 120,
+  },
+  {
+    key: "marcus",
+    name: "Marcus Reid",
+    email: "marcus.reid@example.test",
+    phone: "+447700900203",
+    notes: null,
+    tags: ["regular"],
+    marketingOptIn: true,
+    createdDaysAgo: 75,
+  },
+  {
+    key: "ivy",
+    name: "Ivy Chen",
+    email: "ivy.chen@example.test",
+    phone: "+447700900204",
+    notes: "Books kids cuts for her son.",
+    tags: ["family"],
+    marketingOptIn: true,
+    createdDaysAgo: 60,
+  },
+  {
+    key: "rafael",
+    name: "Rafael Costa",
+    email: "rafael.costa@example.test",
+    phone: "+447700900205",
+    notes: null,
+    tags: [],
+    marketingOptIn: false,
+    createdDaysAgo: 28,
+  },
+  {
+    key: "hana",
+    name: "Hana Ali",
+    email: "hana.ali@example.test",
+    phone: null,
+    notes: null,
+    tags: ["regular"],
+    marketingOptIn: true,
+    createdDaysAgo: 95,
+  },
+  {
+    key: "ben",
+    name: "Ben Walsh",
+    email: "ben.walsh@example.test",
+    phone: "+447700900206",
+    notes: null,
+    tags: [],
+    marketingOptIn: false,
+    createdDaysAgo: 22,
+  },
+  {
+    key: "lucia",
+    name: "Lucia Moretti",
+    email: "lucia.moretti@example.test",
+    phone: "+447700900207",
+    notes: null,
+    tags: ["regular"],
+    marketingOptIn: true,
+    createdDaysAgo: 110,
+  },
+  {
+    key: "kai",
+    name: "Kai Thompson",
+    email: "kai.thompson@example.test",
+    phone: "+447700900208",
+    notes: null,
+    tags: [],
+    marketingOptIn: true,
+    createdDaysAgo: 16,
+  },
+  {
+    key: "nia",
+    name: "Nia Brooks",
+    email: "nia.brooks@example.test",
+    phone: null,
+    notes: null,
+    tags: ["regular"],
+    marketingOptIn: true,
+    createdDaysAgo: 88,
+  },
+  {
+    key: "owen",
+    name: "Owen Fraser",
+    email: "owen.fraser@example.test",
+    phone: "+447700900209",
+    notes: null,
+    tags: [],
+    marketingOptIn: false,
+    createdDaysAgo: 9,
+  },
+  {
+    key: "zara",
+    name: "Zara Malik",
+    email: "zara.malik@example.test",
+    phone: "+447700900210",
+    notes: null,
+    tags: ["regular"],
+    marketingOptIn: true,
+    createdDaysAgo: 140,
+  },
+  {
+    key: "finn",
+    name: "Finn O'Neill",
+    email: "finn.oneill@example.test",
+    phone: "+447700900211",
+    notes: null,
+    tags: [],
+    marketingOptIn: false,
+    createdDaysAgo: 5,
   },
 ];
 
@@ -327,509 +498,130 @@ type Rel = {
   source: BookingSource;
 };
 
+function rel(
+  day: number,
+  hour: number,
+  minute: number,
+  staff: DemoStaffKey,
+  service: DemoServiceKey,
+  client: string,
+  status: BookingStatus,
+  source: BookingSource = "PUBLIC",
+): Rel {
+  return { day, hour, minute, staff, service, client, status, source };
+}
+
+/** Regulars with a clear visit pattern for CRM / AI summaries. */
+function regularHistory(): Rel[] {
+  return [
+    rel(-90, 14, 0, "james", "fade", "alex", "COMPLETED"),
+    rel(-72, 14, 30, "james", "fade", "alex", "COMPLETED"),
+    rel(-54, 15, 0, "james", "fade", "alex", "COMPLETED"),
+    rel(-36, 14, 0, "james", "fade", "alex", "COMPLETED"),
+    rel(-18, 14, 30, "james", "fade", "alex", "COMPLETED"),
+    rel(-42, 11, 0, "adam", "combo", "theo", "COMPLETED"),
+    rel(-24, 11, 0, "adam", "combo", "theo", "COMPLETED"),
+    rel(-8, 11, 0, "adam", "combo", "theo", "COMPLETED"),
+  ];
+}
+
 /**
  * Relative schedule around "today" in the shop timezone.
  * day 0 = today, negative = past, positive = upcoming.
  */
 const RELATIVE_BOOKINGS: Rel[] = [
-  {
-    day: -42,
-    hour: 10,
-    minute: 0,
-    staff: "jordan",
-    service: "haircut",
-    client: "james",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -40,
-    hour: 11,
-    minute: 30,
-    staff: "maya",
-    service: "signature",
-    client: "sofia",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -38,
-    hour: 14,
-    minute: 0,
-    staff: "jordan",
-    service: "combo",
-    client: "elena",
-    status: "COMPLETED",
-    source: "DASHBOARD",
-  },
-  {
-    day: -35,
-    hour: 10,
-    minute: 30,
-    staff: "jordan",
-    service: "fade",
-    client: "priya",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -33,
-    hour: 15,
-    minute: 0,
-    staff: "maya",
-    service: "beard",
-    client: "amira",
-    status: "NO_SHOW",
-    source: "PUBLIC",
-  },
-  {
-    day: -32,
-    hour: 12,
-    minute: 0,
-    staff: "jordan",
-    service: "signature",
-    client: "james",
-    status: "CANCELLED",
-    source: "PUBLIC",
-  },
-  {
-    day: -13,
-    hour: 10,
-    minute: 0,
-    staff: "jordan",
-    service: "haircut",
-    client: "james",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -12,
-    hour: 11,
-    minute: 0,
-    staff: "maya",
-    service: "fade",
-    client: "sofia",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -12,
-    hour: 14,
-    minute: 0,
-    staff: "jordan",
-    service: "combo",
-    client: "elena",
-    status: "COMPLETED",
-    source: "DASHBOARD",
-  },
-  {
-    day: -11,
-    hour: 10,
-    minute: 30,
-    staff: "jordan",
-    service: "signature",
-    client: "priya",
-    status: "NO_SHOW",
-    source: "PUBLIC",
-  },
-  {
-    day: -11,
-    hour: 15,
-    minute: 0,
-    staff: "maya",
-    service: "beard",
-    client: "amira",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -10,
-    hour: 10,
-    minute: 0,
-    staff: "jordan",
-    service: "haircut",
-    client: "james",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -9,
-    hour: 11,
-    minute: 30,
-    staff: "maya",
-    service: "beard",
-    client: "sofia",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -8,
-    hour: 14,
-    minute: 0,
-    staff: "jordan",
-    service: "fade",
-    client: "elena",
-    status: "NO_SHOW",
-    source: "PUBLIC",
-  },
-  {
-    day: -7,
-    hour: 10,
-    minute: 0,
-    staff: "jordan",
-    service: "combo",
-    client: "priya",
-    status: "COMPLETED",
-    source: "DASHBOARD",
-  },
-  {
-    day: -7,
-    hour: 12,
-    minute: 0,
-    staff: "maya",
-    service: "signature",
-    client: "amira",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -6,
-    hour: 9,
-    minute: 30,
-    staff: "jordan",
-    service: "haircut",
-    client: "callum",
-    status: "CANCELLED",
-    source: "PUBLIC",
-  },
-  {
-    day: -6,
-    hour: 11,
-    minute: 0,
-    staff: "maya",
-    service: "fade",
-    client: "noah",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -5,
-    hour: 10,
-    minute: 0,
-    staff: "jordan",
-    service: "signature",
-    client: "james",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -5,
-    hour: 15,
-    minute: 0,
-    staff: "maya",
-    service: "haircut",
-    client: "lewis",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -4,
-    hour: 13,
-    minute: 0,
-    staff: "jordan",
-    service: "beard",
-    client: "sofia",
-    status: "NO_SHOW",
-    source: "PUBLIC",
-  },
-  {
-    day: -4,
-    hour: 16,
-    minute: 0,
-    staff: "maya",
-    service: "combo",
-    client: "elena",
-    status: "COMPLETED",
-    source: "DASHBOARD",
-  },
-  {
-    day: -3,
-    hour: 10,
-    minute: 30,
-    staff: "jordan",
-    service: "fade",
-    client: "priya",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -3,
-    hour: 12,
-    minute: 0,
-    staff: "maya",
-    service: "beard",
-    client: "amira",
-    status: "CANCELLED",
-    source: "PUBLIC",
-  },
-  {
-    day: -2,
-    hour: 11,
-    minute: 0,
-    staff: "jordan",
-    service: "haircut",
-    client: "james",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -2,
-    hour: 14,
-    minute: 30,
-    staff: "maya",
-    service: "signature",
-    client: "sofia",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -1,
-    hour: 9,
-    minute: 30,
-    staff: "jordan",
-    service: "combo",
-    client: "elena",
-    status: "COMPLETED",
-    source: "DASHBOARD",
-  },
-  {
-    day: -1,
-    hour: 11,
-    minute: 30,
-    staff: "maya",
-    service: "fade",
-    client: "noah",
-    status: "COMPLETED",
-    source: "PUBLIC",
-  },
-  {
-    day: -1,
-    hour: 15,
-    minute: 0,
-    staff: "jordan",
-    service: "beard",
-    client: "callum",
-    status: "CANCELLED",
-    source: "PUBLIC",
-  },
-  {
-    day: 1,
-    hour: 10,
-    minute: 0,
-    staff: "jordan",
-    service: "signature",
-    client: "james",
-    status: "CONFIRMED",
-    source: "PUBLIC",
-  },
-  {
-    day: 1,
-    hour: 11,
-    minute: 30,
-    staff: "maya",
-    service: "haircut",
-    client: "amira",
-    status: "CONFIRMED",
-    source: "PUBLIC",
-  },
-  {
-    day: 2,
-    hour: 13,
-    minute: 0,
-    staff: "jordan",
-    service: "fade",
-    client: "priya",
-    status: "CONFIRMED",
-    source: "PUBLIC",
-  },
-  {
-    day: 2,
-    hour: 15,
-    minute: 0,
-    staff: "maya",
-    service: "beard",
-    client: "sofia",
-    status: "CONFIRMED",
-    source: "DASHBOARD",
-  },
-  {
-    day: 3,
-    hour: 10,
-    minute: 30,
-    staff: "jordan",
-    service: "combo",
-    client: "elena",
-    status: "CONFIRMED",
-    source: "PUBLIC",
-  },
-  {
-    day: 3,
-    hour: 15,
-    minute: 30,
-    staff: "maya",
-    service: "beard",
-    client: "callum",
-    status: "PENDING",
-    source: "PUBLIC",
-  },
-  {
-    day: 4,
-    hour: 12,
-    minute: 0,
-    staff: "maya",
-    service: "signature",
-    client: "lewis",
-    status: "CONFIRMED",
-    source: "PUBLIC",
-  },
-  {
-    day: 5,
-    hour: 16,
-    minute: 0,
-    staff: "jordan",
-    service: "haircut",
-    client: "noah",
-    status: "CONFIRMED",
-    source: "PUBLIC",
-  },
+  ...regularHistory(),
+  rel(-40, 10, 0, "omar", "haircut", "sofia", "COMPLETED"),
+  rel(-38, 13, 0, "daniel", "combo", "elena", "COMPLETED", "DASHBOARD"),
+  rel(-35, 10, 30, "james", "kids", "ivy", "COMPLETED"),
+  rel(-33, 15, 0, "adam", "beard", "amira", "NO_SHOW"),
+  rel(-32, 12, 0, "james", "restyle", "priya", "CANCELLED"),
+  rel(-28, 9, 30, "omar", "fade", "marcus", "COMPLETED"),
+  rel(-26, 16, 0, "daniel", "haircut", "ben", "COMPLETED"),
+  rel(-21, 10, 0, "james", "combo", "lucia", "COMPLETED"),
+  rel(-20, 14, 0, "adam", "haircut", "hana", "COMPLETED"),
+  rel(-16, 11, 30, "omar", "beard", "zara", "COMPLETED"),
+  rel(-15, 15, 30, "daniel", "kids", "ivy", "COMPLETED"),
+  rel(-13, 10, 0, "james", "haircut", "nia", "COMPLETED"),
+  rel(-12, 11, 0, "adam", "fade", "sofia", "COMPLETED"),
+  rel(-12, 14, 0, "omar", "combo", "elena", "COMPLETED", "DASHBOARD"),
+  rel(-11, 10, 30, "james", "restyle", "priya", "NO_SHOW"),
+  rel(-11, 15, 0, "daniel", "beard", "amira", "COMPLETED"),
+  rel(-10, 9, 30, "omar", "haircut", "marcus", "COMPLETED"),
+  rel(-9, 11, 30, "adam", "beard", "sofia", "COMPLETED"),
+  rel(-8, 14, 0, "james", "fade", "elena", "NO_SHOW"),
+  rel(-7, 10, 0, "daniel", "combo", "priya", "COMPLETED", "DASHBOARD"),
+  rel(-7, 12, 0, "omar", "restyle", "amira", "COMPLETED"),
+  rel(-6, 9, 30, "james", "haircut", "callum", "CANCELLED"),
+  rel(-6, 11, 0, "adam", "fade", "noah", "COMPLETED"),
+  rel(-5, 10, 0, "omar", "haircut", "kai", "COMPLETED"),
+  rel(-5, 15, 0, "daniel", "haircut", "lewis", "COMPLETED"),
+  rel(-4, 13, 0, "james", "beard", "sofia", "NO_SHOW"),
+  rel(-4, 16, 0, "adam", "combo", "elena", "COMPLETED", "DASHBOARD"),
+  rel(-3, 10, 30, "james", "fade", "priya", "COMPLETED"),
+  rel(-3, 12, 0, "omar", "beard", "amira", "CANCELLED"),
+  rel(-3, 14, 0, "daniel", "kids", "ivy", "COMPLETED"),
+  rel(-2, 11, 0, "james", "haircut", "rafael", "COMPLETED"),
+  rel(-2, 14, 30, "adam", "combo", "lucia", "COMPLETED"),
+  rel(-1, 9, 30, "omar", "combo", "elena", "COMPLETED", "DASHBOARD"),
+  rel(-1, 11, 30, "daniel", "fade", "noah", "COMPLETED"),
+  rel(-1, 15, 0, "james", "beard", "callum", "CANCELLED"),
+  rel(1, 10, 0, "james", "fade", "alex", "CONFIRMED"),
+  rel(1, 11, 30, "adam", "haircut", "amira", "CONFIRMED"),
+  rel(1, 14, 0, "omar", "combo", "marcus", "CONFIRMED"),
+  rel(2, 13, 0, "james", "fade", "priya", "CONFIRMED"),
+  rel(2, 15, 0, "adam", "beard", "sofia", "CONFIRMED", "DASHBOARD"),
+  rel(2, 10, 30, "daniel", "kids", "ivy", "CONFIRMED"),
+  rel(3, 10, 30, "james", "combo", "elena", "CONFIRMED"),
+  rel(3, 15, 30, "omar", "beard", "callum", "PENDING"),
+  rel(3, 12, 0, "daniel", "haircut", "ben", "CONFIRMED"),
+  rel(4, 12, 0, "adam", "combo", "theo", "CONFIRMED"),
+  rel(4, 16, 0, "james", "haircut", "noah", "CONFIRMED"),
+  rel(5, 11, 0, "daniel", "fade", "hana", "CONFIRMED"),
+  rel(5, 14, 30, "james", "restyle", "zara", "PENDING"),
 ];
 
-function roundDown15(minOfDay: number) {
-  return Math.floor(minOfDay / 15) * 15;
-}
+const TODAY_SLOTS: Array<
+  Omit<Rel, "day" | "status" | "source"> & { source?: BookingSource }
+> = [
+  { hour: 9, minute: 0, staff: "james", service: "fade", client: "alex" },
+  { hour: 9, minute: 45, staff: "adam", service: "combo", client: "theo" },
+  { hour: 10, minute: 30, staff: "omar", service: "haircut", client: "marcus" },
+  { hour: 11, minute: 15, staff: "james", service: "beard", client: "callum" },
+  { hour: 11, minute: 45, staff: "james", service: "haircut", client: "priya" },
+  { hour: 13, minute: 0, staff: "daniel", service: "haircut", client: "ben" },
+  { hour: 14, minute: 0, staff: "adam", service: "fade", client: "sofia" },
+  { hour: 15, minute: 0, staff: "omar", service: "restyle", client: "amira" },
+  { hour: 15, minute: 30, staff: "daniel", service: "combo", client: "rafael" },
+  { hour: 16, minute: 30, staff: "james", service: "haircut", client: "lewis" },
+];
 
 function todayFloorRows(today: string, now: Date, timeZone: string): Rel[] {
   const weekday = weekdaySun0(today, timeZone);
-  const jordanOpen = staffWorks("jordan", weekday);
-  const mayaOpen = staffWorks("maya", weekday);
-  if (!jordanOpen && !mayaOpen) return [];
+  const nowMin =
+    Number(formatInTimeZone(now, timeZone, "H")) * 60 +
+    Number(formatInTimeZone(now, timeZone, "m"));
 
-  const localHour = Number(formatInTimeZone(now, timeZone, "H"));
-  const localMinute = Number(formatInTimeZone(now, timeZone, "m"));
-  const nowMin = localHour * 60 + localMinute;
-  const rows: Rel[] = [];
-
-  if (jordanOpen) {
-    const morningStart = 9 * 60 + 30;
-    const morningEnd = morningStart + serviceByKey("haircut").durationMin;
-    rows.push({
-      day: 0,
-      hour: 9,
-      minute: 30,
-      staff: "jordan",
-      service: "haircut",
-      client: "james",
-      status: nowMin >= morningEnd ? "COMPLETED" : "CONFIRMED",
-      source: "PUBLIC",
-    });
-  }
-
-  if (mayaOpen) {
-    const morningStart = 10 * 60 + 30;
-    const morningEnd = morningStart + serviceByKey("beard").durationMin;
-    rows.push({
-      day: 0,
-      hour: 10,
-      minute: 30,
-      staff: "maya",
-      service: "beard",
-      client: "sofia",
-      status: nowMin >= morningEnd ? "COMPLETED" : "CONFIRMED",
-      source: "PUBLIC",
-    });
-  }
-
-  if (jordanOpen && nowMin >= 11 * 60 && nowMin < 17 * 60) {
-    const startMin = Math.max(11 * 60, roundDown15(nowMin - 20));
-    const service: DemoServiceKey = "signature";
-    const duration = serviceByKey(service).durationMin;
-    if (startMin + duration <= 18 * 60) {
-      rows.push({
-        day: 0,
-        hour: Math.floor(startMin / 60),
-        minute: startMin % 60,
-        staff: "jordan",
-        service,
-        client: "priya",
-        status: "CONFIRMED",
-        source: "DASHBOARD",
-      });
-      const later =
-        startMin + duration + serviceByKey(service).bufferAfter + 25;
-      if (later + serviceByKey("fade").durationMin <= 18 * 60) {
-        rows.push({
-          day: 0,
-          hour: Math.floor(later / 60),
-          minute: later % 60,
-          staff: "jordan",
-          service: "fade",
-          client: "lewis",
-          status: "CONFIRMED",
-          source: "PUBLIC",
-        });
-      }
+  return TODAY_SLOTS.flatMap((slot) => {
+    if (!staffWorks(slot.staff, weekday)) return [];
+    if (!withinStaffHours(slot.staff, slot.hour, slot.minute, slot.service)) {
+      return [];
     }
-  } else if (jordanOpen && nowMin < 10 * 60) {
-    rows.push(
+    const endMin =
+      slot.hour * 60 + slot.minute + serviceByKey(slot.service).durationMin;
+    return [
       {
         day: 0,
-        hour: 11,
-        minute: 0,
-        staff: "jordan",
-        service: "signature",
-        client: "priya",
-        status: "CONFIRMED",
-        source: "DASHBOARD",
-      },
-      {
-        day: 0,
-        hour: 14,
-        minute: 0,
-        staff: "jordan",
-        service: "fade",
-        client: "lewis",
-        status: "CONFIRMED",
-        source: "PUBLIC",
-      },
-    );
-  } else if (jordanOpen && nowMin >= 17 * 60 && nowMin < 18 * 60) {
-    rows.push({
-      day: 0,
-      hour: 17,
-      minute: 0,
-      staff: "jordan",
-      service: "beard",
-      client: "lewis",
-      status: "CONFIRMED",
-      source: "PUBLIC",
-    });
-  }
-
-  if (mayaOpen && nowMin < 16 * 60 + 30) {
-    const hour = nowMin < 14 * 60 ? 14 : 16;
-    rows.push({
-      day: 0,
-      hour,
-      minute: 30,
-      staff: "maya",
-      service: "combo",
-      client: "amira",
-      status: "CONFIRMED",
-      source: "PUBLIC",
-    });
-  }
-
-  return rows;
+        hour: slot.hour,
+        minute: slot.minute,
+        staff: slot.staff,
+        service: slot.service,
+        client: slot.client,
+        status: nowMin >= endMin ? "COMPLETED" : "CONFIRMED",
+        source: slot.source ?? "PUBLIC",
+      } satisfies Rel,
+    ];
+  });
 }
 
 export function planDemoBookings(
@@ -837,14 +629,22 @@ export function planDemoBookings(
   timeZone = DEMO_TIMEZONE,
 ): DemoBookingPlan[] {
   const today = isoDayInZone(now, timeZone);
-  const rel = [...RELATIVE_BOOKINGS, ...todayFloorRows(today, now, timeZone)];
+  const relRows = [
+    ...RELATIVE_BOOKINGS,
+    ...todayFloorRows(today, now, timeZone),
+  ];
   const plan: DemoBookingPlan[] = [];
   let tokenIndex = 1;
 
-  for (const row of rel) {
+  for (const row of relRows) {
     const isoDay = shiftIsoDay(today, row.day);
     const weekday = weekdaySun0(isoDay, timeZone);
     if (!staffWorks(row.staff, weekday)) continue;
+    if (!staffByKey(row.staff).services.includes(row.service)) {
+      throw new Error(
+        `Demo plan assigned ${row.service} to ${row.staff}, who does not offer it`,
+      );
+    }
     if (!withinStaffHours(row.staff, row.hour, row.minute, row.service)) {
       continue;
     }

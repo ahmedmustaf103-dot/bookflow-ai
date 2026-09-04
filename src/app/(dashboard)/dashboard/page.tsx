@@ -68,7 +68,7 @@ export default async function DashboardPage() {
         description={`Welcome${ctx.user.firstName ? `, ${ctx.user.firstName}` : ""}. You're on the ${ctx.organization.plan.charAt(0)}${ctx.organization.plan.slice(1).toLowerCase()} plan.`}
         actions={
           <>
-            {staffPlus ? (
+            {staffPlus && !ctx.isDemo ? (
               <ButtonLink
                 href="/dashboard/appointments/new"
                 size="sm"

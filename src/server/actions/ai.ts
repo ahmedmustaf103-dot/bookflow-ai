@@ -7,6 +7,12 @@ import { err, ok, type ActionResult } from "@/lib/result";
 import { requireMembership } from "@/server/auth/session";
 import type { AiBookingProposal, MessageIntent } from "@/server/ai/constants";
 import {
+  demoBookingAssistant,
+  demoClientSummary,
+  demoInsightDigest,
+  demoMessageDraft,
+} from "@/server/ai/demo-features";
+import {
   generateClientSummary,
   generateInsightDigest,
   generateMessageDraft,
@@ -49,11 +55,20 @@ export async function clientSummaryAction(
   formData: FormData,
 ): Promise<ActionResult<{ text: string; tokens: number }>> {
   try {
-    const blocked = await rejectIfDemo();
-    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
+
+    const parsed = parseForm(clientSummarySchema, formData);
+    if (!parsed.ok) return err(parsed.error);
+
+    if (ctx.isDemo) {
+      const result = await demoClientSummary({
+        organizationId: ctx.organization.id,
+        clientId: parsed.data.clientId,
+      });
+      return ok({ text: result.text, tokens: 0 });
+    }
 
     const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
     if (!rl.ok) return rl;
@@ -61,9 +76,6 @@ export async function clientSummaryAction(
     if (!getConfiguredProvider()) {
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
     }
-
-    const parsed = parseForm(clientSummarySchema, formData);
-    if (!parsed.ok) return err(parsed.error);
 
     const result = await generateClientSummary({
       organizationId: ctx.organization.id,
@@ -85,11 +97,21 @@ export async function messageDraftAction(
   formData: FormData,
 ): Promise<ActionResult<{ text: string; tokens: number }>> {
   try {
-    const blocked = await rejectIfDemo();
-    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
+
+    const parsed = parseForm(messageDraftSchema, formData);
+    if (!parsed.ok) return err(parsed.error);
+
+    if (ctx.isDemo) {
+      const result = await demoMessageDraft({
+        organizationId: ctx.organization.id,
+        intent: parsed.data.intent as MessageIntent,
+        clientId: parsed.data.clientId,
+      });
+      return ok({ text: result.text, tokens: 0 });
+    }
 
     const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
     if (!rl.ok) return rl;
@@ -97,9 +119,6 @@ export async function messageDraftAction(
     if (!getConfiguredProvider()) {
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
     }
-
-    const parsed = parseForm(messageDraftSchema, formData);
-    if (!parsed.ok) return err(parsed.error);
 
     const result = await generateMessageDraft({
       organizationId: ctx.organization.id,
@@ -123,11 +142,17 @@ export async function insightDigestAction(
   formData: FormData,
 ): Promise<ActionResult<{ text: string; tokens: number }>> {
   try {
-    const blocked = await rejectIfDemo();
-    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
+    void formData;
+
+    if (ctx.isDemo) {
+      const result = await demoInsightDigest({
+        organizationId: ctx.organization.id,
+      });
+      return ok({ text: result.text, tokens: 0 });
+    }
 
     const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
     if (!rl.ok) return rl;
@@ -135,9 +160,6 @@ export async function insightDigestAction(
     if (!getConfiguredProvider()) {
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
     }
-
-    // formData reserved for future day-range filters
-    void formData;
 
     const result = await generateInsightDigest({
       organizationId: ctx.organization.id,
@@ -163,11 +185,24 @@ export async function bookingAssistantAction(formData: FormData): Promise<
   }>
 > {
   try {
-    const blocked = await rejectIfDemo();
-    if (blocked) return blocked;
     const ctx = await getActiveOrganization();
     if (!ctx.organization) return err("No organization selected");
     await requireMembership(ctx.organization.id, "ADMIN");
+
+    const parsed = parseForm(bookingAssistantSchema, formData);
+    if (!parsed.ok) return err(parsed.error);
+
+    if (ctx.isDemo) {
+      const result = await demoBookingAssistant({
+        organizationId: ctx.organization.id,
+        message: parsed.data.message,
+      });
+      return ok({
+        text: result.text,
+        tokens: 0,
+        proposal: null,
+      });
+    }
 
     const rl = await assertAiRateLimit(ctx.organization.id, ctx.user.id);
     if (!rl.ok) return rl;
@@ -175,9 +210,6 @@ export async function bookingAssistantAction(formData: FormData): Promise<
     if (!getConfiguredProvider()) {
       return err("Configure OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY");
     }
-
-    const parsed = parseForm(bookingAssistantSchema, formData);
-    if (!parsed.ok) return err(parsed.error);
 
     const result = await runBookingAssistant({
       organizationId: ctx.organization.id,

@@ -81,7 +81,10 @@ export default async function GoogleCalendarSettingsPage({
         }
       />
       {ctx.isDemo ? (
-        <DemoUnavailable title={onboardingCopy.tryDemo.unavailableGoogle} />
+        <DemoUnavailable
+          title={onboardingCopy.tryDemo.unavailableGoogle}
+          body="The sample business stays on BookFlow’s own calendar so visitors never connect a real Google account."
+        />
       ) : (
         <GoogleCalendarCard
           configured={configured}

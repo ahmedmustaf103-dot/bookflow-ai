@@ -48,9 +48,11 @@ const en = {
     exit: "Exit Demo",
     backHome: "Back to BookFlow",
     unavailableBilling: "Billing is unavailable in the demo.",
-    unavailableGoogle: "Google Calendar connection is unavailable in the demo.",
+    unavailableGoogle:
+      "Connect your own Google Calendar to sync appointments. This isn’t available in the sample business.",
     unavailableTeam: "Inviting people is unavailable in the demo.",
-    unavailableAi: "AI is unavailable in the demo.",
+    unavailableAi:
+      "Demo AI uses example answers from this sample business.",
     unavailableEdit: "Editing is unavailable in the demo.",
   },
   demoIntro: {

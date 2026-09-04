@@ -1,7 +1,5 @@
 import { PageHeader } from "@/components/ui/page-header";
-import { DemoUnavailable } from "@/components/dashboard/demo-unavailable";
 import { AiWorkbench } from "./ai-workbench";
-import { onboardingCopy } from "@/lib/onboarding/copy";
 import { getConfiguredProvider } from "@/server/ai/provider";
 import { getPlanLimits, planAllowsAi } from "@/server/billing/plans";
 import { requireOrgRole } from "@/server/tenant/context";
@@ -14,7 +12,7 @@ export default async function AiPage({
   const ctx = await requireOrgRole("ADMIN");
   const params = await searchParams;
   const limits = getPlanLimits(ctx.organization.plan);
-  const allowsAi = planAllowsAi(ctx.organization.plan);
+  const allowsAi = ctx.isDemo || planAllowsAi(ctx.organization.plan);
 
   const start = new Date();
   start.setUTCDate(1);
@@ -55,27 +53,28 @@ export default async function AiPage({
         description="Time-saving assists for staff: client briefs, message drafts, insights, and booking recommendations. AI never books or sends until you confirm."
       />
 
-      {ctx.isDemo ? (
-        <DemoUnavailable title={onboardingCopy.tryDemo.unavailableAi} />
-      ) : (
-        <AiWorkbench
-          clients={clients}
-          providerReady={Boolean(getConfiguredProvider())}
-          planAllowsAi={allowsAi}
-          planLabel={ctx.organization.plan}
-          tokensUsed={tokensUsed}
-          tokensLimit={limits.aiTokensPerMonth}
-          initialClientId={params.clientId}
-          initialIntent={params.intent}
-          recentRuns={recentRuns.map((r) => ({
-            id: r.id,
-            feature: r.feature,
-            createdAt: r.createdAt.toISOString(),
-            outputPreview: r.outputPreview,
-            tokens: r.tokensIn + r.tokensOut,
-          }))}
-        />
-      )}
+      <AiWorkbench
+        isDemo={ctx.isDemo}
+        clients={clients}
+        providerReady={ctx.isDemo || Boolean(getConfiguredProvider())}
+        planAllowsAi={allowsAi}
+        planLabel={ctx.isDemo ? "Demo" : ctx.organization.plan}
+        tokensUsed={ctx.isDemo ? 0 : tokensUsed}
+        tokensLimit={ctx.isDemo ? null : limits.aiTokensPerMonth}
+        initialClientId={params.clientId}
+        initialIntent={params.intent}
+        recentRuns={
+          ctx.isDemo
+            ? []
+            : recentRuns.map((r) => ({
+                id: r.id,
+                feature: r.feature,
+                createdAt: r.createdAt.toISOString(),
+                outputPreview: r.outputPreview,
+                tokens: r.tokensIn + r.tokensOut,
+              }))
+        }
+      />
     </div>
   );
 }

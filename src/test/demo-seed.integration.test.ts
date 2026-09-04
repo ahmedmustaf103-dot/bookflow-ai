@@ -83,7 +83,7 @@ describe("demo org seed isolation", () => {
     expect(byStatus.NO_SHOW ?? 0).toBeGreaterThanOrEqual(2);
     expect(byStatus.PENDING ?? 0).toBeGreaterThanOrEqual(1);
 
-    expect(new Set(bookings.map((b) => b.resource.name)).size).toBe(2);
+    expect(new Set(bookings.map((b) => b.resource.name)).size).toBe(4);
     expect(
       new Set(bookings.map((b) => b.service.name)).size,
     ).toBeGreaterThanOrEqual(4);
@@ -93,10 +93,23 @@ describe("demo org seed isolation", () => {
       .reduce((sum, b) => sum + b.service.priceCents, 0);
     expect(completedRevenue).toBeGreaterThan(20_000);
 
-    const james = clients.find((c) => c.email === "james.okonkwo@example.test");
-    expect(james).toBeTruthy();
-    const jamesVisits = bookings.filter((b) => b.clientId === james!.id);
-    expect(jamesVisits.length).toBeGreaterThanOrEqual(2);
+    const services = await db.service.findMany({
+      where: { organizationId: demo.organizationId },
+    });
+    expect(services).toHaveLength(6);
+
+    const staffMemberships = await db.membership.count({
+      where: { organizationId: demo.organizationId, role: "STAFF" },
+    });
+    expect(staffMemberships).toBe(4);
+
+    const alex = clients.find((c) => c.email === "alex.morgan@example.test");
+    expect(alex).toBeTruthy();
+    const alexVisits = bookings.filter((b) => b.clientId === alex!.id);
+    expect(alexVisits.length).toBeGreaterThanOrEqual(5);
+    expect(
+      alexVisits.filter((b) => b.service.name === "Skin Fade").length,
+    ).toBeGreaterThanOrEqual(5);
 
     const newClientCutoff = new Date(
       FROZEN_NOW.getTime() - 30 * 24 * 60 * 60_000,

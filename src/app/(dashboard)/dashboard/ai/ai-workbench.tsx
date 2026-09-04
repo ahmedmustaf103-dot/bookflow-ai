@@ -49,6 +49,7 @@ export function AiWorkbench({
   recentRuns,
   initialClientId,
   initialIntent,
+  isDemo = false,
 }: {
   clients: ClientOption[];
   providerReady: boolean;
@@ -59,6 +60,7 @@ export function AiWorkbench({
   recentRuns: AiRunPreview[];
   initialClientId?: string;
   initialIntent?: string;
+  isDemo?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -76,7 +78,8 @@ export function AiWorkbench({
     if (initialClientId && clients.some((c) => c.id === initialClientId)) {
       return initialClientId;
     }
-    return clients[0]?.id ?? "";
+    const alex = clients.find((c) => c.name === "Alex Morgan");
+    return alex?.id ?? clients[0]?.id ?? "";
   }, [clients, initialClientId]);
 
   const [draftClientId, setDraftClientId] = useState(defaultClientId);
@@ -144,7 +147,11 @@ export function AiWorkbench({
         return;
       }
       setOutput(result.data.text);
-      setMeta(`${result.data.tokens.toLocaleString()} tokens`);
+      setMeta(
+        isDemo
+          ? "Example AI insight"
+          : `${result.data.tokens.toLocaleString()} tokens`,
+      );
       if ("proposal" in result.data) {
         setProposal(result.data.proposal ?? null);
       }
@@ -158,18 +165,34 @@ export function AiWorkbench({
         <Surface className="p-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-sm">
-                Plan: <span className="font-medium">{planLabel}</span>
-              </p>
-              <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-                Tokens this month: {tokensUsed.toLocaleString("en-GB")}
-                {tokensLimit != null
-                  ? ` / ${tokensLimit.toLocaleString("en-GB")}`
-                  : " / ∞"}
-              </p>
+              {isDemo ? (
+                <>
+                  <p className="text-xs font-semibold tracking-wide text-[var(--accent)] uppercase">
+                    Demo AI
+                  </p>
+                  <p className="mt-1 text-sm">
+                    Example answers from this sample business. Nothing is sent
+                    and no AI credits are used.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm">
+                    Plan: <span className="font-medium">{planLabel}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
+                    Tokens this month: {tokensUsed.toLocaleString("en-GB")}
+                    {tokensLimit != null
+                      ? ` / ${tokensLimit.toLocaleString("en-GB")}`
+                      : " / ∞"}
+                  </p>
+                </>
+              )}
             </div>
             <p className="text-xs text-[var(--ink-tertiary)]">
-              AI drafts and proposes — you always confirm.
+              {isDemo
+                ? "Try a customer summary, a message draft, or ask about today."
+                : "AI drafts and proposes — you always confirm."}
             </p>
           </div>
         </Surface>
@@ -213,8 +236,9 @@ export function AiWorkbench({
         <Surface className="p-4">
           <h2 className="text-sm font-semibold">Message draft</h2>
           <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-            Follow-ups, reminders, review asks. Edit the draft, then send if you
-            like it.
+            {isDemo
+              ? "Follow-ups, reminders, and review asks. You can copy the draft — sending is off in the sample business."
+              : "Follow-ups, reminders, review asks. Edit the draft, then send if you like it."}
           </p>
           <form
             className="mt-4 flex flex-col gap-3"
@@ -299,7 +323,9 @@ export function AiWorkbench({
         <Surface className="p-4">
           <h2 className="text-sm font-semibold">Booking recommendations</h2>
           <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
-            Finds real slots and proposes a booking for you to confirm.
+            {isDemo
+              ? "Ask about today’s bookings, a popular service, or a time with James this week."
+              : "Finds real slots and proposes a booking for you to confirm."}
           </p>
           <form
             className="mt-4 flex flex-col gap-3"
@@ -318,7 +344,11 @@ export function AiWorkbench({
                 name="message"
                 required
                 rows={3}
-                placeholder='e.g. "Find a 30-min cut for Alex next Thursday afternoon with Sam"'
+                placeholder={
+                  isDemo
+                    ? 'e.g. "Find me an appointment with James this week."'
+                    : 'e.g. "Find a 30-min cut for Alex next Thursday afternoon with Sam"'
+                }
               />
             </div>
             <Button type="submit" disabled={pending}>
@@ -390,7 +420,7 @@ export function AiWorkbench({
             />
           )}
 
-          {outputKind === "Message draft" && output.trim() ? (
+          {outputKind === "Message draft" && output.trim() && !isDemo ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Button
                 type="button"
@@ -428,7 +458,7 @@ export function AiWorkbench({
             </div>
           ) : null}
 
-          {proposal ? (
+          {proposal && !isDemo ? (
             <div className="mt-4 rounded-[var(--radius-panel)] border border-[var(--accent)]/40 bg-[var(--accent-soft)]/40 p-3">
               <p className="text-xs font-semibold tracking-wide text-[var(--accent)] uppercase">
                 Proposed booking — confirm to create
@@ -481,6 +511,7 @@ export function AiWorkbench({
           ) : null}
         </Surface>
 
+        {isDemo ? null : (
         <Surface className="p-4">
           <h2 className="text-sm font-semibold">Recent AI runs</h2>
           <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
@@ -526,6 +557,7 @@ export function AiWorkbench({
             </ul>
           )}
         </Surface>
+        )}
       </div>
     </div>
   );
