@@ -21,8 +21,8 @@ function BookingPreview() {
         <p className="text-[10px] font-semibold tracking-[0.2em] text-[var(--accent)] uppercase">
           Online booking
         </p>
-        <p className="font-marketing text-2xl font-bold tracking-tight text-zinc-900">
-          Your shop name
+        <p className="font-marketing text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
+          Atelier Hale
         </p>
         <div className="flex gap-2">
           {["Service", "Staff", "Time", "Details", "Confirm"].map(
@@ -80,7 +80,7 @@ const steps = onboardingCopy.marketing.steps;
 export default function HomePage() {
   return (
     <>
-      <section className="bf-marketing-hero relative flex min-h-[100svh] flex-col justify-end overflow-hidden pt-24 pb-0 text-white">
+      <section className="bf-marketing-hero relative flex min-h-[100svh] flex-col justify-start overflow-hidden pt-[6.25rem] pb-8 text-white sm:justify-end sm:pt-24 sm:pb-0">
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -96,15 +96,15 @@ export default function HomePage() {
           }}
         />
 
-        <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-10 px-6 pb-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end lg:gap-12 lg:pb-0">
-          <div className="bf-marketing-hero-copy max-w-xl pb-4 lg:pb-16">
-            <h1 className="font-marketing text-5xl leading-[0.95] font-extrabold tracking-tight sm:text-6xl md:text-7xl">
+        <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-10 px-5 pb-4 sm:px-6 sm:pb-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end lg:gap-12 lg:pb-0">
+          <div className="bf-marketing-hero-copy max-w-xl pb-2 sm:pb-4 lg:pb-16">
+            <h1 className="font-marketing text-[2.125rem] leading-[1.1] font-extrabold tracking-tight sm:text-6xl sm:leading-[0.95] md:text-7xl">
               BookFlow AI
             </h1>
-            <p className="mt-5 max-w-md text-lg leading-relaxed text-white/80">
+            <p className="mt-5 max-w-md text-base leading-relaxed text-white/80 sm:text-lg">
               {onboardingCopy.marketing.heroBody}
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-7 flex flex-wrap gap-3 sm:mt-8">
               <ButtonLink
                 href="/demo"
                 variant="secondary"
@@ -120,7 +120,7 @@ export default function HomePage() {
                 Start free
               </ButtonLink>
             </div>
-            <p className="mt-4 text-sm text-white/70">
+            <p className="mt-5 text-sm text-white/70 sm:mt-4">
               <Link
                 href="/book/bookflow-demo"
                 className="underline underline-offset-4"
